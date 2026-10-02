@@ -9,11 +9,10 @@ speichert sie im akkumulierenden ``daily_closes``-Cache. Wird sowohl vom
 from datetime import date
 
 import structlog
-
 from stockinfo_plugin.types import Identity
 
+from app.persistence.repository import QuoteRepository
 from app.providers.base import DailyCloseProvider, SourceAnswer
-from app.repository import QuoteRepository
 
 logger = structlog.get_logger()
 

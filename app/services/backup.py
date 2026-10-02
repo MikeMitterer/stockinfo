@@ -23,9 +23,13 @@ from pathlib import Path
 
 import structlog
 
-from app.db import SCHEMA_VERSION, get_connection
-from app.data_versions import declared_versions, stored_versions, stamp_versions
 from app.models import BackupReason, SourceDifference
+from app.persistence.data_versions import (
+    declared_versions,
+    stamp_versions,
+    stored_versions,
+)
+from app.persistence.db import SCHEMA_VERSION, get_connection
 from app.sources_config import ROLES, SourcesConfig
 
 logger = structlog.get_logger()

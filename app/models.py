@@ -141,7 +141,7 @@ class RejectedInstrument(BaseModel):
     exchange: str | None = None
     type: str | None = None
     currency: str | None = None
-    reason: str = Field(description="stabile Kennung, siehe app/migration.py")
+    reason: str = Field(description="stabile Kennung, siehe app/persistence/migration.py")
     quotes: int = Field(description="Intraday-Kurspunkte, die entfallen")
     daily_closes: int = Field(description="Tagesschlusskurse, die entfallen")
 

@@ -4,8 +4,9 @@ Das Gegenstück zu `CompositeResolver` auf der Metadaten-Seite: Welche Quelle ei
 Papier führt, hängt an seinem Domizil, und keine einzelne deckt alle ab.
 """
 
-import structlog
 from dataclasses import fields
+
+import structlog
 
 from app.providers.base import EtfDetails, EtfEnricher
 

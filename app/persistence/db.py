@@ -12,7 +12,7 @@ from pathlib import Path
 import structlog
 
 from app.models import OVERRIDE_FIELDS
-from app.migration import (
+from app.persistence.migration import (
     IDENTITY_CHECK,
     MigrationPlan,
     apply_migration,
@@ -204,7 +204,7 @@ def init_db(database_path: str) -> bool:
     try:
         connection.executescript(_SCHEMA)
         _migrate(connection)
-        from app.detail_store import initialize
+        from app.persistence.detail_store import initialize
 
         initialize(connection)
         _create_identity_indices(connection)
@@ -291,7 +291,7 @@ def run_migration(database_path: str, rejected_at: str) -> MigrationPlan:
 # Berichtstabelle und gehärtetes Schema dauerhaft zurück, obwohl die Funktion
 # „alles oder nichts" zusagt.
 #
-# Derselbe Fehler war in `app/migration.py` bereits gefunden, behoben und im
+# Derselbe Fehler war in `app/persistence/migration.py` bereits gefunden, behoben und im
 # Kommentar festgehalten — und hier zwei Stunden später wieder eingebaut
 # (Codex, Runde 30). Eine Liste statt eines Scripts macht ihn unmöglich.
 #

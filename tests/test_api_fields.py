@@ -15,7 +15,6 @@ from fastapi.testclient import TestClient
 from app.contract import CONTRACT_FILE, core_contract
 from tests import test_yaml_profile as yaml_profile
 
-
 client = yaml_profile.client
 volume = yaml_profile.volume
 

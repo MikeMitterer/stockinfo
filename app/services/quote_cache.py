@@ -26,8 +26,8 @@ from app.models import (
     identity_from_columns,
     with_identity,
 )
+from app.persistence.repository import PROTECTED_META_FIELDS, QuoteRepository
 from app.providers.base import identity_from_row
-from app.repository import PROTECTED_META_FIELDS, QuoteRepository
 from app.services.daily_sync import DailyCloseSync
 from app.services.freshness import is_fresh
 from app.services.quote_service import (

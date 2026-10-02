@@ -11,9 +11,8 @@ from fastapi.testclient import TestClient
 from app.config import get_settings
 from app.container import get_sources_config
 from app.main import app
-from app.repository import QuoteRepository
+from app.persistence.repository import QuoteRepository
 from app.sources_config import ROLES
-
 
 PLUGIN = """
 from pathlib import Path

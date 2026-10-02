@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pytest
 
+from examples.yaml_file import YamlFileSource
 from stockinfo_plugin import (
     DailyRequest,
     FxRequest,
@@ -31,8 +32,6 @@ from stockinfo_plugin.testing import (
     QuoteContract,
     ResolverContract,
 )
-
-from examples.yaml_file import YamlFileSource
 
 FIXTURE = Path(__file__).parent / "fixtures" / "assets.yaml"
 

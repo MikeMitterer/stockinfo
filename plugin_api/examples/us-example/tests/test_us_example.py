@@ -11,6 +11,8 @@ one test that needs an outage injects one.
 """
 
 import pytest
+from stockinfo_source_us_example.source import MarketUnreachable, UsExampleSource
+
 from stockinfo_plugin import (
     ListedIdentity,
     NotFound,
@@ -23,8 +25,6 @@ from stockinfo_plugin import (
     Unavailable,
 )
 from stockinfo_plugin.testing import QuoteContract, ResolverContract
-
-from stockinfo_source_us_example.source import MarketUnreachable, UsExampleSource
 
 # Looked up by hand from the fake vendor, not read back out of it: an expected
 # value taken from the thing under test only proves it answers consistently.

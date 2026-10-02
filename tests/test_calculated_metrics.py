@@ -13,13 +13,13 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app import detail_store
 from app.config import get_settings
 from app.container import get_cached_quote_service, get_sources_config
-from app.db import init_db
 from app.detail_models import DetailDefinition
 from app.main import app
-from app.repository import QuoteRepository
+from app.persistence import detail_store
+from app.persistence.db import init_db
+from app.persistence.repository import QuoteRepository
 from app.services.quote_cache import CachedQuoteService
 from app.sources_registry import detail_definitions
 from tests.boundaries import empty_daily_sync

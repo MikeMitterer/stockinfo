@@ -26,7 +26,6 @@ sich selbst übereinstimmt.
 """
 
 import pytest
-
 from stockinfo_plugin import NotFound, Resolved, ResolveRequest
 
 from app.plugins.openfigi_resolver import OpenFigiResolverPlugin

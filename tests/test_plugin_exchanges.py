@@ -1,9 +1,9 @@
 """Deklarierte Handelsplätze durch normalen Start, Aufnahme und REST."""
 
-from pathlib import Path
 import shutil
 import sqlite3
 from importlib.metadata import EntryPoint
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient

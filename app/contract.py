@@ -184,7 +184,8 @@ def plugin_contract() -> dict[str, list[dict]]:
     Returns:
         Je Antworttyp die Felder mit Art, Pflicht und Bedeutung.
     """
-    from dataclasses import MISSING, fields as dataclass_fields
+    from dataclasses import MISSING
+    from dataclasses import fields as dataclass_fields
 
     from stockinfo_plugin.types import (
         DailyBar,

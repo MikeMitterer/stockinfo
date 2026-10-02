@@ -13,10 +13,15 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.container import get_cached_quote_service
-from app.db import init_db
 from app.main import app
-from app.models import InstrumentOverrides, ListedIdentityOut, OVERRIDE_FIELDS, QuoteResponse
-from app.repository import QuoteRepository
+from app.models import (
+    OVERRIDE_FIELDS,
+    InstrumentOverrides,
+    ListedIdentityOut,
+    QuoteResponse,
+)
+from app.persistence.db import init_db
+from app.persistence.repository import QuoteRepository
 from app.services.quote_cache import CachedQuoteService, apply_overrides
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
 

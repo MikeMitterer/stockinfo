@@ -33,7 +33,6 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-
 from stockinfo_plugin.sources import (
     DailyCloseSource,
     FxSource,

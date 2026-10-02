@@ -5,8 +5,12 @@ import sqlite3
 from collections.abc import Sequence
 from typing import Any
 
-from app.data_versions import DATA_VERSIONS_KEY, declared_versions, stored_versions
-from app.db import get_connection
+from app.persistence.data_versions import (
+    DATA_VERSIONS_KEY,
+    declared_versions,
+    stored_versions,
+)
+from app.persistence.db import get_connection
 from app.services.backup import BackupService
 from app.sources_config import SourcesConfig
 from app.sources_registry import specs_by_name

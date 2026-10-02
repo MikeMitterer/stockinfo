@@ -43,9 +43,9 @@ def test_schema_merge_behaelt_quellen_und_anwendbarkeit():
 
 
 def test_persistenz_merge_und_kompatibilitaetsprojektion(tmp_path):
-    from app.db import init_db
     from app.detail_models import DetailInput
-    from app.repository import QuoteRepository
+    from app.persistence.db import init_db
+    from app.persistence.repository import QuoteRepository
     from app.services.quote_cache import CachedQuoteService
     from tests.boundaries import empty_daily_sync
     from tests.test_quote_cache import FakeQuoteService, _now, _response
@@ -68,8 +68,8 @@ def test_persistenz_merge_und_kompatibilitaetsprojektion(tmp_path):
 
 
 def test_katalogversion_steigt_nur_bei_schemawechsel(tmp_path):
-    from app.db import init_db
-    from app.repository import QuoteRepository
+    from app.persistence.db import init_db
+    from app.persistence.repository import QuoteRepository
 
     path = str(tmp_path / 'schema.db')
     init_db(path)
@@ -131,7 +131,7 @@ def test_plausibilitaet_verwendet_die_deklarierte_einheit():
 def test_migration_uebernimmt_waehrung_des_manuellen_betrags():
     import sqlite3
 
-    from app import detail_store
+    from app.persistence import detail_store
 
     connection = sqlite3.connect(':memory:')
     connection.row_factory = sqlite3.Row
@@ -152,9 +152,9 @@ def test_migration_uebernimmt_waehrung_des_manuellen_betrags():
 
 
 def test_alter_override_weg_erhaelt_die_gespeicherte_betragswaehrung(tmp_path):
-    from app.db import init_db
     from app.detail_models import DetailInput
-    from app.repository import QuoteRepository
+    from app.persistence.db import init_db
+    from app.persistence.repository import QuoteRepository
     from app.services.quote_cache import CachedQuoteService
     from tests.boundaries import empty_daily_sync
     from tests.test_quote_cache import FakeQuoteService, _now, _response

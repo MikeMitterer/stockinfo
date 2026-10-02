@@ -13,8 +13,8 @@ import sqlite3
 
 import pytest
 
-from app.db import init_db, run_migration
-from app.migration import REASON_NO_SUFFIX
+from app.persistence.db import init_db, run_migration
+from app.persistence.migration import REASON_NO_SUFFIX
 
 
 def _legacy_database(path: str, rows: list[tuple[str, str | None]]) -> None:

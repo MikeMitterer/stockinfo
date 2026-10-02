@@ -2,12 +2,12 @@
 
 Drei Endpunkte für die drei Schritte, und sie sind die einzigen Fachwege, die
 im Pending-Zustand offen bleiben. Warum es sie überhaupt gibt, steht in
-`app/migration.py`: `init_db()` läuft im Lifespan, bevor die App den ersten
+`app/persistence/migration.py`: `init_db()` läuft im Lifespan, bevor die App den ersten
 Request bedient — ein UI, das erst danach erreichbar wird, könnte niemanden
 mehr warnen.
 
-Router enthalten nur HTTP-Belange. Was der Umzug tut, steht in `app.migration`
-und `app.db`.
+Router enthalten nur HTTP-Belange. Was der Umzug tut, steht in
+`app.persistence.migration` und `app.persistence.db`.
 """
 
 import sqlite3
@@ -18,10 +18,10 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException
 
 from app.config import Settings, get_settings
-from app.db import get_connection, run_migration
-from app.migration import MigrationPlan, Rejection, plan_migration
 from app.migration_guard import REASON_STARTUP_FAILED, MigrationGate
 from app.models import MigrationPreview, MigrationReport, RejectedInstrument
+from app.persistence.db import get_connection, run_migration
+from app.persistence.migration import MigrationPlan, Rejection, plan_migration
 
 logger = structlog.get_logger()
 

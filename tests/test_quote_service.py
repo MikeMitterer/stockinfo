@@ -4,8 +4,8 @@ import pytest
 import structlog
 from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable, Unsupported
 
-from app.models import ListedIdentityOut
 from app.exchanges import split_symbol
+from app.models import ListedIdentityOut
 from app.providers.base import EtfDetails, RawQuote, ResolvedInstrument
 from app.providers.composite_market import CompositeQuoteProvider
 from app.services.quote_service import (

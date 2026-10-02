@@ -11,8 +11,8 @@ import sqlite3
 
 import pytest
 
-from app.db import init_db
-from app.migration import (
+from app.persistence.db import init_db
+from app.persistence.migration import (
     REASON_NO_SUFFIX,
     REASON_NON_CANONICAL_TICKER,
     REASON_UNKNOWN_SUFFIX,

@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from app.db import init_db
 from app.models import ListedIdentityOut, QuoteResponse
-from app.repository import (
+from app.persistence.db import init_db
+from app.persistence.repository import (
     IdentityConflictError,
     IncompleteIdentityError,
     QuoteRepository,
@@ -110,7 +110,7 @@ def test_migration_ergaenzt_die_neuen_spalten(tmp_path) -> None:
     """
     import sqlite3
 
-    from app.db import init_db
+    from app.persistence.db import init_db
 
     db_file = str(tmp_path / "alt.db")
     with sqlite3.connect(db_file) as connection:
@@ -168,7 +168,7 @@ def test_duplikate_verlieren_weder_overrides_noch_daily_wasserzeichen(tmp_path) 
     """
     import sqlite3
 
-    from app.db import init_db, run_migration
+    from app.persistence.db import init_db, run_migration
 
     db_file = str(tmp_path / "duplikate.db")
     with sqlite3.connect(db_file) as connection:
@@ -294,7 +294,7 @@ def test_overrides_werden_feldweise_zusammengefuehrt(tmp_path) -> None:
     """
     import sqlite3
 
-    from app.db import init_db, run_migration
+    from app.persistence.db import init_db, run_migration
 
     db_file = str(tmp_path / "konflikt.db")
     _legacy_db_with_duplicate(
@@ -334,7 +334,7 @@ def test_daily_spannen_mit_luecke_werden_nicht_zusammengezogen(tmp_path) -> None
     """
     import sqlite3
 
-    from app.db import init_db, run_migration
+    from app.persistence.db import init_db, run_migration
 
     db_file = str(tmp_path / "luecke.db")
     _legacy_db_with_duplicate(
@@ -369,7 +369,7 @@ def test_ueberlappende_daily_spannen_werden_geweitet(tmp_path) -> None:
     """Überlappen sich die Spannen, ist die Vereinigung lückenlos — also zulässig."""
     import sqlite3
 
-    from app.db import init_db, run_migration
+    from app.persistence.db import init_db, run_migration
 
     db_file = str(tmp_path / "ueberlappung.db")
     _legacy_db_with_duplicate(

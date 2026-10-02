@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from stockinfo_plugin import Source
 
-from app.db import init_db
+from app.persistence.db import init_db
 from app.services.backup import BackupService
 from app.sources_config import SourcesConfig
 from app.sources_registry import SourceSpec, register_loaded
@@ -72,7 +72,7 @@ def test_source_hat_kompatiblen_standard():
 
 
 def test_neuer_stand_wird_nicht_als_migration_gespeichert(tmp_path, source, config):
-    from app.data_versions import stamp_versions, stored_versions
+    from app.persistence.data_versions import stamp_versions, stored_versions
 
     database = str(tmp_path / "stockinfo.db")
     init_db(database)
@@ -87,7 +87,7 @@ def test_neuer_stand_wird_nicht_als_migration_gespeichert(tmp_path, source, conf
 def test_frische_datenbank_traegt_deklaration_auch_beim_erneuten_lesen(
     tmp_path, source, config
 ):
-    from app.data_versions import stamp_versions
+    from app.persistence.data_versions import stamp_versions
 
     database = str(tmp_path / "stockinfo.db")
     source.data_version = 3
@@ -185,7 +185,7 @@ SOURCES = [Example]
             # Das neue Plugin ist geladen, aber sein Migrationsweg fehlt.
             assert client.get("/sources").status_code == 503
             assert client.get("/instruments").status_code == 503
-            from app.data_versions import declared_versions
+            from app.persistence.data_versions import declared_versions
 
             assert declared_versions(get_sources_config())["t25-example"] == 2
     finally:

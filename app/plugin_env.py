@@ -36,8 +36,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from importlib import metadata
 from collections.abc import Callable, Sequence
+from importlib import metadata
 from pathlib import Path
 
 import structlog

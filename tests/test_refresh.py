@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from app.db import init_db
 from app.models import ListedIdentityOut, QuoteResponse
-from app.repository import QuoteRepository
+from app.persistence.db import init_db
+from app.persistence.repository import QuoteRepository
 from app.scheduler import RefreshScheduler
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteUnavailableError

@@ -1,6 +1,6 @@
 """Börsentabelle und Symbol-Rückrechnung — ohne Netz-Abhängigkeiten.
 
-Bewusst ein eigenes Modul: `app/db.py` braucht die Zerlegung für die
+Bewusst ein eigenes Modul: `app/persistence/db.py` braucht die Zerlegung für die
 Identitäts-Migration aus T-21, und die Schema-Schicht soll dafür nicht den
 Resolver samt yfinance mitziehen.
 
@@ -31,7 +31,7 @@ _TICKER_PATTERN = re.compile(r"[A-Z0-9]+")
 #
 # Sie standen bis T-21 Übergabe 3 in `app/migration.py`. Seit der Aufnahmeweg
 # dieselben drei Fälle beantwortet, gehören sie zur Regel und nicht zu einem
-# ihrer beiden Aufrufer — `app.migration` reicht sie unverändert weiter, damit
+# ihrer beiden Aufrufer — `app.persistence.migration` reicht sie unverändert weiter, damit
 # Werte, Tests und die i18n-Schlüssel des Dashboards unberührt bleiben.
 REASON_NO_SUFFIX = "symbol_without_exchange_suffix"
 REASON_UNKNOWN_SUFFIX = "unknown_exchange_suffix"
@@ -278,7 +278,7 @@ def canonical_identity(ticker: str | None, mic: str | None) -> tuple[str, str] |
     beste Zahl an Quellen für einen Wert, den es nicht mehr gibt, ist null.
 
     **Strenger als das, was der Bestand tragen darf.** `keeps_its_identity` in
-    `app/migration.py` beurteilt *gespeicherte* Zeilen milder — eine von Hand
+    `app/persistence/migration.py` beurteilt *gespeicherte* Zeilen milder — eine von Hand
     gesetzte Zuordnung wie `RDS-A`/`XLON` bleibt dort stehen, statt beim
     nächsten Start verworfen zu werden. Streng beim Erzeugen, nachsichtig beim
     Annehmen: Sonst löschte ein Regel-Nachziehen menschliche Arbeit.
@@ -364,7 +364,7 @@ def identity_from_symbol(symbol: str) -> tuple[str, str] | None:
     aus zwei Optionalen zurück, das jeder Aufrufer wieder auseinandernehmen
     muss; sie ruft jetzt hier durch.
 
-    **Warum die Trennung überhaupt entstand:** Der Umzug in `app/migration.py`
+    **Warum die Trennung überhaupt entstand:** Der Umzug in `app/persistence/migration.py`
     brauchte ein „Ergebnis oder nichts" und bekam eine eigene, gleich
     aussehende Funktion. Zwei Implementierungen derselben Fachregel laufen
     beim ersten neuen Fall auseinander — dann entscheidet die Migration anders

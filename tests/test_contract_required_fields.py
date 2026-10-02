@@ -42,17 +42,16 @@ from pathlib import Path
 import pytest
 import structlog
 from fastapi.testclient import TestClient
-
 from stockinfo_plugin.sources import Resolver
 from stockinfo_plugin.types import ListedIdentity, NotFound, Resolved
 
 from app.main import app
+from app.persistence.repository import QuoteRepository
 from app.plugin_adapters import ResolverAdapter
 from app.providers.base import ResolvedInstrument
-from app.repository import QuoteRepository
 from app.resolver import CompositeResolver
-from tests.boundaries import wire_real_chain
 from tests import test_yaml_profile as yaml_profile
+from tests.boundaries import wire_real_chain
 
 fields_client = yaml_profile.client
 volume = yaml_profile.volume
@@ -583,9 +582,10 @@ def test_openfigi_sagt_lieber_nichts_als_die_haelfte(
     er ist gewollt, und er soll hier sichtbar sein und nicht im Betrieb
     auffallen.
     """
+    from stockinfo_plugin.types import ResolveRequest
+
     from app.plugins.openfigi_resolver import OpenFigiResolverPlugin
     from app.providers.openfigi_provider import FigiMatch
-    from stockinfo_plugin.types import ResolveRequest
 
     class _Figi:
         def map_isin(self, isin: str, id_value: str, id_type: str = "micCode"):

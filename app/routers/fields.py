@@ -8,11 +8,11 @@ Antwort Pflicht sind.
 
 from fastapi import APIRouter, HTTPException, Response
 
+from app.config import get_settings
 from app.container import get_sources_config
 from app.contract import ContractUnavailableError, core_contract, plugin_contract
-from app.config import get_settings
 from app.models import FieldsResponse, InstrumentTypesResponse
-from app.repository import QuoteRepository
+from app.persistence.repository import QuoteRepository
 from app.services.instrument_types import instrument_type_catalog
 
 router = APIRouter(tags=["contract"])

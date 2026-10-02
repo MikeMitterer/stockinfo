@@ -11,10 +11,10 @@ from pathlib import Path
 import yaml
 from fastapi.testclient import TestClient
 
-from app.plugin_adapters import unwrap
 from app.config import Settings
 from app.container import _build_resolver, get_sources_config
 from app.main import app
+from app.plugin_adapters import unwrap
 from app.sources_config import (
     DEFAULT_CHAINS,
     load_sources_config,

@@ -24,12 +24,12 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from stockinfo_plugin.types import NotFound
 
 from app.container import get_cached_quote_service
 from app.main import app
+from app.persistence.repository import REASON_SYMBOL_AMBIGUOUS, QuoteRepository
 from app.providers.base import RawQuote, ResolvedInstrument
-from app.repository import REASON_SYMBOL_AMBIGUOUS, QuoteRepository
-from stockinfo_plugin.types import NotFound
 from tests.boundaries import wire_real_chain
 
 # Der Alias, den sich die US-Plätze teilen — sie führen kein Suffix.

@@ -93,10 +93,10 @@ def test_quellenausfall_aendert_weder_schema_noch_version(volume, client):
     _profile(volume, chains)
     before = client.get('/fields').json()
     # Dieselbe validierte Quelle wird beim nächsten Aufbau als gestört gemeldet.
+    from app.config import get_settings
+    from app.container import get_sources_config
     from app.plugin_adapters import unwrap
     from app.sources_registry import build_chain
-    from app.container import get_sources_config
-    from app.config import get_settings
 
     source = unwrap(build_chain('etf_meta', get_sources_config(), get_settings())[0])
     source.__class__.configuration_problem = lambda self: 'Testausfall'
@@ -120,10 +120,10 @@ def test_schemaentfernung_erhoeht_version_im_rest_vertrag(volume, client):
 
 
 def test_konstruktorfehler_behaelt_schema_und_manuelle_werte(volume, client, monkeypatch):
+    from app.config import get_settings
+    from app.container import get_sources_config
     from app.plugin_adapters import unwrap
     from app.sources_registry import build_chain
-    from app.container import get_sources_config
-    from app.config import get_settings
 
     chains = {'resolvers': ['yaml-file'], 'quotes': ['yaml-file'],
               'etf_meta': ['risk-demo', 'yaml-file']}
@@ -150,7 +150,7 @@ def test_konstruktorfehler_behaelt_schema_und_manuelle_werte(volume, client, mon
 
 
 def test_feldauskunft_funktioniert_mit_nur_lesender_verbindung(volume, client, monkeypatch):
-    from app import repository
+    from app.persistence import repository
 
     _profile(volume, {'quotes': ['yaml-file'], 'etf_meta': ['risk-demo', 'yaml-file']})
     before = client.get('/fields').json()

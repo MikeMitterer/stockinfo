@@ -24,8 +24,6 @@ from app.container import (
     initialize_detail_catalog,
     warm_all_chains,
 )
-from app.data_versions import stamp_versions
-from app.db import init_db
 from app.docs import register_docs
 from app.migration_guard import (
     HEALTHCHECK_PATH,
@@ -42,14 +40,16 @@ from app.models import (
     OperationalResponse,
     ReadinessResponse,
 )
+from app.persistence.data_versions import stamp_versions
+from app.persistence.db import init_db
 from app.persistence.plugin_migration import migrate_plugins
-from app.plugin_loader import load_all
-from app.repository import (
+from app.persistence.repository import (
     REASON_IDENTITY_CONFLICT,
     REASON_SYMBOL_AMBIGUOUS,
     AmbiguousSymbolError,
     IdentityConflictError,
 )
+from app.plugin_loader import load_all
 from app.routers import backups, dashboard, fields, fx, instruments, migration, quotes
 from app.routers.migration import get_gate
 from app.routers.validation import REASON_INVALID_ISIN, InvalidIsinError

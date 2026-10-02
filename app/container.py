@@ -13,13 +13,13 @@ from fastapi import Depends
 
 from app.config import get_settings
 from app.exchange_catalog import covered_quote_mics
+from app.persistence.repository import QuoteRepository
 from app.providers.base import EtfEnricher, InstrumentResolver
 from app.providers.composite_etf import CompositeEtfEnricher
 from app.providers.composite_market import (
     CompositeDailyCloseProvider,
     CompositeQuoteProvider,
 )
-from app.repository import QuoteRepository
 from app.resolver import CompositeResolver
 from app.services.analyzer import ROLES as ANALYZED_ROLES
 from app.services.analyzer import QuoteAnalyzer

@@ -24,8 +24,8 @@ def lap(label: str, since: float) -> float:
 
 t0 = time.perf_counter()
 import httpx
-import yfinance as yf
 import justetf_scraping
+import yfinance as yf
 
 t = lap("import", t0)
 

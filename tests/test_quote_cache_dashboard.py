@@ -2,9 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from app.db import init_db
 from app.models import ListedIdentityOut, QuoteResponse
-from app.repository import QuoteRepository
+from app.persistence.db import init_db
+from app.persistence.repository import QuoteRepository
 from app.services.quote_cache import CachedQuoteService
 from tests.boundaries import empty_daily_sync
 

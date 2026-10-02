@@ -1,18 +1,18 @@
 """Profilwechsel mit echten Dateien in einem isolierten Datenverzeichnis."""
 
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 import yaml
+from stockinfo_plugin import IsinOnlyIdentity, Quote, QuoteRequest
 
 from app.config import Settings
 from app.sources_config import load_sources_config
 from plugin_api.examples.yaml_file import YamlFileSource
-from stockinfo_plugin import IsinOnlyIdentity, Quote, QuoteRequest
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/sources-profile.sh"

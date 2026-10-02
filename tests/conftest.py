@@ -1,8 +1,8 @@
 """Isolierte Standarddatenbank und Schutz der Arbeitsdaten beim Testen."""
 
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 import pytest

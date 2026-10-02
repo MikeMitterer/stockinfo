@@ -55,14 +55,6 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-
-from app.container import get_cached_quote_service
-from app.main import app
-from app.plugin_adapters import ResolverAdapter, _instrument_from
-from app.plugins.yahoo_search_resolver import YahooSearchResolverPlugin
-from app.providers.base import RawQuote, ResolvedInstrument
-from app.resolver import CompositeResolver
-from app.repository import QuoteRepository
 from stockinfo_plugin.sources import Resolver
 from stockinfo_plugin.types import (
     IsinOnlyIdentity,
@@ -71,6 +63,14 @@ from stockinfo_plugin.types import (
     Resolved,
     Unsupported,
 )
+
+from app.container import get_cached_quote_service
+from app.main import app
+from app.persistence.repository import QuoteRepository
+from app.plugin_adapters import ResolverAdapter, _instrument_from
+from app.plugins.yahoo_search_resolver import YahooSearchResolverPlugin
+from app.providers.base import RawQuote, ResolvedInstrument
+from app.resolver import CompositeResolver
 from tests.boundaries import wire_real_chain
 
 # Eine echte Bundesanleihe — Prüfziffer gültig, damit die Aufnahme nicht schon

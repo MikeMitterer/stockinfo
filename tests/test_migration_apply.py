@@ -15,8 +15,8 @@ import sqlite3
 
 import pytest
 
-from app.db import run_migration
-from app.migration import (
+from app.persistence.db import run_migration
+from app.persistence.migration import (
     REASON_NO_SUFFIX,
     REASON_NON_CANONICAL_TICKER,
     apply_migration,
@@ -281,7 +281,7 @@ def test_ein_spaeter_fehler_rollt_den_ganzen_umzug_zurueck(
 
     Ausgelöst wird der Fehler deshalb an der spätesten Stelle, die es gibt.
     """
-    from app import db as db_module
+    from app.persistence import db as db_module
 
     symbols_before = _symbols(bestand)
     columns_before = _columns(bestand)

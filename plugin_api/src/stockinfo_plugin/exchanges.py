@@ -1,7 +1,7 @@
 """Optionale Handelsplatzdeklarationen ohne Abhängigkeit vom Host."""
 
-from dataclasses import dataclass
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Literal
 
 from stockinfo_plugin.invariants import currency_is_valid, mic_is_wellformed
