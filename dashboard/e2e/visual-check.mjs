@@ -191,6 +191,11 @@ async function way(id, title, expect, body) {
     const lines = String(error.message).split('\n')
     const target = lines.find((line) => line.includes('waiting for'))?.trim()
     failure = error instanceof CheckFailed ? error.message : `${error.name}: ${lines[0]}${target ? ` (${target})` : ''}`
+    // Was im Moment des Scheiterns zu sehen war — sonst bleibt nur der Text.
+    for (const [index, open] of context.pages().entries()) {
+      const file = `${id}-failure-${index + 1}.png`
+      await open.screenshot({ path: join(OUT, file) }).then(() => shots.push(file), () => {})
+    }
   } finally {
     await context.close()
   }
@@ -423,6 +428,125 @@ try {
       'SELECT COUNT(*) AS n FROM quotes WHERE instrument_id NOT IN (SELECT id FROM instruments)')
     check(orphans === 0, `${orphans} Kurspunkte ohne Papier übrig`)
     await ctx.shot(page, 'deleted')
+  })
+
+  await way('W9', 'Börsen', {}, async (ctx) => {
+    const page = await ctx.page('/#/exchanges')
+    const rows = page.locator('tbody tr')
+    // Das Offline-Profil deckt nur XETR ab; erst mit den nicht abgedeckten
+    // Börsen gibt es eine Liste, die der Filter verkleinern kann.
+    check(await rows.count() === 1, `Offline-Profil sollte genau eine Börse abdecken (${await rows.count()})`)
+    check((await page.locator('main').innerText()).includes('Trading venues'), 'Überschrift fehlt')
+    await page.getByRole('switch', { name: 'Show exchanges not covered' }).click()
+    await settle(page)
+    const all = await rows.count()
+    check(all > 1, 'nicht abgedeckte Börsen erscheinen nicht')
+    await page.getByPlaceholder('Search MIC, venue or source').fill('XETR')
+    await settle(page)
+    const filtered = await rows.count()
+    check(filtered > 0 && filtered < all, `Filter wirkt nicht (${all} → ${filtered})`)
+    check((await rows.first().innerText()).includes('XETR'), 'gefilterte Zeile nennt XETR nicht')
+    await ctx.shot(page, 'filtered')
+  })
+
+  await way('W10', 'Analyse', {}, async (ctx) => {
+    const page = await ctx.page('/#/analysis')
+    await page.getByPlaceholder('ISIN or symbol (e.g. EUNL.DE)').fill('IE00B4L5Y983')
+    await page.getByRole('button', { name: 'Analyze' }).click()
+    await page.waitForTimeout(1500)
+    await settle(page)
+    const text = await page.locator('main').innerText()
+    check(text.includes('answered'), 'keine Quelle mit Status „answered“')
+    check(text.includes('yaml-file'), 'gemessene Quelle yaml-file fehlt')
+    await ctx.shot(page, 'measured')
+  })
+
+  await way('W11', 'Devisen', {
+    http: [{ status: 404, url: '/fx' }],
+    console: [/fx|rate/i],
+  }, async (ctx) => {
+    const page = await ctx.page('/#/fx')
+    // Per Tastatur wählen: Die Liste zeichnet nur sichtbare Einträge, und
+    // geschlossene Menüs bleiben im DOM. Pfeiltaste bis zur Währung, dann Enter.
+    const choose = async (label, currency) => {
+      await page.getByLabel(label, { exact: true }).click()
+      await page.waitForTimeout(200)
+      const pending = page.locator('.n-base-select-menu:visible .n-base-select-option--pending')
+      const atCurrency = async () => (await pending.count()) > 0 && (await pending.first().innerText()).trim() === currency
+      // Erst abwärts, dann aufwärts: Die Liste springt am Ende nicht zurück.
+      for (const key of ['ArrowDown', 'ArrowUp']) {
+        for (let step = 0; step < 120 && !(await atCurrency()); step += 1) await page.keyboard.press(key)
+        if (await atCurrency()) break
+      }
+      check((await pending.first().innerText()).trim() === currency, `${currency} nicht in der Auswahl ${label}`)
+      await page.keyboard.press('Enter')
+      await page.waitForTimeout(300)
+    }
+    await choose('Base', 'CAD')
+    await choose('Quote', 'EUR')
+    await page.getByRole('button', { name: 'Convert' }).click()
+    await settle(page)
+    const text = await page.locator('main').innerText()
+    // Die Oberfläche zeigt drei Nachkommastellen; den genauen Wert sagt die API.
+    check(text.includes('1 CAD = 0.641 EUR'), 'CAD→EUR zeigt nicht 0,641')
+    check(text.includes('yaml-file'), 'Quelle des Kurses fehlt')
+    const rate = (await api(state.server, '/fx?base=CAD&quote=EUR')).body
+    check(rate.rate === 0.6412, `API liefert ${rate.rate} statt 0,6412`)
+    await ctx.shot(page, 'cad-eur')
+    const shownTime = text
+    // Ein Paar, das die Offline-Datei nicht führt.
+    await choose('Base', 'EUR')
+    await choose('Quote', 'USD')
+    await page.getByRole('button', { name: 'Convert' }).click()
+    await page.waitForTimeout(1200)
+    check((await page.locator('body').innerText()).includes('None of the configured sources carries the rate EUR/USD'),
+      'keine verständliche Meldung für ein unbekanntes Paar')
+    await ctx.shot(page, 'unknown-pair')
+    // Zuletzt, damit die Schritte davor laufen: Die Datei pflegt den Kurs mit
+    // `as_of: 2026-08-27T17:30+02:00`. Gezeigt werden muss dieser Zeitpunkt,
+    // nicht der des Abrufs.
+    check(rate.quote_time.startsWith('2026-08-27') && shownTime.includes('Aug 27, 2026'),
+      `Kurszeitpunkt ist der Abruf (${rate.quote_time}), nicht as_of der Quelle — App-Fehler, Folgeticket`)
+  })
+
+  await way('W12', 'Einstellungen', {}, async (ctx) => {
+    let page = await ctx.page('/#/settings?tab=appearance')
+    const theme = page.locator('.ux-themepicker__tile', { hasText: 'Paper' })
+    await theme.click()
+    await settle(page)
+    const chosen = await page.locator('html').getAttribute('data-theme')
+    await page.reload()
+    await settle(page)
+    check(await page.locator('.ux-themepicker__tile', { hasText: 'Paper' }).getAttribute('aria-pressed') === 'true',
+      'gewähltes Thema übersteht das Neuladen nicht')
+    check(await page.locator('html').getAttribute('data-theme') === chosen, 'Thema nach Neuladen anders')
+    await ctx.shot(page, 'theme')
+    await page.locator('.ux-themepicker__tile', { hasText: 'MangoLila' }).click()
+    await settle(page)
+
+    await page.goto(`${state.server.base}/#/settings?tab=language`)
+    await settle(page)
+    await page.getByRole('button', { name: 'German' }).click()
+    await settle(page)
+    await page.reload()
+    await settle(page)
+    check((await page.locator('nav, header').first().innerText()).includes('Einstellungen'), 'Deutsch übersteht das Neuladen nicht')
+    await ctx.shot(page, 'language-de')
+    await page.getByRole('button', { name: 'Englisch' }).click()
+    await settle(page)
+    check((await page.locator('nav, header').first().innerText()).includes('Settings'), 'zurück auf Englisch klappt nicht')
+
+    page = await ctx.page('/#/settings?tab=environment')
+    check((await page.locator('main').innerText()).includes(join(state.dataDir, 'stockinfo.db')),
+      'Umgebung nennt den Datenbankpfad der Instanz nicht')
+    await ctx.shot(page, 'environment')
+    page = await ctx.page('/#/settings?tab=links')
+    check(await page.getByRole('link', { name: 'Swagger UI (/docs)' }).count() === 1, 'Link zur Swagger UI fehlt')
+    await ctx.shot(page, 'links')
+    page = await ctx.page('/#/settings?tab=about')
+    const version = (await api(state.server, '/health')).body.version
+    check((await page.locator('body').innerText()).includes(version), `Über/Fußzeile nennt die Version ${version} nicht`)
+    await ctx.shot(page, 'about')
   })
 } finally {
   await browser.close()
