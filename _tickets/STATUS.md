@@ -26,11 +26,11 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `changes_requested`
-- `ticket`: `T-93-visuelle-gesamtpruefung.md`
-- `branch`: `t-93-visuelle-gesamtpruefung`
-- `handoff_commit`: `ce9673b`
-- `review_round`: `2`
+- `phase`: `claude_working`
+- `ticket`: `T-95-vertippte-isin-verstaendlich-melden.md`
+- `branch`: `t-95-vertippte-isin-verstaendlich-melden`
+- `handoff_commit`: `—`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
 - `owner`: `claude`
 - `updated_at`: `2026-10-02`
@@ -38,8 +38,18 @@ schaltet den Branch. Regel:
 - `last_reviewed_commit`: `ce9673b`
 - `last_reviewed_round`: `2`
 - `workstream`: `persistenz`
-- `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md`
-- `priority_ticket`: `T-93-visuelle-gesamtpruefung.md`
+- `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md`
+- `priority_ticket`: `T-95-vertippte-isin-verstaendlich-melden.md`
+
+**T-95 aktiv, T-93 pausiert · 2026-10-02.** Codex-Befund B5 aus T-93
+Runde 2 ist ein Produktfehler: Eine vertippte ISIN wird als Symbol ohne
+Börsenzusatz gemeldet. Folgeticket
+[T-95](30-doing/T-95-vertippte-isin-verstaendlich-melden.md), aktiviert
+wie T-94 (Mikes Regel: Folgetickets aus den Tests gehören in die Kette;
+Muster „T-94 vorziehen und T-93 danach abschließen“). Der Branch zweigt
+von `t-93-visuelle-gesamtpruefung` (`1c69db2`) ab und kommt nach der
+Freigabe dorthin zurück. Danach T-93 Runde 3 mit B5 (W2), B6 (W4) und
+Mikes Vorgabe „sichtbare Läufe auf dem Hauptmonitor“.
 
 **T-94 freigegeben, T-93 wieder aktiv · 2026-10-02.** T-94 (`8991a55`,
 Freigabe `a188046`) ist per Fast-Forward in `t-93-visuelle-gesamtpruefung`
