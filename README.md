@@ -109,8 +109,7 @@ splits and dividends. Both behaviors differ from the REST artifact; see the
 - **make** (drives setup and start/stop of the services)
 - optional **Docker** (to run the container)
 - **Node.js 24+ with npm** (`make setup` installs the dashboard packages;
-  `make visual-check` uses Node's built-in SQLite module; the backend and
-  prebuilt Docker image do not use Node.js on the host)
+  the backend and prebuilt Docker image do not use Node.js on the host)
 
 The project uses shared ecosystem helpers under `.libs/` (MakeLib, BashLib,
 ProjectTools). `make setup` links them via `scripts/setup-libs.sh`; it finds the
@@ -484,7 +483,6 @@ make test                       # backend, plugin API, example plugin and dashbo
 make test-backend               # backend only (pytest)
 cd dashboard && npm run test    # dashboard only (Vitest)
 make check                      # everything that works offline, plus Ruff and type checks
-make visual-check               # click through the app in Chrome (see below)
 ```
 
 The normal backend run includes tests marked `integration` that call real
@@ -498,28 +496,6 @@ tests:
 
 Backend tests use temporary databases. The test setup blocks connections to
 the working database; additional test databases belong under `tmp_path`.
-
-### Browser check
-
-`make visual-check` builds the dashboard, starts its own StockInfo on a free
-port with a temporary database and the offline example data from `examples/`,
-and clicks through the main features in a visible Chrome: adding, overview,
-details, price chart, manual values, refresh, delete, exchanges, analysis, FX,
-settings, backup and restore, migration of an old database, German and
-English, and a phone-width view. It never touches `data/` and makes no
-network requests.
-
-Each step prints `OK` or `FAIL` with the reason. The report and screenshots
-are written to `.tmp/visual-check/<timestamp>/`. Options:
-
-```bash
-make visual-check HEADLESS=1    # without a visible window
-make visual-check ONLY=W2,W5    # selected steps only (numbers as in the report)
-make visual-check ONLINE=1      # plus an online smoke test: adds one security via the real sources
-```
-
-It needs Google Chrome in `/Applications`; set `CHROME=/path/to/chrome`
-for another location.
 
 [↑ Contents](#contents)
 

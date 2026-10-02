@@ -1,13 +1,22 @@
-// Browser-Gesamtprüfung von StockInfo — `make visual-check`.
+// Browser-Gesamtprüfung von StockInfo — Werkzeug für die Agenten, kein
+// Make-Target (Mike, 2026-10-02: Einem Lauf kann kein Mensch folgen).
 //
 // Startet eine eigene Instanz mit temporärer Datenbank und den Offline-Daten
-// aus `examples/`, klickt die Hauptwege im sichtbaren Chrome durch und prüft
-// Inhalte, nicht Pixel. Jeder Weg nennt die Konsolen- und HTTP-Fehler, die er
-// erwartet; jeder andere lässt ihn scheitern. Ergebnis: eine Zeile je Weg,
-// `report.md` und Screenshots unter `.tmp/visual-check/<Zeitstempel>/`.
+// aus `examples/`, klickt die Hauptwege in Chrome durch und prüft Inhalte,
+// nicht Pixel. Jeder Weg nennt die Konsolen- und HTTP-Fehler, die er
+// erwartet; jeder andere lässt ihn scheitern. Die Arbeitsdatenbank `data/`
+// wird nie berührt, ins Netz geht keine Anfrage.
 //
-// Umgebungsvariablen: HEADLESS=1 (unsichtbar), ONLY=W2,W3 (Auswahl),
-// CHROME=<Pfad> (anderes Chrome).
+// Aufruf aus `dashboard/` (Node 24+, wegen `node:sqlite`):
+//
+//   node e2e/visual-check.mjs               # alle Wege, sichtbares Chrome
+//   HEADLESS=1 node e2e/visual-check.mjs    # ohne Fenster
+//   ONLY=W2,W5 node e2e/visual-check.mjs    # nur diese Wege (Nummern wie im Bericht)
+//   ONLINE=1 node e2e/visual-check.mjs      # dazu W17: ein Papier über die echten Quellen
+//   CHROME=<Pfad> node e2e/visual-check.mjs # Chrome an anderem Ort
+//
+// Ergebnis: eine Zeile `OK`/`FAIL` je Weg, `report.md` und Screenshots unter
+// `.tmp/visual-check/<Zeitstempel>/`. Exit-Code 0 nur, wenn alle Wege grün sind.
 import { spawn, spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'

@@ -160,13 +160,6 @@ check: test-plugin-api test-example test-dashboard ## Alle netzfreien Prüfungen
 	$(VENV)/bin/ruff check app tests scripts
 	cd dashboard && npx vue-tsc -b
 
-# Startet eine eigene Instanz mit temporärer Datenbank und Offline-Daten und
-# klickt die Hauptwege im sichtbaren Chrome durch. HEADLESS=1 ohne Fenster,
-# ONLY=W2,W5 nur einzelne Wege. Bericht und Bilder unter .tmp/visual-check/.
-.PHONY: visual-check
-visual-check: ## Browser-Gesamtprüfung aller Hauptwege (eigene Temp-Instanz, ohne Netz)  [HEADLESS=1] [ONLY=W2,W5]
-	cd dashboard && node e2e/visual-check.mjs
-
 .PHONY: test-backend
 test-backend: ## Backend-Tests (pytest)  [ARGS="-k name"]
 	$(PYTEST) -q $(ARGS)

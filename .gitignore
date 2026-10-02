@@ -2,7 +2,7 @@
 .env
 *.db
 data/
-# Ergebnisse von `make visual-check` (Bericht, Screenshots, Dashboard-Build).
+# Ergebnisse von `dashboard/e2e/visual-check.mjs` (Bericht, Screenshots, Dashboard-Build).
 .tmp/
 __pycache__/
 *.pyc

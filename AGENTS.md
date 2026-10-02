@@ -212,4 +212,10 @@ temporärer Datenbank und lokalen Testkursen. Start und Stop sind in seinem
 Modul-Docstring und in StockPortfolios `AGENTS.md` beschrieben. Dafür nie die
 Arbeitsdatenbank verwenden.
 
+Die Browser-Gesamtprüfung von StockInfo ist `dashboard/e2e/visual-check.mjs`.
+Sie startet eine eigene Instanz mit temporärer Datenbank und Offline-Daten
+und prüft die Hauptwege in Chrome. Sie ist ein Werkzeug für die Agenten,
+etwa nach großen Umbauten, und hat deshalb kein Make-Target und keinen
+README-Abschnitt. Der Aufruf steht im Kopfkommentar des Skripts.
+
 [↑ Übersicht](#übersicht)
