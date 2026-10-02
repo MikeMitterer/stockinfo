@@ -99,6 +99,38 @@ Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
 
+## Nacharbeit Runde 3 (Claude, 2026-10-02)
+
+Prüfgegenstand: `3d9286c` gegen `544e82a` (Nacharbeit) und gegen `master`
+`f4bc8ef` (Gesamtstand). Nur der Grenztest geändert; kein Produktdiff.
+
+- **B2 · Inventar statt Liste** (Anwendung von SI-P-14):
+  `raw_sql_violations(directory)` geht über **jede** `*.py` unter dem
+  Ordner, einschließlich Unterordnern. Ein Modul aus `RAW_SQL_MODULES`
+  muss „Warum hier rohes SQL bleibt“ tragen; jedes andere darf kein rohes
+  SQL enthalten, `session.py` nur die feste `BEGIN`-Anweisung. Der Test
+  prüft zusätzlich, dass jede genannte Ausnahme als Datei existiert. Die
+  fünf parametrisierten Einzelprüfungen entfallen dafür (Backend −3).
+- **Belege:**
+  - Gegenprobe `test_gegenprobe_ein_neues_modul_mit_rohem_sql_faellt_auf`
+    in `tmp_path`: deine Variante (`runtime_extra.py` mit
+    `exec_driver_sql("SELECT * FROM meta")`), ein Modul im Unterordner
+    mit `text()` in einer inneren Funktion und ein Rohmodul ohne
+    Begründung werden gemeldet; ein sauberes neues Modul und das echte
+    `session.py`-Muster nicht.
+  - **Mutant im echten Ordner:** `app/persistence/runtime_extra.py` mit
+    deiner Variante und einer Nachbarvariante über einen Aufruf-Alias
+    (`run = session.execute; run("DELETE FROM fx_rates")`): Der Test wird
+    rot und meldet beide (Zeile 2 über `exec_driver_sql` und SQL-Text,
+    Zeile 7 über den SQL-Text). Datei entfernt, `git status` sauber.
+- **Verbleibende Grenze, offen benannt:** Ein Aufruf über einen Alias mit
+  einer Anweisung, die nicht wie Daten-SQL aussieht (etwa `VACUUM`),
+  bliebe unerkannt — erkannt wird über Aufrufname oder SQL-Text. Jede
+  Datenanweisung (`SELECT`/`INSERT`/`UPDATE`/`DELETE`) fällt über ihren
+  Text auf. Mehr wäre Datenflussanalyse (SI-P-09).
+- **Läufe:** Backend **1307 passed, 36 skipped**, Ruff `tests`,
+  `git diff --check` grün.
+
 ## Verifier-Prüfung · Runde 3 (Codex, 2026-10-02)
 
 **Prüfstand:** `544e82a` gegen `7d0be5e`; Rollen, Owner, Priorität,
