@@ -942,3 +942,17 @@ def test_ein_refresh_loescht_den_namen_nicht(repo: QuoteRepository) -> None:
     updated = repo.get_instrument_by_isin("IE00B4L5Y983")
     assert updated is not None
     assert updated["name"] == "ISHARES CORE MSCI WORLD UCITS ETF"
+
+
+def test_die_waehrungspaare_kommen_vollstaendig_und_sortiert(repo: QuoteRepository) -> None:
+    """T-97 fragt jeden gespeicherten Kurs ab; dafür braucht es alle Paare."""
+    stamp = "2026-10-02T12:00:00+00:00"
+    repo.save_fx_rate("USD", "EUR", 0.92, stamp, stamp)
+    repo.save_fx_rate("CAD", "EUR", 0.64, stamp, stamp)
+    repo.save_fx_rate("CAD", "CHF", 0.58, stamp, stamp)
+
+    assert repo.list_fx_pairs() == [("CAD", "CHF"), ("CAD", "EUR"), ("USD", "EUR")]
+
+
+def test_ohne_wechselkurse_gibt_es_keine_paare(repo: QuoteRepository) -> None:
+    assert repo.list_fx_pairs() == []

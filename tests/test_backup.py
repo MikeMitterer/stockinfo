@@ -25,7 +25,9 @@ from fastapi.testclient import TestClient
 from app.config import get_settings
 from app.container import get_backup_service, get_sources_config
 from app.main import app
+from app.persistence.backup_store import DatabaseInUseError, snapshot_read_only, table_contents
 from app.persistence.db import SCHEMA_VERSION, get_connection, init_db
+from app.persistence.repository import QuoteRepository
 from app.plugins.yfinance_metadata import YFinanceMetadataPlugin
 from app.services.backup import (
     KEEP_BACKUPS,
@@ -776,3 +778,52 @@ def test_der_fehlerzustand_ist_ueber_backups_sichtbar(
         assert "Zielmedium voll" in body["restore_error"]
     assert not (tmp_path / "stockinfo.db.incoming").exists()
     assert seen[0]["backups"] == seen[1]["backups"], "der zweite Start hat es erneut versucht"
+
+
+# ─── T-97 · Sicherung eines fremden Bestands ─────────────────────────────────
+
+
+def _filled_database(tmp_path: Path) -> Path:
+    """Eine Datenbank mit einem Wechselkurs, ohne offene Verbindung danach."""
+    database = tmp_path / "bestand" / "stockinfo.db"
+    database.parent.mkdir()
+    init_db(str(database))
+    stamp = "2026-10-02T12:00:00+00:00"
+    QuoteRepository(str(database)).save_fx_rate("CAD", "EUR", 0.64, stamp, stamp)
+    return database
+
+
+def test_der_snapshot_legt_neben_dem_original_nichts_an(tmp_path: Path) -> None:
+    """`mode=ro` legte `-wal` und `-shm` neben den Arbeitsbestand (gemessen in T-97)."""
+    original = _filled_database(tmp_path)
+    before = sorted(path.name for path in original.parent.iterdir())
+
+    snapshot_read_only(original, tmp_path / "snapshot.db")
+
+    assert sorted(path.name for path in original.parent.iterdir()) == before
+    assert ("CAD", "EUR") in {row[:2] for row in table_contents(tmp_path / "snapshot.db")["fx_rates"]}
+
+
+def test_eine_volle_wal_verhindert_den_snapshot(tmp_path: Path) -> None:
+    """Mit `immutable=1` bliebe der Inhalt einer WAL ungelesen — also kein Snapshot."""
+    original = _filled_database(tmp_path)
+    original.with_name("stockinfo.db-wal").write_bytes(b"x")
+
+    with pytest.raises(DatabaseInUseError):
+        snapshot_read_only(original, tmp_path / "snapshot.db")
+    assert not (tmp_path / "snapshot.db").exists()
+
+
+def test_der_tabelleninhalt_zeigt_jede_aenderung(tmp_path: Path) -> None:
+    """Der Schreibweg-Vergleich in T-97 erkennt eine Änderung nur, wenn sie hier ankommt."""
+    database = _filled_database(tmp_path)
+    before = table_contents(database)
+    stamp = "2026-10-02T13:00:00+00:00"
+    QuoteRepository(str(database)).save_fx_rate("CAD", "EUR", 0.65, stamp, stamp)
+
+    after = table_contents(database)
+
+    assert before["fx_rates"] != after["fx_rates"]
+    assert {name: rows for name, rows in before.items() if name != "fx_rates"} == {
+        name: rows for name, rows in after.items() if name != "fx_rates"
+    }

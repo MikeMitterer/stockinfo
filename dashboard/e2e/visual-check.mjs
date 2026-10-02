@@ -38,6 +38,12 @@ const OUT = process.env.VISUAL_OUT ?? join(ROOT, '.tmp', 'visual-check', STAMP)
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const ONLY = process.env.ONLY ? new Set(process.env.ONLY.split(',')) : null
 const HEADLESS = process.env.HEADLESS === '1'
+// W17 ist ein sichtbarer Pflichtweg (T-97): ohne Fenster kein Lauf, und das
+// vor dem Start von Server und Chrome.
+if (process.env.DB_COPY && HEADLESS) {
+  console.log('FAIL W17 Arbeitsbestand — W17 braucht ein sichtbares Fenster, HEADLESS=1 ist nicht erlaubt')
+  process.exit(1)
+}
 const WINDOW_X = 100
 const VIEWPORT = { width: 1512, height: 860 }
 
