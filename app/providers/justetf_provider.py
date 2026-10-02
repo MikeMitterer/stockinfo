@@ -186,7 +186,7 @@ class JustEtfProvider:
             provider=overview.get("fund_provider"),
             replication=self._as_replication(overview.get("replication")),
             # justETF liefert Millionen („EUR 22,638 m" → 22638.0); der Katalog
-            # führt die Fondsgröße ebenfalls in Mio. EUR.
+            # führt die Fondsgröße ebenfalls in Millionen.
             fund_size=self._as_float(overview.get("fund_size_eur")),
             fund_currency=overview.get("fund_currency"),
             fund_domicile=overview.get("fund_domicile"),

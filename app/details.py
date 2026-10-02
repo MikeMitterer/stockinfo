@@ -15,7 +15,8 @@ from app.detail_models import DetailDefinition, DetailInput, DetailScope, Detail
 CANONICAL = {
     'ter': ('number', 'percent', 0, 5),
     'volatility': ('number', 'percent', 0, 500),
-    # In Mio. EUR wie bei justETF; 2.000.000 entspricht 2 Billionen.
+    # In Millionen; die Währung trägt jeder Wert selbst (justETF: EUR).
+    # 2.000.000 entspricht 2 Billionen.
     'fund_size': ('number', 'millions', 0, 2_000_000),
     'accumulating': ('boolean', None, None, None),
     'provider': ('text', None, None, None),

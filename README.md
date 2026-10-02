@@ -85,8 +85,9 @@ and the [plugin author guide](docs/plugin-authors.md).
 **ETFs outside Europe.** justETF is a database of European UCITS funds, so a US or
 Canadian ETF finds nothing there. For those, Yahoo supplies the fund provider —
 and deliberately nothing else: it reports the expense ratio in two fields with two
-different units (`0.03` vs `0.0003` for the same fund) and the fund size in local
-currency, while this app stores millions of EUR. A wrong number would be worse than
+different units (`0.03` vs `0.0003` for the same fund) and the fund size as an
+absolute amount, while this app keeps fund sizes in millions (in EUR from justETF,
+in your chosen currency when you enter one by hand). A wrong number would be worse than
 none, because a value from a source *hides* one you entered by hand instead of
 leaving the gap open. So TER, fund size and domicile stay empty for those funds —
 enter them yourself and they stay put.
