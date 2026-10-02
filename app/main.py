@@ -41,7 +41,7 @@ from app.models import (
     ReadinessResponse,
 )
 from app.persistence.data_versions import stamp_versions
-from app.persistence.db import init_db
+from app.persistence.db import init_db, is_fresh_database
 from app.persistence.plugin_migration import migrate_plugins
 from app.persistence.repository import (
     REASON_IDENTITY_CONFLICT,
@@ -103,8 +103,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     restored = apply_pending(settings.database_path, get_sources_config())
     if restored:
         logger.info("restore_completed", backup=restored)
-    database_path = Path(settings.database_path)
-    fresh_database = not database_path.exists() or database_path.stat().st_size == 0
+    fresh_database = is_fresh_database(settings.database_path)
 
     # **Jede Rolle einmal bauen, bevor jemand fragt.** Sonst zeigt `/sources`
     # einen spekulativen Zustand, der sich nach dem ersten Fachrequest ändert.

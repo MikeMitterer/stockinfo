@@ -761,7 +761,7 @@ def test_der_fehlerzustand_ist_ueber_backups_sichtbar(
     def _boom(*args: object, **kwargs: object) -> None:
         raise OSError("Zielmedium voll")
 
-    monkeypatch.setattr("app.services.backup.shutil.copy2", _boom)
+    monkeypatch.setattr("app.persistence.backup_store.shutil.copy2", _boom)
 
     seen = []
     for _ in range(2):

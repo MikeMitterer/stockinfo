@@ -14,7 +14,6 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import tempfile
 import threading
 from dataclasses import dataclass
@@ -27,7 +26,9 @@ from app.models import BackupReason, SourceDifference
 from app.persistence.backup_store import (
     UnreadableDatabaseError,
     copy_database,
+    database_exists,
     read_stamp,
+    replace_database,
     write_stamp_if_missing,
 )
 from app.persistence.data_versions import (
@@ -369,17 +370,13 @@ def apply_pending(database_path: str, config: SourcesConfig) -> str | None:
     2. Erneut prüfen — die Prüfung beim REST-Aufruf ist keine dauerhafte Zusage.
     3. **Jetzt** den aktuellen Stand sichern. Zwischen Klick und Neustart wird
        weitergeschrieben; eine Sicherung vom Klick fehlten genau diese Zeilen.
-    4. Über eine temporäre Zieldatei und atomaren Austausch tauschen; die
-       Sicherung wird kopiert, nicht verbraucht.
-    5. `-wal`/`-shm` entfernen — sie gehören zur alten Datei. Bliebe eines
-       liegen, läse SQLite den neuen Bestand mit dem Journal des vorigen.
-    6. Erst danach die Absicht löschen.
+    4. Die Datei tauschen (`replace_database`: atomar, Journale entfernt).
+    5. Erst danach die Absicht löschen.
 
     Ein Fehler bricht den Start **nicht** ab und lässt die Absicht liegen: Die
     Datenbank ist unangetastet, und der Wunsch verschwindet nicht spurlos.
     """
-    database = Path(database_path)
-    pending = database.parent / PENDING_FILENAME
+    pending = Path(database_path).parent / PENDING_FILENAME
     if not pending.is_file():
         return None
 
@@ -394,20 +391,15 @@ def apply_pending(database_path: str, config: SourcesConfig) -> str | None:
     service = BackupService(database_path, config)
     name = str(intent.get("backup", ""))
     force = bool(intent.get("force", False))
-    temporary = database.with_name(database.name + ".incoming")
     try:
         source = service.resolve(service.check(name, force=force).name)
 
-        if database.is_file():
+        if database_exists(database_path):
             service.create(reason="pre-restore", protect=source.name)
 
-        shutil.copy2(source, temporary)
-        os.replace(temporary, database)
-        for suffix in ("-wal", "-shm"):
-            database.with_name(database.name + suffix).unlink(missing_ok=True)
+        replace_database(database_path, source)
     except Exception as exc:  # noqa: BLE001 — ein Start bricht daran nicht ab
         logger.error("restore_failed", name=name, error=str(exc))
-        temporary.unlink(missing_ok=True)
         _write_atomic(
             pending,
             json.dumps({**intent, "failed": f"{type(exc).__name__}: {exc}"}, indent=2),
@@ -441,11 +433,10 @@ def restore_state(database_path: str) -> tuple[str | None, str]:
 
 def stamped_fingerprint(database_path: str | Path) -> str | None:
     """Die Kennung, unter der die **vorhandene** Datenbank entstanden ist."""
-    path = Path(database_path)
-    if not path.is_file():
+    if not database_exists(database_path):
         return None
     try:
-        return _read_stamp(path)[0]
+        return _read_stamp(Path(database_path))[0]
     except UnreadableDatabaseError:
         return None
 

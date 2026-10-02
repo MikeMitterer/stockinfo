@@ -174,6 +174,18 @@ def get_connection(database_path: str) -> sqlite3.Connection:
     return connection
 
 
+def is_fresh_database(database_path: str | Path) -> bool:
+    """Ob die Datenbank neu ist: Die Datei fehlt oder ist leer.
+
+    Vor `init_db` fragen — danach existiert die Datei immer.
+
+    Args:
+        database_path: Pfad zur SQLite-Datei.
+    """
+    path = Path(database_path)
+    return not path.exists() or path.stat().st_size == 0
+
+
 def init_db(database_path: str) -> bool:
     """Erstellt das Schema und sagt, ob ein Identitäts-Umzug **aussteht**.
 
