@@ -108,7 +108,7 @@ function stopServer(server) {
   })
 }
 
-/** Zählt in der Datenbank der Instanz — nur lesend. */
+/** Zählt in der Datenbank der Instanz — nur lesend (`node:sqlite`, daher Node 24+). */
 function readOnlyCount(dataDir, sql) {
   const database = new DatabaseSync(join(dataDir, 'stockinfo.db'), { readOnly: true })
   try {
@@ -141,6 +141,7 @@ async function way(id, title, expect, body) {
   const httpErrors = []
   const consoleErrors = []
   const externalRequests = []
+  const pageErrors = []
   const contexts = []
   // Jeder Kontext meldet seine Fehler in dieselben Listen; Sprache und
   // Fensterbreite lassen sich je Seite wählen (W15, W16).
@@ -157,6 +158,9 @@ async function way(id, title, expect, body) {
     created.on('console', (message) => {
       if (message.type() === 'error') consoleErrors.push(message.text())
     })
+    // Eine unbehandelte Ausnahme der Seite ist kein Konsolenereignis — ohne
+    // diesen Zweig bliebe eine abgestürzte Funktion unsichtbar.
+    created.on('weberror', (failure) => pageErrors.push(String(failure.error()?.message ?? failure.error())))
     contexts.push(created)
     return created
   }
@@ -199,6 +203,7 @@ async function way(id, title, expect, body) {
       // die HTTP-Prüfung oben hat sie schon eingeordnet.
       && !/Failed to load resource: the server responded with a status of/.test(text))
     check(unexpectedConsole.length === 0, `unerwartete Konsolenfehler: ${JSON.stringify(unexpectedConsole)}`)
+    check(pageErrors.length === 0, `unbehandelte Seitenfehler: ${JSON.stringify(pageErrors)}`)
     check(externalRequests.length === 0, `Anfragen ins Netz: ${JSON.stringify([...new Set(externalRequests)].slice(0, 5))}`)
   } catch (error) {
     // Bei Playwright-Fehlern die Zeile mit dem gesuchten Element mitnehmen —
@@ -235,13 +240,13 @@ async function paper(key) {
 }
 
 // Die fünf Papiere der Offline-Vorlage, mit der Eingabe, über die sie
-// aufgenommen werden.
+// aufgenommen werden, und dem Kurs aus der Datei (die Anleihe: letzter Schlusskurs).
 const PAPERS = [
-  { input: 'IE00B4L5Y983', symbol: 'EUNL.DE', kind: 'listed', type: 'etf' },
-  { input: 'US0378331005', symbol: 'APC.DE', kind: 'listed', type: 'stock' },
-  { input: 'BTC-EUR', symbol: 'BTC-EUR', kind: 'pair', type: 'crypto' },
-  { input: 'DE0001102531', symbol: 'DE0001102531', kind: 'isin_only', type: 'bond' },
-  { input: 'DE0009848119', symbol: 'DE0009848119', kind: 'isin_only', type: 'fund' },
+  { input: 'IE00B4L5Y983', symbol: 'EUNL.DE', kind: 'listed', type: 'etf', price: 128.21, shown: '128.21' },
+  { input: 'US0378331005', symbol: 'APC.DE', kind: 'listed', type: 'stock', price: 277.4, shown: '277.40' },
+  { input: 'BTC-EUR', symbol: 'BTC-EUR', kind: 'pair', type: 'crypto', price: 94500, shown: '94,500.00' },
+  { input: 'DE0001102531', symbol: 'DE0001102531', kind: 'isin_only', type: 'bond', price: 99.42, shown: '99.42' },
+  { input: 'DE0009848119', symbol: 'DE0009848119', kind: 'isin_only', type: 'fund', price: 142.5, shown: '142.50' },
 ]
 
 // ─── Ablauf ───────────────────────────────────────────────────────────────
@@ -251,13 +256,17 @@ console.log(`Ausgabe: ${OUT}`)
 const dist = buildDashboard()
 const state = { dataDir: offlineDataDir(), server: null }
 state.server = await startServer(state.dataDir, dist)
-const browser = await chromium.launch({
-  executablePath: CHROME,
-  headless: process.env.HEADLESS === '1',
-  args: ['--no-first-run'],
-})
+// Erst im geschützten Bereich starten: Scheitert Chrome, muss der eigene
+// Server trotzdem beendet und der Bericht geschrieben werden.
+let browser = null
 
 try {
+  browser = await chromium.launch({
+    executablePath: CHROME,
+    headless: process.env.HEADLESS === '1',
+    args: ['--no-first-run'],
+  })
+
   await way('W1', 'Start', {}, async (ctx) => {
     check((await api(state.server, '/health')).status === 200, '/health nicht 200')
     check((await api(state.server, '/ready')).status === 200, '/ready nicht 200')
@@ -284,15 +293,24 @@ try {
       const stored = listed.find((item) => item.symbol === paper.symbol)
       check(stored?.identity.kind === paper.kind, `${paper.symbol}: Form ${stored?.identity.kind} statt ${paper.kind}`)
       check(stored?.type === paper.type, `${paper.symbol}: Gattung ${stored?.type} statt ${paper.type}`)
+      check(stored?.latest_price === paper.price, `${paper.symbol}: Kurs ${stored?.latest_price} statt ${paper.price}`)
+      check((await row(page, paper.symbol).innerText()).includes(paper.shown), `${paper.symbol}: Zeile zeigt nicht ${paper.shown}`)
     }
     await ctx.shot(page, 'all-added')
-    await input.fill('XX0000000000')
-    await page.getByRole('button', { name: 'Add', exact: true }).click()
-    await page.waitForTimeout(1500)
-    const message = await page.locator('body').innerText()
-    check(message.includes('None of the configured sources found a security for XX0000000000'),
-      'keine verständliche Meldung für ein unbekanntes Papier')
-    await ctx.shot(page, 'unknown')
+    // Zwei Fehlversuche: ein unbekanntes Papier und eine verschriebene ISIN.
+    // Die Aufnahme hält Letztere für ein Symbol ohne Börsenendung.
+    const failures = [
+      ['XX0000000000', 'None of the configured sources found a security for XX0000000000', 'unknown'],
+      ['DE000110253X', 'The symbol has no exchange suffix', 'malformed'],
+    ]
+    for (const [value, expected, name] of failures) {
+      await input.fill(value)
+      await page.getByRole('button', { name: 'Add', exact: true }).click()
+      await page.waitForTimeout(1500)
+      check((await page.locator('body').innerText()).includes(expected), `${value}: keine verständliche Meldung („${expected}“)`)
+      await ctx.shot(page, name)
+      for (const close of await page.getByRole('button', { name: /close/i }).all()) await close.click().catch(() => {})
+    }
     check(await page.locator('tbody tr').count() === PAPERS.length, 'Fehlversuch hat die Übersicht verändert')
   })
 
@@ -314,16 +332,29 @@ try {
     const descending = await first()
     check(ascending === 'APC.DE' && descending === 'EUNL.DE',
       `Reihenfolge nach Symbol stimmt nicht (auf ${ascending}, ab ${descending})`)
+    // Eine zweite Spalte: Kurs absteigend — Bitcoin vorn, die Anleihe hinten.
+    const price = page.locator('th.sortable', { hasText: 'Price' })
+    await price.click({ position: { x: 6, y: 8 } })
+    await settle(page)
+    if (await price.getAttribute('aria-sort') !== 'descending') {
+      await price.click({ position: { x: 6, y: 8 } })
+      await settle(page)
+    }
+    check(await price.getAttribute('aria-sort') === 'descending', 'Kursspalte nicht absteigend sortiert')
+    const prices = await page.locator('tbody tr').allInnerTexts()
+    check(prices[0].includes('Bitcoin') && prices.at(-1).includes('Bundesrepublik'),
+      `Reihenfolge nach Kurs stimmt nicht (${prices.map((text) => text.split('\n')[0]).join(', ')})`)
     await ctx.shot(page, 'sorted')
   })
 
   await way('W4', 'Detailbereich', {}, async (ctx) => {
     const page = await ctx.page('/')
+    // Je Identitätsform, was die Quelle für diese Gattung deklariert.
     const expectations = {
       'EUNL.DE': ['iShares', 'Ireland', '0.2 %', 'yaml-file'],
-      'BTC-EUR': [],
-      DE0001102531: [],
-      DE0009848119: ['Fund provider'],
+      'BTC-EUR': ['Volatility (1y)'],
+      DE0001102531: ['No detail fields are declared for this instrument.'],
+      DE0009848119: ['Total expense ratio (TER)', 'Fund provider', 'Fund domicile'],
     }
     for (const [key, texts] of Object.entries(expectations)) {
       await row(page, key).locator('td.caret-col button').click()
@@ -332,9 +363,7 @@ try {
       check(await detail.isVisible(), `${key}: Detailbereich öffnet nicht`)
       const text = await detail.innerText()
       for (const expected of texts) check(text.includes(expected), `${key}: „${expected}“ fehlt im Detailbereich`)
-      if (text.includes('Source as of')) {
-        check(/[A-Z][a-z]{2} \d{1,2}, \d{4}/.test(text), `${key}: Datum nicht im englischen Format`)
-      }
+      check(/Source as of: [A-Z][a-z]{2} \d{1,2}, \d{4}/.test(text), `${key}: kein Stand der Quelle im englischen Datumsformat`)
       await ctx.shot(page, key.replace(/[^A-Za-z0-9]/g, ''))
       await row(page, key).locator('td.caret-col button').click()
       await settle(page)
@@ -699,8 +728,13 @@ try {
       }
     })
   }
+} catch (error) {
+  // Ein Fehler außerhalb eines Wegs — etwa Chrome nicht gefunden.
+  const failure = `${error.name}: ${String(error.message).split('\n')[0]}`
+  results.push({ id: '—', title: 'Ablauf', ok: false, failure, seconds: '0.0', shots: [] })
+  console.log(`FAIL Ablauf — ${failure}`)
 } finally {
-  await browser.close()
+  if (browser) await browser.close()
   await stopServer(state.server)
 }
 
