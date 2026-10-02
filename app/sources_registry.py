@@ -72,7 +72,13 @@ class SourceSpec:
 
     name: str
     roles: frozenset[str]
-    build: Callable[[str, dict, object], object]
+    build: Callable[[str, dict, Settings], object]
+    """Bauanweisung: Rolle, eigener Konfigurationsabschnitt, Einstellungen.
+
+    Gebaut wird nur mit vorhandenen `Settings` (`_evaluate` baut ohne sie
+    nicht). Ein Builder darf auch mehr annehmen, etwa `object` wie der
+    Plugin-Builder in `plugin_loader.spec_from_class`.
+    """
     cost: str = "free"
     loaded: bool = False
     """Kam diese Quelle von außen — Entry-Point oder Plugin-Verzeichnis?
