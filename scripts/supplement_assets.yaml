@@ -1,0 +1,71 @@
+# Ergänzung für `compare_database_versions.py` (T-97).
+#
+# Hat der Arbeitsbestand weniger als 15 Papiere, nimmt der **alte** Stand
+# diese Papiere über `POST /instruments/intake` in den gemeinsamen Snapshot
+# auf, bevor er in die Vorher- und die Nachher-Kopie geteilt wird. Danach
+# liest keine Instanz mehr aus dieser Datei; die Erwartungen des Browserwegs
+# stammen aus den Antworten des alten Stands.
+#
+# Ausgewählt nach Vielfalt: Börsen und Währungen außerhalb von Xetra/EUR
+# (NASDAQ/USD, SIX/CHF, LSE/GBP), ein zweites Paar, ein ETF und ein Fonds
+# mit Details, ein ETC. Kurse sind Beispielwerte, keine Marktdaten.
+version: 1
+
+instruments:
+  - id: nvidia-nasdaq
+    identity: {kind: listed, isin: US67066G1040, ticker: NVDA, mic: XNAS}
+    name: NVIDIA Corp.
+    instrument_type: stock
+    price: {value: 178.50, currency: USD, as_of: "2026-09-30T22:00:00+02:00"}
+
+  - id: nestle-six
+    identity: {kind: listed, isin: CH0038863350, ticker: NESN, mic: XSWX}
+    name: Nestlé S.A.
+    instrument_type: stock
+    price: {value: 86.40, currency: CHF, as_of: "2026-09-30T17:30:00+02:00"}
+
+  - id: vodafone-lse
+    identity: {kind: listed, isin: GB00BH4HKS39, ticker: VOD, mic: XLON}
+    name: Vodafone Group plc
+    instrument_type: stock
+    # In GBP: Die YAML-Quelle nimmt nur ISO-4217-Codes, Pence (`GBp`) nicht.
+    price: {value: 0.7230, currency: GBP, as_of: "2026-09-30T17:30:00+01:00"}
+
+  - id: ethereum-usd
+    identity: {kind: pair, base: ETH, quote_currency: USD}
+    name: Ethereum
+    instrument_type: crypto
+    price: {value: 3450.00, currency: USD, as_of: "2026-09-30T23:00:00+02:00"}
+
+  - id: all-world-etf
+    identity: {kind: listed, isin: IE00BK5BQT80, ticker: VWCE, mic: XETR}
+    name: Vanguard FTSE All-World UCITS ETF
+    instrument_type: etf
+    price: {value: 132.10, currency: EUR, as_of: "2026-09-30T17:30:00+02:00"}
+    metadata:
+      ter_bps: 22
+      provider: Vanguard
+      fund_domicile: Ireland
+    history:
+      currency: EUR
+      closes:
+        - {date: "2026-09-28", value: 131.20}
+        - {date: "2026-09-29", value: 131.75}
+        - {date: "2026-09-30", value: 132.10}
+
+  - id: mixed-fund
+    identity: {kind: isin_only, isin: FR0010135103}
+    name: Carmignac Patrimoine A EUR Acc
+    instrument_type: fund
+    price: {value: 712.30, currency: EUR, as_of: "2026-09-30T17:30:00+02:00"}
+    metadata:
+      provider: Carmignac
+      fund_domicile: France
+
+  - id: gold-etc
+    identity: {kind: listed, isin: DE000A0S9GB0, ticker: 4GLD, mic: XETR}
+    name: Xetra-Gold
+    instrument_type: etc
+    price: {value: 102.50, currency: EUR, as_of: "2026-09-30T17:30:00+02:00"}
+
+fx_rates: []

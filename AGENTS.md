@@ -230,6 +230,14 @@ Arbeitsdatenbank `data/` berührt es nie.
   Hauptmonitor, links bei x = 100 px, weil dort Mikes Dock liegt (Mike,
   2026-10-02). `HEADLESS=1` bleibt für Läufe ohne Fenster.
 
+**Nach Umbauten an der Datenbank:** `scripts/compare_database_versions.py`
+vergleicht die API eines alten und des aktuellen Stands auf je einer Kopie des
+Arbeitsbestands und startet danach W17 „Arbeitsbestand“ sichtbar auf einer
+weiteren Kopie (T-97). Das Original öffnet es nur lesend und bricht ab, wenn
+es sich ändert oder die App noch läuft; alles andere liegt unter `.tmp/t97/`
+und wird gelöscht. Aufruf und Grenzen stehen im Modul-Docstring. Neue
+beauftragte Unterschiede kommen mit Ticket in `EXPECTED_DIFFERENCES`.
+
 Für eine Browserprüfung mit beiden Apps gibt es in StockPortfolio
 `scripts/stockinfo-test-server.py`. Es startet die echte StockInfo-API mit
 temporärer Datenbank und lokalen Testkursen. Start und Stop sind in seinem
