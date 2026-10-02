@@ -138,20 +138,28 @@ const results = []
  */
 async function way(id, title, expect, body) {
   if (ONLY && !ONLY.has(id)) return
-  const context = await browser.newContext({ viewport: VIEWPORT, colorScheme: 'dark', locale: 'en-US' })
   const httpErrors = []
   const consoleErrors = []
-  context.on('response', (response) => {
-    if (response.status() >= 400) httpErrors.push({ status: response.status(), url: response.url() })
-  })
-  context.on('console', (message) => {
-    if (message.type() === 'error') consoleErrors.push(message.text())
-  })
+  const contexts = []
+  // Jeder Kontext meldet seine Fehler in dieselben Listen; Sprache und
+  // Fensterbreite lassen sich je Seite wählen (W15, W16).
+  const newContext = async ({ locale = 'en-US', viewport = VIEWPORT } = {}) => {
+    const created = await browser.newContext({ viewport, colorScheme: 'dark', locale })
+    created.on('response', (response) => {
+      if (response.status() >= 400) httpErrors.push({ status: response.status(), url: response.url() })
+    })
+    created.on('console', (message) => {
+      if (message.type() === 'error') consoleErrors.push(message.text())
+    })
+    contexts.push(created)
+    return created
+  }
+  const context = await newContext()
   const shots = []
   const ctx = {
     context,
-    async page(path = '/') {
-      const page = await context.newPage()
+    async page(path = '/', options = null) {
+      const page = await (options ? await newContext(options) : context).newPage()
       await page.goto(state.server.base + path)
       await settle(page)
       return page
@@ -192,12 +200,12 @@ async function way(id, title, expect, body) {
     const target = lines.find((line) => line.includes('waiting for'))?.trim()
     failure = error instanceof CheckFailed ? error.message : `${error.name}: ${lines[0]}${target ? ` (${target})` : ''}`
     // Was im Moment des Scheiterns zu sehen war — sonst bleibt nur der Text.
-    for (const [index, open] of context.pages().entries()) {
+    for (const [index, open] of contexts.flatMap((each) => each.pages()).entries()) {
       const file = `${id}-failure-${index + 1}.png`
       await open.screenshot({ path: join(OUT, file) }).then(() => shots.push(file), () => {})
     }
   } finally {
-    await context.close()
+    for (const each of contexts) await each.close()
   }
   const seconds = ((Date.now() - started) / 1000).toFixed(1)
   results.push({ id, title, ok: !failure, failure, seconds, shots })
@@ -547,6 +555,117 @@ try {
     const version = (await api(state.server, '/health')).body.version
     check((await page.locator('body').innerText()).includes(version), `Über/Fußzeile nennt die Version ${version} nicht`)
     await ctx.shot(page, 'about')
+  })
+
+  await way('W13', 'Sicherung', {}, async (ctx) => {
+    let page = await ctx.page('/#/settings?tab=backups')
+    await page.getByRole('button', { name: 'Back up now' }).click()
+    await settle(page)
+    check(await page.locator('.backups__table tbody tr').count() === 1, 'Sicherung erscheint nicht in der Liste')
+    await page.getByRole('button', { name: 'Restore' }).first().click()
+    await page.waitForTimeout(400)
+    await ctx.shot(page, 'confirm')
+    await page.getByRole('button', { name: 'Schedule' }).click()
+    await settle(page)
+    check((await page.locator('.backups__state--pending').innerText()).includes('restart is pending'),
+      'vorgemerkte Wiederherstellung wird nicht angekündigt')
+    await ctx.shot(page, 'pending')
+    // Nach der Sicherung ändern: Dieses Papier muss nach dem Neustart zurück sein.
+    const before = (await api(state.server, '/instruments')).body.map((item) => item.symbol).sort()
+    check((await api(state.server, '/instruments/by-symbol/BTC-EUR', { method: 'DELETE' })).status === 204,
+      'Papier ließ sich nicht löschen')
+    await page.close()
+    await stopServer(state.server)
+    state.server = await startServer(state.dataDir, dist)
+    check(state.server.lines.join('').includes('restore_completed'), 'Server meldet keine abgeschlossene Wiederherstellung')
+    const after = (await api(state.server, '/instruments')).body.map((item) => item.symbol).sort()
+    check(JSON.stringify(after) === JSON.stringify(before), `Stand nach Wiederherstellung ${after} statt ${before}`)
+    page = await ctx.page('/#/settings?tab=backups')
+    check(await page.locator('.backups__table tbody tr').count() === 2, 'Vorabsicherung vor dem Einspielen fehlt')
+    check(await page.locator('.backups__state--pending').count() === 0, 'Hinweis auf Neustart bleibt stehen')
+    await ctx.shot(page, 'restored')
+  })
+
+  await way('W14', 'Migration', {
+    // Solange der Umzug aussteht, ist die App absichtlich nicht bereit.
+    http: [{ status: 503, url: '/ready' }],
+  }, async (ctx) => {
+    const legacyDir = offlineDataDir()
+    const made = spawnSync(join(ROOT, '.venv', 'bin', 'python'),
+      [join(ROOT, 'scripts', 'make_legacy_database.py'), join(legacyDir, 'stockinfo.db')], { cwd: ROOT })
+    check(made.status === 0, `Altdatenbank nicht angelegt: ${made.stderr}`)
+    const legacy = await startServer(legacyDir, dist)
+    const main = state.server
+    state.server = legacy
+    try {
+      const preview = (await api(legacy, '/migration')).body
+      check(preview.pending === true && preview.migrating === 2 && preview.rejected?.[0]?.symbol === 'XYZ',
+        `Vorschau stimmt nicht: ${JSON.stringify(preview).slice(0, 160)}`)
+      const page = await ctx.page('/')
+      const gate = await page.locator('body').innerText()
+      check(gate.includes('The instruments need to be migrated'), 'Hinweis auf den Umzug fehlt')
+      check(gate.includes('XYZ'), 'abgelehntes Papier fehlt in der Vorschau')
+      await ctx.shot(page, 'preview')
+      await page.getByRole('button', { name: 'Create backup now' }).click()
+      await settle(page)
+      check((await api(legacy, '/backups')).body.backups.length === 1, 'Sicherung aus dem Hinweis fehlt')
+      await page.getByRole('button', { name: 'Run the migration now' }).click()
+      await page.waitForTimeout(1500)
+      await settle(page)
+      await ctx.shot(page, 'after-confirm')
+      const report = (await api(legacy, '/migration/report')).body
+      check(report.completed === true && report.rejected?.[0]?.symbol === 'XYZ', 'Bericht nach dem Umzug stimmt nicht')
+      check((await api(legacy, '/ready')).status === 200, 'nach dem Umzug nicht bereit')
+      await page.goto(`${legacy.base}/`)
+      await settle(page)
+      check(await page.locator('tbody tr').count() === 2, 'Übersicht nach dem Umzug zeigt nicht die zwei Papiere')
+      await ctx.shot(page, 'dashboard')
+    } finally {
+      state.server = main
+      await stopServer(legacy)
+    }
+  })
+
+  // Die Namensräume des Katalogs: Ein sichtbares `nav.settings` hieße, dass
+  // eine Übersetzung fehlt.
+  const catalogSpaces = [...readFileSync(join(ROOT, 'dashboard', 'src', 'i18n', 'en.ts'), 'utf8')
+    .matchAll(/^ {2}([a-zA-Z]+)[,:]/gm)].map((match) => match[1])
+  // Nicht nach Punkt oder Schrägstrich: `.env.example` ist ein Dateiname.
+  const rawKey = new RegExp(`(?<![.\\w/-])(?:${catalogSpaces.join('|')})\\.[a-z][A-Za-z]*(?:\\.[a-zA-Z_]+)*\\b`)
+  const views = ['/#/assets', '/#/exchanges', '/#/fx', '/#/analysis',
+    ...['appearance', 'language', 'backups', 'environment', 'links', 'about'].map((tab) => `/#/settings?tab=${tab}`)]
+
+  await way('W15', 'Sprachen', {}, async (ctx) => {
+    check(catalogSpaces.length > 10, 'Katalog-Namensräume nicht gefunden')
+    for (const locale of ['de-DE', 'en-US']) {
+      for (const view of views) {
+        const page = await ctx.page(view, { locale })
+        const text = await page.locator('body').innerText()
+        const found = text.match(rawKey)
+        check(!found, `${locale} ${view}: roher Katalogschlüssel „${found?.[0]}“ sichtbar`)
+        const navigation = await page.locator('header').first().innerText()
+        check(navigation.includes(locale === 'de-DE' ? 'Einstellungen' : 'Settings'), `${locale} ${view}: Navigation nicht in ${locale}`)
+        await ctx.shot(page, `${locale}-${view.replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '')}`)
+        await page.context().close()
+      }
+    }
+  })
+
+  await way('W16', 'Schmale Ansicht', {}, async (ctx) => {
+    const narrow = { viewport: { width: 390, height: 844 } }
+    for (const view of ['/#/assets', '/#/settings?tab=appearance', '/#/fx']) {
+      const page = await ctx.page(view, narrow)
+      if (view === '/#/assets') {
+        // Schmal zeigt die Übersicht Karten; „more“ öffnet die Details.
+        await page.getByRole('button', { name: /more/ }).first().click()
+        await settle(page)
+        check(await page.locator('.drilldown').count() > 0, 'Details öffnen sich in der schmalen Ansicht nicht')
+      }
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+      check(overflow <= 1, `${view}: ${overflow} px waagerecht zu breit`)
+      await ctx.shot(page, view.replace(/[^a-z]+/g, '-').replace(/^-|-$/g, ''))
+      await page.context().close()
+    }
   })
 } finally {
   await browser.close()
