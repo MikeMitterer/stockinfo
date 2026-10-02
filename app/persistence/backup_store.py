@@ -12,7 +12,7 @@ import shutil
 import sqlite3
 from pathlib import Path
 
-from app.persistence.db import get_connection
+from app.persistence.db import connect_read_only, get_connection
 
 _JOURNAL_SUFFIXES = ("-wal", "-shm")
 
@@ -58,7 +58,7 @@ def read_stamp(database_file: Path, key: str) -> tuple[str | None, int]:
         UnreadableDatabaseError: Die Datei ist keine lesbare Datenbank.
     """
     try:
-        connection = sqlite3.connect(f"file:{database_file}?mode=ro", uri=True)
+        connection = connect_read_only(database_file)
         try:
             version = int(connection.execute("PRAGMA user_version").fetchone()[0])
             try:

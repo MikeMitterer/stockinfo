@@ -14,7 +14,9 @@ from fastapi.testclient import TestClient
 from app.config import get_settings
 from app.container import get_sources_config
 from app.main import app
-from app.persistence.db import init_db
+from app.persistence.backup_store import read_stamp
+from app.persistence.data_versions import stored_versions
+from app.persistence.db import SCHEMA_VERSION, init_db
 from app.persistence.repository import QuoteRepository
 
 NAMES = ["quotes?archive.db", "a#b.db", "p%20q.db", "x&mode=ro.db"]
@@ -31,6 +33,22 @@ def test_repository_liest_und_schreibt_die_datei_aus_dem_pfad(tmp_path: Path, na
     assert repository.count_instruments() == 0
     assert repository.get_fx_rate("EUR", "USD")["rate"] == 1.1
     assert {entry.name for entry in tmp_path.iterdir()} <= {name, f"{name}-wal", f"{name}-shm"}
+
+
+@pytest.mark.parametrize("folder", ["volume?x", "volume#y"])
+def test_eine_sicherung_wird_auch_in_einem_sonderverzeichnis_gelesen(
+    tmp_path: Path, folder: str
+) -> None:
+    """Dieselbe Falle beim schreibgeschützten Öffnen über eine `file:`-URI."""
+    directory = tmp_path / folder
+    directory.mkdir()
+    path = directory / "stockinfo.db"
+    init_db(str(path))
+
+    _, schema_version = read_stamp(path, "details_generation_id")
+
+    assert schema_version == SCHEMA_VERSION
+    assert stored_versions(path) == {}
 
 
 def test_die_app_startet_mit_fragezeichen_im_pfad(

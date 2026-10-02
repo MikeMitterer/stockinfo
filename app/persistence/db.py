@@ -172,6 +172,16 @@ def get_connection(database_path: str) -> sqlite3.Connection:
     return connection
 
 
+def connect_read_only(database_file: str | Path) -> sqlite3.Connection:
+    """Öffnet eine Datei nur lesend, etwa eine Sicherung.
+
+    **Als URI aus `as_uri()`, nicht aus Text.** In `file:{pfad}?mode=ro`
+    beendete ein `?` oder `#` im Verzeichnisnamen den Pfad vorzeitig, und
+    SQLite öffnete eine andere Datei.
+    """
+    return sqlite3.connect(f"{Path(database_file).resolve().as_uri()}?mode=ro", uri=True)
+
+
 def configure_connection(connection: sqlite3.Connection) -> None:
     """Setzt die PRAGMAs, die jede Verbindung braucht — rohe wie ORM-Verbindungen.
 
