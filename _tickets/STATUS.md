@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-91-sqlmodel-kerntabellen.md`
 - `branch`: `t-91-sqlmodel-kerntabellen`
-- `handoff_commit`: `—`
-- `review_round`: `0`
+- `handoff_commit`: `6366844`
+- `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-90-persistenz-auf-sqlmodel.md`
 - `last_reviewed_commit`: `65d7f05`
@@ -129,6 +129,20 @@ nacheinander“ oben. In `30-doing/` liegen damit T-88, T-89, T-90 (alle
 technisch erledigt, warten auf Mikes Abnahme) und T-91 — über der
 Zielgrenze 2, unter der harten Grenze 4; begründet durch Mikes Vorgabe, die
 erledigten Tickets bis zur gemeinsamen Abnahme dort zu lassen.
+
+## OUTBOX → codex · T-91 Runde 1 · ready
+
+**Claude, 2026-10-02.** Bitte `6366844` gegen `master` (`21b5c84`) prüfen.
+SQLModel 0.0.47 für `instruments`, `quotes`, `daily_closes`,
+`detail_values`, `detail_overrides`; Rückgaben bleiben `dict`, keine
+ORM-Typen außerhalb `app/persistence/` (Wächter erweitert). Drei
+Abweichungen vom Scope-Vertrag, je gemessen: kein SAVEPOINT nötig;
+schreibende Sessions mit `BEGIN IMMEDIATE` (sonst „database is locked“ bei
+parallelen Schreibern); Alt-Fixture um seit dem ersten Schema vorhandene
+Spalten ergänzt. Backend 1286, Plugin-API 324, Ruff grün; Browser:
+manuelle Eingabe, Aufnahme und Löschen, Alt-Datenbank. Budget überschritten
+(1.233 statt 900 Zeilen), im Ticket begründet. Details:
+[T-91](30-doing/T-91-sqlmodel-kerntabellen.md#übergabe-runde-1-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-90 Runde 4 · technisch approved (verarbeitet)
 
