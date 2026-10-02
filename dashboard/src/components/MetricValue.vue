@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { manualValue, overrideState, sourceProvides } from '../composables/useOverrides'
-import { fundSizeText } from '../utils/fundSize'
+import { fundSizeCurrency, fundSizeText, type FundSizeValue } from '../utils/fundSize'
 import type { InstrumentSummary, OverrideField } from '../types'
 
 /**
@@ -62,17 +62,20 @@ const fromSource = computed(() => applicable.value && sourceProvides(props.item,
  */
 const DIGITS = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
 
-/** Formatiert eine Zahl passend zum Feld: Prozent bei ter/volatility, Mio. EUR bei fund_size. */
-function formatNumber(raw: number): string {
+/**
+ * Formatiert eine Zahl passend zum Feld: Prozent bei ter/volatility,
+ * Millionen mit Währung bei fund_size.
+ */
+function formatNumber(raw: number, which: FundSizeValue): string {
   const formatted = n(raw, DIGITS)
-  if (props.field === 'fund_size') return fundSizeText(t, formatted)
+  if (props.field === 'fund_size') return fundSizeText(t, formatted, fundSizeCurrency(props.item, which))
   return isPercentField.value ? `${formatted} %` : formatted
 }
 
 const display = computed(() => {
   if (typeof value.value === 'string') return value.value
   if (numericValue.value === null) return t('common.noValue')
-  return formatNumber(numericValue.value)
+  return formatNumber(numericValue.value, 'effective')
 })
 
 /** Der eingetragene Wert als Text — für den Hinweis, wenn die Quelle ihn verdeckt. */
@@ -80,7 +83,7 @@ const manualAsText = computed(() => {
   const raw = manualValue(props.item, props.field)
   if (raw === null) return ''
   if (typeof raw === 'boolean') return raw ? t('table.yes') : t('table.no')
-  if (typeof raw === 'number') return formatNumber(raw)
+  if (typeof raw === 'number') return formatNumber(raw, 'manual')
   return raw
 })
 

@@ -29,6 +29,27 @@ describe('MetricValue', () => {
     i18n.global.locale.value = previousLocale
   })
 
+  it('zeigt eine manuelle Fondsgröße in ihrer Eingabewährung', () => {
+    const previousLocale = i18n.global.locale.value
+    i18n.global.locale.value = 'de'
+    const wrapper = mount(MetricValue, {
+      global: { plugins: [i18n] },
+      props: {
+        item: makeInstrument({
+          fund_size: 30, manual_fund_size: 30, manual_fields: ['fund_size'],
+          details: { fund_size: {
+            value: 30, unit: 'millions', currency: 'USD', origin: 'manual', source: null,
+            as_of: null, shadowed: false, manual_value: 30, manual_currency: 'USD',
+          } },
+        }),
+        field: 'fund_size',
+      },
+    })
+
+    expect(wrapper.text()).toContain('30,00 Mio. USD')
+    i18n.global.locale.value = previousLocale
+  })
+
   it('zeigt den wirksamen Wert ohne jede Bedienung', () => {
     const wrapper = mount(MetricValue, {
       global: { plugins: [i18n] },
