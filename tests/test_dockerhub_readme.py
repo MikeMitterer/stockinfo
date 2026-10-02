@@ -12,6 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / ".libs/ProjectTools/src/bash/dockerhub-readme.sh"
 
 
+# Netz nötig: Mit leerem `XDG_CACHE_HOME` richtet das Skript seine
+# Werkzeug-venv neu ein und lädt die Pakete aus dem Paketindex.
+@pytest.mark.integration
 def test_cli_ohne_aktion_zeigt_hilfe_und_vorschau_braucht_keinen_token(
     tmp_path: Path,
 ) -> None:

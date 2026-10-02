@@ -140,11 +140,17 @@ async function way(id, title, expect, body) {
   if (ONLY && !ONLY.has(id)) return
   const httpErrors = []
   const consoleErrors = []
+  const externalRequests = []
   const contexts = []
   // Jeder Kontext meldet seine Fehler in dieselben Listen; Sprache und
   // Fensterbreite lassen sich je Seite wählen (W15, W16).
   const newContext = async ({ locale = 'en-US', viewport = VIEWPORT } = {}) => {
     const created = await browser.newContext({ viewport, colorScheme: 'dark', locale })
+    // Ohne Netz zugesagt: Jede Anfrage an etwas anderes als 127.0.0.1 ist ein Fehler.
+    created.on('request', (request) => {
+      const url = request.url()
+      if (/^https?:/.test(url) && !url.startsWith('http://127.0.0.1:')) externalRequests.push(url)
+    })
     created.on('response', (response) => {
       if (response.status() >= 400) httpErrors.push({ status: response.status(), url: response.url() })
     })
@@ -193,6 +199,7 @@ async function way(id, title, expect, body) {
       // die HTTP-Prüfung oben hat sie schon eingeordnet.
       && !/Failed to load resource: the server responded with a status of/.test(text))
     check(unexpectedConsole.length === 0, `unerwartete Konsolenfehler: ${JSON.stringify(unexpectedConsole)}`)
+    check(externalRequests.length === 0, `Anfragen ins Netz: ${JSON.stringify([...new Set(externalRequests)].slice(0, 5))}`)
   } catch (error) {
     // Bei Playwright-Fehlern die Zeile mit dem gesuchten Element mitnehmen —
     // die erste Zeile sagt nur „Timeout“.
@@ -667,6 +674,31 @@ try {
       await page.context().close()
     }
   })
+
+  // Nur mit ONLINE=1 und nicht Teil des Bestehens der Pflichtwege: ein Papier
+  // über die echten Online-Quellen (Standardkette ohne `sources.yaml`).
+  if (process.env.ONLINE === '1') {
+    await way('W17', 'Online-Rauchtest', {}, async (ctx) => {
+      const onlineDir = mkdtempSync(join(tmpdir(), 'stockinfo-visual-online-'))
+      const online = await startServer(onlineDir, dist)
+      const main = state.server
+      state.server = online
+      try {
+        const page = await ctx.page('/')
+        await page.getByPlaceholder('ISIN or symbol').fill('IE00B3RBWM25')
+        await page.getByRole('button', { name: 'Add', exact: true }).click()
+        await page.waitForTimeout(8000)
+        await settle(page)
+        check(await row(page, 'IE00B3RBWM25').count() === 1, 'Papier über die Online-Quellen nicht aufgenommen')
+        const stored = await paper('IE00B3RBWM25')
+        check(typeof stored?.latest_price === 'number', 'kein Kurs von den Online-Quellen')
+        await ctx.shot(page, 'added')
+      } finally {
+        state.server = main
+        await stopServer(online)
+      }
+    })
+  }
 } finally {
   await browser.close()
   await stopServer(state.server)
