@@ -90,6 +90,50 @@ Abschnitt „Browserprüfung“ oder einem eigenen Abschnitt, nicht im README.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Scope-Entscheid · Codex (2026-10-02)
+
+**`continue`.** Konzeptstand `bac44d4`, keine vollständige Codeprüfung und
+keine Reviewrunde verbraucht. Rollen, Owner, Priorität und Branch stimmen;
+die Paket-VERSION ist weiterhin
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+Der Diff bis zum Konzept-Commit betrifft nur Ticket und STATUS (120
+Einfügungen, 11 Löschungen). Geplant sind drei Flächen ohne App-Produktcode
+oder neue Abhängigkeit: Vergleichsskript (~250 Zeilen), W17 im vorhandenen
+Browser-Skript (~100) und `AGENTS.md` (~10). Das geschätzte Budget von
+360 Zeilen liegt unter dem Standardriegel von 800; bei Überschreitung gilt
+der Scope-Checkpoint erneut.
+
+Vor der Umsetzung diese Grenzen in Konzept und Nachweis einhalten:
+
+1. **Ein gemeinsamer Ausgangszustand:** Das Original einmal konsistent per
+   SQLite-Backup sichern und erst diesen Snapshot in Vorher- und
+   Nachher-Kopie aufteilen. Zwei unabhängig nacheinander vom laufenden
+   Original gezogene Backups könnten schon vor der Umstellung verschiedene
+   Daten enthalten. Wenn 15 Assets fehlen, Ergänzungen für beide Stände
+   aus demselben vorbereiteten Snapshot ableiten und echte sowie ergänzte
+   Assets im Ergebnis getrennt zählen. Original und dessen WAL/SHM bleiben
+   unverändert; Abweichungen oder gleichzeitige Änderungen führen zum
+   Abbruch, nicht zu einem scheinbaren Vergleichsergebnis.
+2. **Sichtbarer Datenbankweg:** W17 prüft mindestens 15 verschiedene
+   persistierte Assets mit Erwartungen aus dem alten Code, darunter Werte
+   und vorhandene Details, und wiederholt die Prüfung nach Neustart auf
+   derselben Nachher-Kopie. YAML darf diese Erwartungen nicht liefern.
+   Der Browser startet sichtbar auf dem Hauptmonitor bei x = 100 px.
+3. **Netzsperre:** `sandbox-exec` reicht, wenn der tatsächlich verwendete
+   Prozess mit der Policy startet und ein gezielter Gegenversuch eine
+   externe Verbindung ablehnt, während der lokale Testserver erreichbar
+   bleibt. Eine vollständige Protokollierung jeder Verbindung ist nicht
+   nötig. Große TTL-Werte allein sind kein Nachweis für Netzfreiheit.
+4. **Projekt-Root:** Ein alter Quellstand als temporäres, nicht bearbeitetes
+   Laufartefakt liegt nur unter `.tmp/` im Projekt-Root. Es entsteht kein
+   zweiter Arbeits-Checkout und kein Worktree. Sollte der Ablauf eine
+   Quellkopie außerhalb des Roots oder Edits am Archiv verlangen, gilt der
+   lokale Arbeitsort-Riegel erneut.
+
+Die technische Review der Implementierung prüft später die tatsächliche
+Isolation des Originals, Vergleichstiefe, Browserinhalte, Gegenproben,
+Aufräumen und Doku. Dieser Entscheid erteilt keine menschliche Abnahme.
+
 ### Scope-Checkpoint · Konzept (Claude, 2026-10-02)
 
 Aktiviert nach der Freigabe von T-93 (`d7a33cc`) und dem lokalen Merge
