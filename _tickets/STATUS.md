@@ -26,10 +26,10 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
-- `ticket`: `T-94-devisenkurs-zeitpunkt-der-quelle.md`
-- `branch`: `t-94-devisenkurs-zeitpunkt-der-quelle`
-- `handoff_commit`: `8991a55`
+- `phase`: `claude_working`
+- `ticket`: `T-93-visuelle-gesamtpruefung.md`
+- `branch`: `t-93-visuelle-gesamtpruefung`
+- `handoff_commit`: `f5e0619`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
 - `owner`: `claude`
@@ -39,14 +39,20 @@ schaltet den Branch. Regel:
 - `last_reviewed_round`: `1`
 - `workstream`: `persistenz`
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md`
-- `priority_ticket`: `T-94-devisenkurs-zeitpunkt-der-quelle.md`
+- `priority_ticket`: `T-93-visuelle-gesamtpruefung.md`
 
-**T-94 aktiv, T-93 pausiert · 2026-10-02.** Nach Mikes Entscheidung
-„T-94 vorziehen und T-93 danach abschließen“ zweigt
-`t-94-devisenkurs-zeitpunkt-der-quelle` von `t-93-visuelle-gesamtpruefung`
-ab (Stand `ee5d856`: Nacharbeit B1–B4 aus T-93 Runde 1, Node 24). Nach der
-Freigabe von T-94 kommt der Branch zurück nach T-93; dann folgen ein
-vollständiger `make visual-check` und die Übergabe von T-93 Runde 2.
+**T-94 freigegeben, T-93 wieder aktiv · 2026-10-02.** T-94 (`8991a55`,
+Freigabe `a188046`) ist per Fast-Forward in `t-93-visuelle-gesamtpruefung`
+übernommen. Es geht **nicht allein** nach `master`: Es baut auf der noch
+ungeprüften T-93-Nacharbeit `ee5d856` auf. Beide gehen nach der Freigabe
+von T-93 gemeinsam nach `master`. T-93 Runde 2 umfasst B1–B4, den
+vollständigen Browserlauf und Mikes Entscheidung zum Aufruf (unten).
+
+**Browserprüfung ohne Make-Target und README-Abschnitt · Mike, 2026-10-02.**
+„Ja, raus aus Makefile und README“, nach seiner Frage, weshalb die Prüfung
+dort steht, obwohl kein Mensch ihr folgen kann. Sie ist ein Werkzeug für
+die Agenten: Aufruf im Kopf von `dashboard/e2e/visual-check.mjs`, Hinweis
+in `AGENTS.md`. Node 24 bleibt als Voraussetzung im README.
 
 **Node 24 als Mindestversion · Mike, 2026-10-02.** Zu T-93 B1 (`node:sqlite`
 gegen „Node.js 20+“): „Selbst Node 24 ist kein Problem. Das wäre die aktuell
