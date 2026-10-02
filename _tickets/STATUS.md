@@ -57,6 +57,8 @@ vollständigen Browserlauf und Mikes Entscheidung zum Aufruf (unten).
 
 **Sichtbare Browserprüfung auf dem Hauptmonitor · Mike, 2026-10-02.**
 Künftige visuelle Tests sollen sichtbar auf dem Hauptmonitor starten.
+Die Fenster-x-Position soll **100 px** betragen; links befindet sich
+Mikes Dock (Präzisierung von Mike, 2026-10-02).
 Der sichtbare T-93-Runde-2-Lauf hatte noch keine erzwungene
 Monitorposition; die Vorgabe gehört in die Nacharbeit.
 
