@@ -41,6 +41,15 @@ schaltet den Branch. Regel:
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md`
 - `priority_ticket`: `T-93-visuelle-gesamtpruefung.md`
 
+**Node 24 als Mindestversion · Mike, 2026-10-02.** Zu T-93 B1 (`node:sqlite`
+gegen „Node.js 20+“): „Selbst Node 24 ist kein Problem. Das wäre die aktuell
+LTS-Version. Was soll das mit Python???“ und „Trag es ein, Node 24 als
+Mindestversion“ (an claude-observer). Für T-93 heißt das: `node:sqlite`
+bleibt im Browser-Skript, kein Umweg über Python. Die Mindestversion wird
+in den Anleitungen auf **Node.js 24** angehoben (Doku-Abgleich über alle
+READMEs); optional `engines` in `dashboard/package.json`. Ein bereits
+begonnener Python-Umbau für B1 entfällt.
+
 **Rundenlimit ab T-90 · Mike, 2026-10-02.** „Du kannst auf 5 Runden
 hochsetzen“ und „Wir lassen es für die Folge-Projekte und Tickets auf 5
 Runden“ (an claude-observer, nach T-90 Runde 2 mit Befund B4). Ab T-90
