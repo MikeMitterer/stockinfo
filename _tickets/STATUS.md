@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `branch`: `t-89-volatilitaet-alle-typen`
 - `handoff_commit`: `9b55a13`
 - `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
-- `last_reviewed_commit`: `5684a68`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `9b55a13`
+- `last_reviewed_round`: `3`
 - `workstream`: `volatilitaet`
 - `priority_chain`: `T-89`
 - `priority_ticket`: `T-89`
@@ -70,7 +70,44 @@ in T-89 (Mike: „Das war eine Erkenntnis aus dem Review“, „Mach das gleich
 in T-89 mit c“). Die technische Freigabe von Runde 2 gilt für `5684a68`;
 der erweiterte Stand geht als Runde 3 an Codex. Kein Merge vorher.
 
-## OUTBOX → codex · T-89 Runde 3 · ready
+## INBOX → claude · T-89 Runde 3 · changes_requested
+
+**Codex, 2026-10-02.** `9b55a13` gegen `5684a68` unabhängig geprüft;
+**`changes_requested`**. Die Anzeige und die Datenberechnung sind im
+geprüften Stand plausibel: Backend **1265 passed, 35 skipped**,
+Dashboard **399 passed**, Typprüfung und ESLint grün. Die drei DE-/EN-
+Belegbilder habe ich angesehen. Zwei negative Laufzeit-Mutanten machen die
+neuen Service-Tests gezielt rot. Offen für Runde 4:
+
+1. **B3 · Type Hints:** `quote` in der geänderten
+   `_volatility_from_cache`-Funktion und das ältere `definitions` in der
+   berührten Repository-Datei sind untypisiert. `ruff --select ANN,I` für
+   alle berührten Python-Dateien meldet beide Stellen; bitte annotieren
+   und den vollständigen Lauf belegen.
+2. **B4 · öffentlicher Datumspfad:** Der neue API-Test setzt `as_of`
+   direkt. Bitte Refresh und Wiederherstellung bis `GET /instruments`
+   mit temporärer DB und einem roten Gegenfall prüfen; Verify #7 ist
+   noch nicht vollständig belegt.
+3. **B5 · Persistenzstandard:** Die bearbeitete SQLite-Schicht in
+   `app/repository.py` liegt außerhalb `app/persistence/` und nutzt keine
+   ORM-Schicht. Der harte `code-standards`-Riegel gilt bei Berührung;
+   eine lokale StockInfo-Ausnahme ist nicht dokumentiert. Bitte die Regel
+   erfüllen oder eine ausdrückliche Projektentscheidung von Mike
+   dokumentieren. Dieser Befund wurde bei der früheren T-89-Prüfung
+   übersehen und wird dadurch nicht aufgehoben.
+4. **B6 · Standardbericht:** Die Runde-3-Übergabe enthält keine
+   Ergebnismatrix je Referenzgruppe. Bitte die anwendbaren Zeilen mit
+   konkreten Belegen in Runde 4 nachreichen.
+
+Verify #8 ist ✅; #6 und #7 bleiben ⚠️. Vollständige Gegenproben,
+Standardtabelle, Doku-Abgleich und Fundstellen:
+[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-3-codex-2026-10-02).
+Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
+Mikes Limit von fünf Runden bleibt in Kraft; kein Merge vor der Freigabe
+des erweiterten Stands. Die getrennte Board-Übernahme `df699dd1`
+bleibt offen.
+
+## Archiv · OUTBOX → codex · T-89 Runde 3 · ready (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte `9b55a13` gegen `5684a68` prüfen
 (Gesamtstand gegen `eca7413`). Scope-Erweiterung nach Mikes Entscheidung:

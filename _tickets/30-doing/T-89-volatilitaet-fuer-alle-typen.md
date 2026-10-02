@@ -156,18 +156,120 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 |---|---|---|:--:|
 | 1 | `GET /fields`, Feld `volatility` | `sources` = `justetf`, `calculated`; Scope `calculated` mit allen Gattungen, `listed` und `pair` | ✅ |
 | 2 | `GET /instruments` mit Aktie, Fonds, ETF | Aktie und Fonds: `details.volatility` mit Quelle `calculated`; ETF mit justETF-Wert: Quelle `justetf` | ✅ |
-| 3 | `.venv/bin/python -m pytest -q`, `tests/test_calculated_metrics.py` | Backend und 11 gezielte Tests grün; beide HTTP-Tests am negativen Mutanten rot und an der Endfassung grün | ✅ |
+| 3 | `.venv/bin/python -m pytest -q`, `tests/test_calculated_metrics.py` | Backend 1265 grün; Testmodul 13 grün, zwei neue Datumstests an negativen Laufzeit-Mutanten rot | ✅ |
 | 4 | Sichtbare Prüfung im Browser (Temp-Datenbank), deutsch und englisch | Tabelle zeigt „Vola 1Y“ bei Aktie und Fonds; Detailbereich zeigt „Volatilität (1 Jahr)“ | ✅ |
 | 5 | StockPortfolios `projectDetailFields` mit den echten Antworten | Zusatzinformationen zeigen die Volatilität bei Aktie und Fonds; Coder-Lauf belegt die Ausgaben, API-Scopes wurden unabhängig geprüft | ✅ |
-| 6 | Standard und Doku | Doku und Namensinventar passen; vollständige und richtige Typangaben im Testmodul, Ruff `ANN,I` grün | ✅ |
-| 7 | Stand berechneter Werte: Refresh einer Aktie mit Tageskursen, Wiederherstellung ohne Kurse, `GET /instruments` | `details.volatility.as_of` = Datum des letzten Schlusskurses; bei Wiederherstellung bleibt das alte Datum | ➖ |
-| 8 | Detailbereich im Browser, deutsch und englisch (Aktie, Fonds, ETF) | Quelle „berechnet aus Tageskursen“ / „calculated from daily closes“ mit Datum ohne Uhrzeit; ETF unverändert mit justETF-Zeitpunkt | ➖ |
+| 6 | Standard und Doku | Doku und Namensinventar passen; `ANN,I` in den berührten Python-Produktdateien rot, Persistenzstandard ohne lokale Ausnahme, Standards-Matrix der Runde 3 fehlt | ⚠️ B3, B5, B6 |
+| 7 | Stand berechneter Werte: Refresh einer Aktie mit Tageskursen, Wiederherstellung ohne Kurse, `GET /instruments` | Servicepfade samt Datum grün und gezielt rot; API-Test setzt `as_of` direkt und belegt den Refresh bis `GET /instruments` nicht | ⚠️ B4 |
+| 8 | Detailbereich im Browser, deutsch und englisch (Aktie, Fonds, ETF) | Übersetzte Quelle und reines Datum bei Aktie/Fonds; ETF mit unverändertem justETF-Zeitpunkt; Komponenten- und Browserbelege | ✅ |
 
 ## Review-Verlauf (neueste Runde zuerst)
 
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 3 (Codex, 2026-10-02)
+
+**Prüfstand:** `9b55a13` gegen `5684a68`, Gesamtstand gegen `eca7413`.
+Nach dem Produktcommit kamen nur Ticket-/Status- und Bilddateien hinzu.
+Rollen, Owner, Branch und Priorität stimmten; der Arbeitsbaum war beim
+Claim sauber. Paket-VERSION `df699dd1` unverändert. Ergebnis:
+**`changes_requested`**. Die neue Anzeige ist fachlich plausibel und
+sichtbar belegt; die folgenden Prüfriegel sind noch offen. Dies ist Runde
+3 von höchstens 5. Keine technische Freigabe des erweiterten Stands und
+keine menschliche Abnahme.
+
+### Befunde für Runde 4
+
+1. **B3 · Python-Typen.** In der geänderten Funktion
+   `app/services/quote_cache.py:615` ist `quote` untypisiert, obwohl
+   `QuoteResponse` bereits importiert wird. Der Lauf
+   `.venv/bin/ruff check --select ANN,I app/repository.py
+   app/services/quote_cache.py tests/test_calculated_metrics.py` meldet
+   außerdem das ältere `definitions` in der erneut berührten
+   `app/repository.py:616`. Die Python-Referenz verlangt Type Hints überall;
+   bitte beide Parameter zutreffend annotieren und den genannten Lauf für
+   **alle drei** berührten Python-Dateien grün belegen. Normaler Ruff ist
+   grün. Das Testmodul allein hat keine fehlenden Annotationen.
+2. **B4 · öffentlicher Datumspfad.** Die beiden neuen Tests in
+   `tests/test_calculated_metrics.py:126-148` laufen über den Service und
+   dessen Repository, nicht über HTTP. Der bestehende API-Test
+   `:173-185` setzt `as_of` mit `repo.set_volatility(...)` direkt. Daher
+   kann er auch bestehen, wenn der Refresh kein Datum ermittelt oder beim
+   Wiederherstellen verliert. Verify #7 verlangt Refresh **und**
+   `GET /instruments`. Bitte mindestens einen dünnen Test mit temporärer
+   DB von einem echten Refresh bis zur API-Antwort ergänzen, einschließlich
+   altem Datum beim Wiederherstellen, und den entscheidenden falschen
+   Gegenfall an diesem öffentlichen Pfad rot zeigen. Keine zusätzliche
+   Testinfrastruktur. Die vorhandenen Service-Tests bleiben nützlich.
+3. **B5 · Persistenzstandard.** Die Erweiterung bearbeitet
+   `QuoteRepository.set_volatility` in `app/repository.py:632-645` und
+   schreibt weiterhin über `detail_store.put_provider` mit rohem SQLite
+   außerhalb eines `app/persistence/`-Ordners. Die harte Regel in
+   `code-standards/references/persistence.md` gilt laut Text auch beim
+   Berühren bestehenden Codes. Eine ausdrücklich beschlossene lokale
+   StockInfo-Ausnahme habe ich in AGENTS.md, Workflow, STATUS und Ticket
+   nicht gefunden. Das war bereits bei der früheren T-89-Prüfung übersehen
+   worden; deren Urteil für `5684a68` hebt die Regel nicht auf. Vor einer
+   Freigabe braucht es eine regelkonforme Umsetzung oder eine ausdrückliche,
+   im Projekt dokumentierte Entscheidung von Mike für diese Ausnahme.
+4. **B6 · Standardnachweis im Handoff.** Die Runde-3-OUTBOX und die
+   Nacharbeit enthalten keine Ergebnismatrix je Referenzgruppe des gelesenen
+   `code-standards`-Skills. Der lokale Standard-Riegel verlangt dieselben
+   Zeilen beim Coder und Verifier mit konkreten Belegen. Bitte die
+   anwendbaren Gruppen in Runde 4 vollständig berichten; B3 und B5 dabei
+   nicht unter „Ruff grün“ zusammenziehen.
+
+### Gegenproben und Abgleich
+
+- Backend: **1265 passed, 35 skipped, 1 Starlette-Warnung**. Dashboard:
+  **52 Dateien, 399 passed**. `vue-tsc -b` und ESLint grün; ESLint musste
+  nach einem parallelen Lauf mit kurzzeitigem Vite-Dateikonflikt allein
+  wiederholt werden und bestand. Normaler Ruff und beide
+  `git diff --check`-Vergleiche grün.
+- Meine zwei Laufzeit-Mutanten änderten keine Produktdatei: ohne das
+  ermittelte Schlusskursdatum fällt
+  `test_berechnete_volatilitaet_traegt_das_datum_des_letzten_schlusskurses`
+  mit `as_of: None` rot; beim Verlieren des alten Datums im zweiten
+  `set_volatility`-Aufruf fällt
+  `test_wiederhergestellte_volatilitaet_behaelt_ihr_datum` ebenso rot.
+  Am Handoff-Stand bestehen beide. Das belegt die Servicepfade, nicht B4.
+- Die drei Belegbilder habe ich angesehen: APC.DE deutsch zeigt „berechnet
+  aus Tageskursen“ und **02.10.2026** ohne Uhrzeit; GOLD.SG englisch zeigt
+  „calculated from daily closes“ und **Sep 29, 2026**; EUNL.DE deutsch
+  zeigt weiter `justetf` mit **01.10.2026, 23:06**. Kein eigener
+  Live-Browserlauf in dieser Runde.
+- AST-Inventar aller drei berührten Python-Dateien und TS-Compiler-Inventar
+  der sechs berührten Vue-/TS-Dateien: neue Nicht-Testbezeichner englisch.
+  DRY: kein zweiter Datumsformatierer; `formatDateTime` wird erweitert,
+  `providerValues` teilt die Quellenfilterung. I18n: neue Texte in DE und
+  EN, kein fest verdrahteter sichtbarer Text.
+- **Doku-Abgleich:** `docs/plugin-authors.md` nennt `as_of` als Datum des
+  letzten Schlusskurses; Root-README beschreibt berechnete Volatilität und
+  verlinkt die Detailfeld-Doku. `docker/README.md` und
+  `unraid/README.md` machen keine widersprechende Aussage zu Quelle oder
+  Fußzeile und benötigen für diese Änderung keinen Zusatz. Der
+  API-Vertrag enthält bereits `as_of`; kein Vertragswechsel.
+
+**Gelesener Standard:**
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md`, Referenzen
+`architecture.md`, `frontend.md`, `python.md`, `persistence.md`,
+`quality.md`, `documentation.md`; zusätzlich `ux-standards/SKILL.md`.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ keine doppelte Datums-/Quellenlogik, AST-/TS-Inventare ohne neue deutsche Nicht-Testnamen; Persistenzgrenze separat unter B5. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ✅ 399 Dashboardtests, `vue-tsc`, ESLint, DE-/EN-Bilder und Katalogtexte. |
+| Python, FastAPI und Webhooks | ⚠️ B3: `ANN001` für `quote` und `definitions`; Backend und normaler Ruff grün. |
+| Datenbanken und Persistenzgrenzen | ⚠️ B5: berührtes SQLite-Repository liegt außerhalb `persistence/`; Tests nutzen temporäre DB. |
+| Fehler, Logging und Tests | ⚠️ B4: Service-Mutanten rot, aber kein durchgehender API-Akzeptanztest nach Refresh; keine neue Testinfrastruktur. |
+| Markdown und Inhaltsverzeichnisse | ✅ bestehende Überschriften/Links bleiben, `docs/plugin-authors.md` und beide READMEs inhaltlich abgeglichen. |
+
+Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
+Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
 
 ## Nacharbeit Runde 2 · Scope-Erweiterung (Claude, 2026-10-02)
 
