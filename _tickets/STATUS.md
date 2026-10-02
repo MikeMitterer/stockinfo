@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-90-persistenz-auf-sqlmodel.md`
 - `branch`: `t-90-persistenz-sqlmodel`
-- `handoff_commit`: `—`
-- `review_round`: `0`
+- `handoff_commit`: `8804575`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `last_reviewed_commit`: `8e6438c`
@@ -105,6 +105,28 @@ ist – sprich vorher kommt noch T-90. Fang gleich damit an.“
 technisch erledigt sind („Nicht wenn es leer ist sondern wenn die Tickets
 darin erledigt sind“); bis zur Abnahme bleiben sie dort liegen.
 
+**Auftrag T-90 bis T-92 · Mike, 2026-10-02.** „Du erledigst alle drei
+Tickets nacheinander. Warte nicht auf mich. Bei Fragen kläre es mit Codex
+ab. Nur wenn Codex nicht mehr weiter kommt, dann musst du auf meine Antwort
+warten.“ Claude arbeitet T-90, T-91 und T-92 je mit vollem Codex-Review
+nacheinander ab, mergt jedes nach technischer Freigabe lokal nach `master`
+und zieht das nächste aus `20-ready/` nach `30-doing/`. Fragen gehen zuerst
+an Codex; Mike entscheidet erst, wenn beide nicht weiterkommen.
+
+## OUTBOX → codex · T-90 Runde 1 · ready
+
+**Claude, 2026-10-02.** Bitte `8804575` gegen `master` (`de620e9`)
+prüfen. Fünf Module per `git mv` nach `app/persistence/`, SQL aus
+`routers/migration.py` und `services/backup.py` in
+`app/persistence/db.py` und `backup_store.py`, Protocol `QuoteStore` mit
+DI über `get_quote_store()`, AST-Wächtertest mit Gegenprobe. Backend 1269,
+Plugin-API 324, Ruff in `app`, `tests`, `scripts`, `plugin_api` grün.
+Browser: Detailbereich, Backup mit echtem Restore nach Neustart,
+Migrationsvorschau mit Alt-Datenbank. Offen benannt: Backup-Dienst und
+Migrationsrouter rufen Modulfunktionen statt eines Protocols (Scope-Vertrag).
+Details:
+[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#übergabe-runde-1-claude-2026-10-02).
+
 ## An Mike · T-88 und T-89 auf `master` zur gemeinsamen Abnahme
 
 **Claude, 2026-10-02.** Codex hat T-88 (Runde 4, `2caca38`) und T-89
@@ -119,8 +141,9 @@ gemergt, der Root steht auf `master`. Kein Push. Offen:
      aus Tageskursen“, „Stand der Quelle“ mit Datum ohne Uhrzeit.
    Bestehende Werte bekommen ihr Datum beim nächsten Refresh. Beide Tickets
    bleiben bis zu deiner Bestätigung in `30-doing/`.
-2. **Danach:** [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md)
-   (Persistenz auf SQLModel) beendet die befristete T-89-Ausnahme.
+2. **Persistenz:** [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md) liegt
+   bei Codex im Review; T-91 und T-92 folgen ohne Zwischenstopp. T-92
+   beendet die befristete T-89-Ausnahme.
 3. **Docker Hub und Unraid:** Image 1.4.0 ist gebaut, aber nicht gepusht
    und enthält T-88/T-89 noch nicht. Neues Image, Docker-Hub-Beschreibung
    (`make push`) und Unraid-Listing brauchen deinen Auftrag.
