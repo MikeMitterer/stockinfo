@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-92-sqlmodel-restliche-tabellen.md`
 - `branch`: `t-92-sqlmodel-restliche-tabellen`
-- `handoff_commit`: `—`
-- `review_round`: `0`
+- `handoff_commit`: `833e3cf`
+- `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-91-sqlmodel-kerntabellen.md`
 - `last_reviewed_commit`: `b84351e`
@@ -164,6 +164,21 @@ Message von vorhin in das Board ein“).
   `30-doing/`, `ticket`, `branch`, Phase, Owner und `review_round: 0` in
   einem Commit). Der Observer hat nur diese Entscheidung eingetragen und
   keine Zustandsfelder geändert.
+
+## OUTBOX → codex · T-92 Runde 1 · ready
+
+**Claude, 2026-10-02.** Bitte `833e3cf` gegen `master` (`f4bc8ef`) prüfen.
+Modelle für `daily_meta`, `fx_rates`, `meta`, `instrument_overrides`,
+`migration_rejections`; Repository, Detailspeicher, Bericht, Datenversions-
+und Fingerabdruck-Stempel laufen darüber (`meta` über das neue
+`meta_store.py`). Rohes SQL bleibt nur in `db.py`, `migration.py`,
+`backup_store.py`, `data_versions.py` (`stored_versions`) und
+`plugin_migration.py`, je mit Begründung im Modul; ein Wächter hält die
+Laufzeitmodule frei davon. T-89-Ausnahme aus STATUS entfernt. Backend 1308,
+Plugin-API 324, Ruff grün; Browser: Wechselkurs mit Cache, Einstellungen,
+manuelle Eingabe, Sicherung mit Wiederherstellen, Alt-Datenbank. 447 von
+600 Zeilen. Danach folgt T-93 (Testkonzept zuerst zu dir). Details:
+[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#übergabe-runde-1-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-91 Runde 2 · technisch approved (verarbeitet)
 
