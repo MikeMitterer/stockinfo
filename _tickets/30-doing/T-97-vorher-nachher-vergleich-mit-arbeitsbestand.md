@@ -14,7 +14,10 @@ vor T-90 `fund_size` = 1.234.000.000 EUR mit Quelle `manual`. Nach der
 Umstellung muss dieselbe Abfrage auf derselben Datenbank denselben Wert und
 dieselbe Quelle liefern.
 
-**Stand:** Angelegt am 2026-10-02 auf Mikes Auftrag. Mike: „die visuellen
+**Stand:** Runde 1 am 2026-10-02 mit `changes_requested`. Der unabhängige
+Positivlauf bestätigt 16 gespeicherte Assets und einen unveränderten
+Arbeitsbestand; Fehlerpfade des Vergleichswerkzeugs können noch fälschlich
+mit Exit 0 enden. Angelegt am 2026-10-02 auf Mikes Auftrag. Mike: „die visuellen
 Tests werden mit dem YAML-File gemacht obwohl massive Änderungen bei dem
 Datenbankzugriffen gemacht wurden … am aktuellen Grund vorbei“ und „Ja, leg
 T-97 an und trag es ein“. Folgeticket der SQL-Umstellung in der
@@ -72,15 +75,16 @@ Kopie des Arbeitsbestands ist erteilt (siehe Grenzen).
       unverändert (Prüfsumme vor und nach dem Vergleich).
 - [x] Der Vergleich deckt die oben genannten Bereiche ab und nennt die Zahl
       der verglichenen Instrumente und Felder.
-- [x] Der sichtbare Datenbankweg prüft **mindestens 15 verschiedene
+- [ ] Der sichtbare Datenbankweg prüft **mindestens 15 verschiedene
       Assets** (Mike, 2026-10-02: „Zwei Papiere sind mir zu wenig … ich denke
       da mindestens 15“): verschiedene Gattungen, Identitätsformen, Börsen
       und Währungen, mit und ohne Details. Reicht der Arbeitsbestand dafür
       nicht, wird er mit einem eigenen Testbestand ergänzt.
-- [x] Jeder Unterschied ist als erwartet (mit Ticket) oder als Befund
-      eingeordnet; Befunde stehen als Folgetickets in der Kette. — Keine
-      Unterschiede, keine Folgetickets.
-- [x] Der Schreibweg auf der Nachher-Kopie ändert nur die erwarteten Zeilen.
+- [ ] Jeder Unterschied ist als erwartet (mit Ticket) oder als Befund
+      eingeordnet; Befunde stehen als Folgetickets in der Kette. Im
+      Positivlauf keine Unterschiede; die Fehlerentscheidung fehlt noch.
+- [ ] Der Schreibweg auf der Nachher-Kopie ändert nur die erwarteten Zeilen.
+      Im Positivlauf stimmig; die Assertion fehlt noch.
 - [x] Kopien und Antwortdateien sind nach dem Vergleich gelöscht.
 
 ### Side-Effects
@@ -90,6 +94,94 @@ Datenbank-Umbauten wiederholbar ist; Ablage und Aufruf in `AGENTS.md`,
 Abschnitt „Browserprüfung“ oder einem eigenen Abschnitt, nicht im README.
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+### Verifier-Prüfung · Runde 1 (Codex, 2026-10-02)
+
+**Ergebnis: `changes_requested`.** `780abf3` gegen `ab4f0db` geprüft.
+Rollen, Owner, Priorität, Branch und eingefrorener Commit stimmten; der
+Arbeitsbaum war sauber. Die Paket-VERSION blieb
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+Keine technische oder menschliche Freigabe, kein Merge und kein Push.
+
+**Unabhängiger Positivlauf:** `.venv/bin/python
+scripts/compare_database_versions.py` mit sichtbarem W17 auf dem
+Hauptmonitor: 16 Assets (9 aus dem Arbeitsbestand, 7 ergänzt), 4
+Wechselkurse, 23 888 Feldpfade, 0 Befunde, W17 vor und nach Neustart
+grün. Die SHA-256 der Originaldatenbank war vor und nach dem Lauf gleich;
+neue WAL/SHM-Dateien gab es nicht, `.tmp/t97/` war danach leer. Ein erster
+Sandboxlauf konnte lokal keinen Port binden (EPERM); der freigegebene Lauf
+außerhalb der Tool-Sandbox bestand. `make check` unabhängig grün (1305
+Backend-, 399 Dashboard-, 324 Plugin-API- und 50 Beispieltests, ESLint,
+Ruff, `vue-tsc`); `git diff --check` sauber. Der Positivlauf ersetzt die
+folgenden Fehlerpfadprüfungen nicht.
+
+**B1 · Rote Ergebnisse liefern Exit 0.** In
+`scripts/compare_database_versions.py` meldet `main()` `findings`,
+`writes` und `visual.returncode` nur per `print`; nur eine geänderte
+Original-Prüfsumme setzt am Ende Exit 1. Damit können ein echter
+Vergleichsbefund, eine falsche Tabellenänderung und ein rotes W17 als
+erfolgreicher Gesamtlauf gelten. Bitte diese Ergebnisse als harte
+Abbruchbedingungen auswerten und für jeden der drei Fehlerfälle eine
+gezielte Gegenprobe bis zum Prozess-Exit nachweisen. Das ist für Mikes
+Abnahme ein Blocker.
+
+**B2 · Serverstart kann einen Kindprozess zurücklassen.** `Instance.__init__`
+startet `uvicorn`, wirft aber bei ausbleibender Bereitschaft `SystemExit`,
+bevor die Instanz in `main()`s Aufräumliste steht. Läuft der Kindprozess
+dann noch, beendet `finally` ihn nicht. Bitte den gestarteten Prozess und
+die Logdatei auch bei fehlgeschlagenem Start zuverlässig schließen;
+Gegenprobe mit absichtlich ausbleibender Bereitschaft. Der Prüflauf darf
+keine fremde oder eigene Instanz als Nebenwirkung zurücklassen.
+
+**B3 · „Erwartet“ prüft nur den Feldpfad.** `EXPECTED_DIFFERENCES` und
+`compare()` stufen jede Änderung an `fund_size`, `volatility` oder
+`quote_time` als T-88/T-89/T-94 ein, unabhängig vom neuen Wert. Auch ein
+gelöschter oder offensichtlich falscher Wert würde so durchgehen. Bitte
+die konkret beauftragte Umrechnung beziehungsweise Semantik prüfen oder
+den Wertunterschied als Befund behandeln, bis er geprüft ist. W17 muss
+validierte erwartete Unterschiede ebenfalls berücksichtigen; sein
+vollständiger Gleichheitsvergleich widerspricht sonst dieser Einordnung.
+
+**B4 · Neue Datenbankzugriffe außerhalb der Persistenzschicht.** Das neue
+Skript enthält `sqlite3.connect`, `SELECT` und rohe Tabellenvergleiche
+unter `scripts/`. Der gelesene Skill
+`code-standards/references/persistence.md` verlangt Datenbankzugriffe und
+SQL in `app/persistence/`; eine lokale Ausnahme für dieses neue Skript ist
+nicht dokumentiert. Die vorhandene `app/persistence/backup_store.py` zeigt
+bereits, wie notwendige rohe SQLite-Operationen dort begründet und gekapselt
+werden. Bitte diesen technischen Zugriff dort bündeln und dem Skript nur
+eine fachliche Schnittstelle geben. Das ist eine Muss-Regel, kein nach
+beobachtetem Schaden abstufbarer Stilpunkt.
+
+**B5 · Sichtbarkeit ist nicht erzwungen.** Der Vergleich startet W17 mit
+`env={**os.environ, ...}`. Ist `HEADLESS=1` in der Umgebung gesetzt, läuft
+W17 ohne sichtbares Fenster und ohne Hauptmonitorprüfung, obwohl T-97 einen
+sichtbaren Pflichtweg verspricht. Bitte für diesen Aufruf sichtbares Chrome
+explizit festlegen und den Aufruf mit gesetztem `HEADLESS=1` gegenprüfen,
+ohne dabei einen headless Abnahmelauf als Nachweis zu verwenden.
+
+**Scope-Riegel vor Nacharbeit:** Im Konzept waren drei geänderte
+Test-/Dokuflächen (~360 Zeilen) genannt; tatsächlich sind es vier
+(`scripts/compare_database_versions.py`,
+`scripts/supplement_assets.yaml`, `dashboard/e2e/visual-check.mjs`,
+`AGENTS.md`) mit rund 590 Zeilen. Vier statt drei überschreitet die
+25-Prozent-Dateigrenze; vor weiterem Produkt- oder Testcode ist deshalb
+ein neuer `scope_checkpoint` mit dem tatsächlichen Umfang nötig. Die
+Korrektur von B4 kann eine weitere Datei berühren und gehört in diesen
+Checkpoint. Runde 1 ist verbraucht; der Checkpoint selbst verbraucht keine.
+
+**Standards, DRY und Doku-Abgleich:** `code-standards` mit Architektur,
+Python, Persistenz, Qualität, CLI und Dokumentation sowie die lokale
+Browserregel geprüft. Positiv sind die getrennten temporären Kopien,
+`immutable=1`, Netzsperre mit EPERM-Gegenprobe und die Wiederverwendung
+von `visual-check.mjs` statt eines zweiten Browser-Skripts. Das doppelte
+`instrument_key`/`instrumentKey` ist eine kleine sprachübergreifende
+Vertragsregel und derzeit durch dieselben Identitätsfelder belegt; kein
+eigener DRY-Blocker. `AGENTS.md` erklärt den neuen Aufruf und die
+Arbeitsdatenbank-Grenze; `README.md`, `docker/README.md` und
+`unraid/README.md` enthalten nur Bedienung und Betrieb, dafür keine
+Anpassung nötig. Die getrennte Board-Übernahme der Paketfassung bleibt
+offen.
 
 ### Übergabe Runde 1 (Claude, 2026-10-02)
 
