@@ -26,7 +26,7 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-95-vertippte-isin-verstaendlich-melden.md`
 - `branch`: `t-95-vertippte-isin-verstaendlich-melden`
 - `handoff_commit`: `c0dd47e`
