@@ -26,20 +26,20 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
+- `phase`: `blocked`
 - `ticket`: `T-91-sqlmodel-kerntabellen.md`
-- `branch`: `t-91-sqlmodel-kerntabellen`
+- `branch`: `master`
 - `handoff_commit`: `b84351e`
 - `review_round`: `2`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-91-sqlmodel-kerntabellen.md`
 - `last_reviewed_commit`: `b84351e`
 - `last_reviewed_round`: `2`
 - `workstream`: `persistenz`
-- `priority_chain`: `T-91`
-- `priority_ticket`: `T-91`
+- `priority_chain`: `T-92`
+- `priority_ticket`: `T-92`
 
 **Rundenlimit ab T-90 · Mike, 2026-10-02.** „Du kannst auf 5 Runden
 hochsetzen“ und „Wir lassen es für die Folge-Projekte und Tickets auf 5
@@ -130,7 +130,16 @@ technisch erledigt, warten auf Mikes Abnahme) und T-91 — über der
 Zielgrenze 2, unter der harten Grenze 4; begründet durch Mikes Vorgabe, die
 erledigten Tickets bis zur gemeinsamen Abnahme dort zu lassen.
 
-## INBOX → claude · T-91 Runde 2 · technisch approved
+**T-92 wartet an der Doing-Grenze · Claude, 2026-10-02.** Codex hat T-91
+in Runde 2 freigegeben (`b84351e`); T-91 ist lokal nach `master` gemergt
+(`f4bc8ef`), der Root steht auf `master`. In `30-doing/` liegen jetzt vier
+Tickets (T-88, T-89, T-90, T-91), alle technisch erledigt und bei Mike zur
+Abnahme. Das ist die harte Obergrenze; T-92 darf erst nach `30-doing/`,
+wenn mindestens eines davon abgenommen ist (Regel
+[Ticketgrenzen](.agents/AGENT-WORKFLOW.md#ticketgrenzen)). Deshalb
+`blocked`, `owner: mike`.
+
+## Archiv · INBOX → claude · T-91 Runde 2 · technisch approved (verarbeitet)
 
 **Codex, 2026-10-02.** `b84351e` gegen `6366844` unabhängig geprüft.
 **B1 behoben:** `URL.create` erhält den vollständigen Dateinamen;
@@ -353,12 +362,15 @@ gemergt, der Root steht auf `master`. Kein Push. Offen:
      aus Tageskursen“, „Stand der Quelle“ mit Datum ohne Uhrzeit.
    Bestehende Werte bekommen ihr Datum beim nächsten Refresh. Beide Tickets
    bleiben bis zu deiner Bestätigung in `30-doing/`.
-2. **Persistenz:** [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md) ist
-   technisch freigegeben (Runde 4) und lokal nach `master` gemergt
-   (`21b5c84`); es wartet mit T-88/T-89 auf deine Abnahme. Prüfbar ohne
-   Handgriff: Verhalten unverändert, Backup und Wiederherstellen laufen wie
-   bisher. [T-91](30-doing/T-91-sqlmodel-kerntabellen.md) läuft, T-92 folgt;
-   T-92 beendet die befristete T-89-Ausnahme.
+2. **Persistenz:** [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md)
+   (Runde 4, `21b5c84`) und [T-91](30-doing/T-91-sqlmodel-kerntabellen.md)
+   (Runde 2, `f4bc8ef`) sind technisch freigegeben und lokal nach `master`
+   gemergt. Prüfbar ohne Handgriff: Verhalten unverändert; Dashboard,
+   Detailbereich, Aufnahme, Löschen, Backup und Wiederherstellen laufen wie
+   bisher. **Damit sind vier Tickets in Doing — die harte Grenze.** T-92
+   (übrige Tabellen, beendet die T-89-Ausnahme) startet, sobald du
+   mindestens eines abnimmst. Zum Fortsetzen genügt z. B. „T-88 und T-89
+   sind abgenommen“.
 3. **Docker Hub und Unraid:** Image 1.4.0 ist gebaut, aber nicht gepusht
    und enthält T-88/T-89 noch nicht. Neues Image, Docker-Hub-Beschreibung
    (`make push`) und Unraid-Listing brauchen deinen Auftrag.
@@ -1698,10 +1710,11 @@ T-70 ist keine zweite fortgeschriebene Fassung des Haupttickets.
 
 Die [Aufnahmeregel](.agents/AGENT-WORKFLOW.md#ticketgrenzen) erlaubt höchstens
 zwei zusätzliche Tickets bei begründetem Bedarf. Andere Ordner haben kein Limit.
-Aktuelle Ausnahmen: `30-doing` mit drei Tickets (T-88, T-89, T-90), eins
-über der Zielgrenze. Bedarf: Mike nimmt T-88 und T-89 erst ab, wenn die
-Tickets in Doing technisch erledigt sind, und hat T-90 vorher aktiviert
-(2026-10-02). Bei einer Überschreitung hier Ordner, betroffene
+Aktuelle Ausnahmen: `30-doing` mit vier Tickets (T-88, T-89, T-90, T-91),
+zwei über der Zielgrenze und damit an der harten Obergrenze. Bedarf: Mike
+nimmt die Tickets erst ab, wenn die Tickets in Doing technisch erledigt
+sind, und hat T-90 bis T-92 als Kette beauftragt (2026-10-02). Alle vier
+sind technisch erledigt; T-92 wartet in `20-ready/` auf einen freien Platz. Bei einer Überschreitung hier Ordner, betroffene
 Tickets und konkreten Bedarf nennen; nach Rückkehr zur Zielgrenze entfernen.
 Der Bestand wird aus den Ticketdateien ermittelt, nicht als Zähler gepflegt.
 

@@ -108,6 +108,14 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | 7 | Browser mit Alt-Datenbank | Umzug, danach Übersicht über den ORM-Leseweg mit Kurs und Kurszahl | ✅ |
 | 8 | Doku | README-Projektaufbau nennt SQLModel; übrige Anleitungen ohne Aussage zu Abhängigkeiten | ✅ |
 
+### Auflösung
+
+Technisch freigegeben von Codex in Runde 2 (`b84351e`). Claude hat den
+Ticketbranch am 2026-10-02 lokal nach `master` gemergt (`f4bc8ef`); kein
+Push, kein Docker-Hub- oder Unraid-Update. Folgearbeit:
+[T-92](T-92-sqlmodel-restliche-tabellen.md). Mikes Abnahme steht aus; das
+Ticket bleibt bis dahin in `30-doing/`.
+
 ## Review-Verlauf (neueste Runde zuerst)
 
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
