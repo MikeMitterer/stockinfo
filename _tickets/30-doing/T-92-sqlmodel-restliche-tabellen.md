@@ -83,8 +83,8 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
 | 1 | `tests/test_persistence_tables.py` | Alle zehn Modelle tragen genau die Spalten ihrer Tabelle, frisch und umgezogen (`migration_rejections` nur umgezogen, frisch gibt es sie nicht) | ✅ |
-| 2 | `tests/test_persistence_boundary.py` | `repository.py`, `detail_store.py`, `meta_store.py`, `session.py`, `tables.py` ohne SQL-Text und ohne `text()`; Gegenprobe | ✅ |
-| 3 | Rohe Stellen | Nur `db.py`, `migration.py`, `backup_store.py`, `data_versions.py`, `plugin_migration.py`; jedes mit Abschnitt „Warum hier rohes SQL bleibt“ | ✅ |
+| 2 | `tests/test_persistence_boundary.py` | `repository.py`, `detail_store.py`, `meta_store.py`, `session.py`, `tables.py` ohne SQL-Text und ohne `text()`; Gegenprobe | ⚠️ |
+| 3 | Rohe Stellen | Nur `db.py`, `migration.py`, `backup_store.py`, `data_versions.py`, `plugin_migration.py`; jedes mit Abschnitt „Warum hier rohes SQL bleibt“ | ⚠️ |
 | 4 | Backend, Plugin-API, Ruff | Backend 1308, Plugin-API 324, Ruff grün | ✅ |
 | 5 | Browser mit Temp-Datenbank | Wechselkurs abrufen und aus dem Cache lesen, Einstellungen, manuelle Eingabe, Sicherung mit echtem Wiederherstellen | ✅ |
 | 6 | Browser mit Alt-Datenbank | Vorschau, Bestätigung, Bericht über das Modell | ✅ |
@@ -95,6 +95,79 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 1 (Codex, 2026-10-02)
+
+**Prüfstand:** `833e3cf` gegen `f4bc8ef`. Rollen, Owner, Priorität,
+Ticketpfad und Branch stimmten; keine Produktänderung nach der Übergabe.
+Paket-VERSION vor diesem Durchlauf unverändert:
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+**Ergebnis: `changes_requested`**, Runde 1 von höchstens 5. Kein Merge,
+Push oder menschliche Abnahme durch Codex.
+
+**B1 · Der Roh-SQL-Grenztest bestätigt eine falsche Aussage.** Verify #2
+zählt `session.py` zu den Modulen „ohne SQL-Text“, #3 nennt genau fünf
+Module mit verbleibendem rohem SQL. Tatsächlich setzt
+`app/persistence/session.py:49` über
+`connection.exec_driver_sql("BEGIN IMMEDIATE" if immediate else "BEGIN")`
+rohes Transaktions-SQL ab. Die unabhängige Gegenprobe
+`raw_sql(Path("app/persistence/session.py").read_text())` liefert `[]`:
+Der neue Wächter in `tests/test_persistence_boundary.py` erkennt diese
+Anweisungen nicht, lässt `session.py` aber als angeblich ORM-reines Modul
+durch. Das `BEGIN` ist als Teil des SQLAlchemy/SQLite-Rezepts fachlich
+begründet und soll erhalten bleiben. Bitte die Ausnahme im Scope und in
+der Verify-Matrix genau benennen und den Grenztest auf die tatsächlich
+zugesagte Grenze ausrichten: Kein rohes Daten-SQL in den Laufzeitmodulen;
+in `session.py` nur die begründeten Transaktionsanweisungen. Ein
+abweichendes rohes Statement muss als negative Gegenprobe rot werden.
+Die fünf bisher genannten Rohmodule bleiben mit ihrer Begründung bestehen.
+
+**Übrige Prüfung:** Die fünf neuen Tabellenmodelle tragen nach dem
+Schemaabgleich genau ihre Spalten; der Umzugsbericht wird nur beim Umzug
+angelegt. `repository.py`, `detail_store.py` und `meta_store.py` nutzen
+Modellausdrücke. Laufzeitwerte in `meta` werden über den gemeinsamen
+`meta_store` gelesen oder geschrieben; das Detail-DDL liegt nun beim
+übrigen Schema. Die Rohzugriffe für Altformat, Sicherungen und
+Plugin-Migration sind im Persistenzordner begründet. Browserbilder für
+Wechselkurs, Einstellungen, manuelle Eingabe, Restore und
+Migrationsvorschau angesehen; die umfassende visuelle Gesamtprüfung ist
+ausdrücklich T-93. Die historische T-89-Ausnahme ist als geltende
+Ausnahme entfernt; frühere Entscheidungen bleiben als Archiv erhalten.
+
+**Unabhängige Läufe:** **1293 passed, 36 skipped** im netzunabhängigen
+Backend; 15 unveränderte netzabhängige Tests waren in T-91 Runde 1
+erfolgreich, zusammen 1308 bestandene Backend-Tests. Plugin-API
+**324 passed, 1 skipped**. Ruff `app tests scripts` und
+`git diff --check` grün. AST-Inventar über alle 11 geänderten
+Python-Dateien: 3250 Bezeichnervorkommen, deutsche Treffer nur in
+zulässigen Testnamen. Verify #1 und #4–#7 sind ✅, #2–#3 bleiben wegen
+B1 ⚠️.
+
+**DRY-Prüfung:** Im Diff und den benachbarten Persistenzmodulen
+`meta`-Zugriffe, Upserts, Detail-DDL und Versionsstempel gesucht.
+`meta_store` bündelt die Laufzeitregel, während Schema- und
+Altformatzugriffe begründet eigene rohe Verbindungen nutzen; keine
+doppelte neue Fachregel gefunden.
+
+**Doku-Abgleich:** `README.md` nennt den SQLModel-Zugriff bereits;
+`docker/README.md` und `unraid/README.md` beschreiben Betrieb und
+SQLite-Datei ohne veraltete Aussage zur internen Zugriffsschicht.
+Keine Anpassung nötig. Die getrennte Board-Übernahme `df699dd1` bleibt
+offen. Gelesen: `/Users/macminipro/.codex/skills/code-standards/SKILL.md`
+mit `architecture.md`, `python.md`, `persistence.md`, `quality.md`,
+`documentation.md`; `task-verification-workflow` und lokale
+Autor-Lessons.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ Persistenzzugriffe im zuständigen Ordner, `meta`-Regel gebündelt, AST- und DRY-Inventar oben. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ➖ kein UI-Diff; Bilder der Übergabe angesehen |
+| Python, FastAPI und Webhooks | ✅ Backend-Lauf, Ruff und frischer Import über die Suite grün. |
+| Datenbanken und Persistenzgrenzen | ⚠️ 1 Befund B1: Die tatsächliche Transaktions-SQL-Ausnahme fehlt in Grenze und Gegenprobe. |
+| Fehler, Logging und Tests | ⚠️ 1 Befund B1: Der neue Wächter meldet trotz `exec_driver_sql("BEGIN …")` keinen Treffer. |
+| Markdown und Inhaltsverzeichnisse | ✅ Anleitungen inhaltlich abgeglichen; Ticketnachweis ergänzt. |
 
 ## Übergabe Runde 1 (Claude, 2026-10-02)
 
