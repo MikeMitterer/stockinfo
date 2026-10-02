@@ -251,6 +251,20 @@ ORM_ONLY_MODULES = ["repository.py", "detail_store.py", "meta_store.py", "sessio
 TRANSACTION_STATEMENTS = frozenset({"BEGIN", "BEGIN IMMEDIATE"})
 
 
+def _is_transaction_statement(node: ast.expr) -> bool:
+    """Ob der Ausdruck **nur** eine erlaubte Transaktionsanweisung ergeben kann.
+
+    Erlaubt sind eine feste Zeichenkette aus `TRANSACTION_STATEMENTS` oder ein
+    bedingter Ausdruck, dessen beide Zweige es wieder sind. Ein Name, eine
+    Verkettung oder ein f-String könnte beliebiges SQL tragen.
+    """
+    if isinstance(node, ast.Constant):
+        return node.value in TRANSACTION_STATEMENTS
+    if isinstance(node, ast.IfExp):
+        return _is_transaction_statement(node.body) and _is_transaction_statement(node.orelse)
+    return False
+
+
 def raw_sql(source: str, *, transactions_allowed: bool = False) -> list[str]:
     """Nennt rohes SQL — das, was ein ORM-Modul nicht hat.
 
@@ -258,7 +272,8 @@ def raw_sql(source: str, *, transactions_allowed: bool = False) -> list[str]:
     `exec_driver_sql(...)` und ein `execute(...)`, dessen erstes Argument
     selbst ein String ist — nicht Spaltennamen in einem SQLAlchemy-Ausdruck.
     Mit `transactions_allowed` bleibt ein `exec_driver_sql` erlaubt, dessen
-    Strings alle in `TRANSACTION_STATEMENTS` liegen.
+    erstes Argument nur eine Anweisung aus `TRANSACTION_STATEMENTS` ergeben
+    kann (`_is_transaction_statement`).
     """
     found = [finding for finding in database_accesses(source) if "SQL im String" in finding]
     for node in ast.walk(ast.parse(source)):
@@ -267,16 +282,11 @@ def raw_sql(source: str, *, transactions_allowed: bool = False) -> list[str]:
         name = node.func.id if isinstance(node.func, ast.Name) else (
             node.func.attr if isinstance(node.func, ast.Attribute) else None
         )
-        strings = {
-            part.value
-            for argument in node.args
-            for part in ast.walk(argument)
-            if isinstance(part, ast.Constant) and isinstance(part.value, str)
-        }
         if name == "text":
             found.append(f"{node.lineno}: text(...)")
         elif name == "exec_driver_sql":
-            if not (transactions_allowed and strings and strings <= TRANSACTION_STATEMENTS):
+            allowed = transactions_allowed and node.args and _is_transaction_statement(node.args[0])
+            if not allowed:
                 found.append(f"{node.lineno}: exec_driver_sql(...)")
         elif name == "execute" and node.args and _string_text(node.args[0]) is not None:
             found.append(f"{node.lineno}: execute('...')")
@@ -288,6 +298,23 @@ def test_die_laufzeitmodule_enthalten_kein_rohes_sql(module: str) -> None:
     source = (PERSISTENCE_DIR / module).read_text(encoding="utf-8")
 
     assert raw_sql(source, transactions_allowed=module == "session.py") == []
+
+
+def test_die_transaktionsausnahme_nimmt_keinen_dynamischen_zweig() -> None:
+    """Gegenprobe aus dem Review: Ein Zweig mit Variable oder Verkettung ist kein `BEGIN`."""
+    source = (
+        "def run(connection, statement, suffix, immediate):\n"
+        "    connection.exec_driver_sql('BEGIN IMMEDIATE' if immediate else statement)\n"
+        "    connection.exec_driver_sql('BEGIN' + suffix)\n"
+        "    connection.exec_driver_sql(f'BEGIN {suffix}')\n"
+        "    connection.exec_driver_sql('BEGIN IMMEDIATE' if immediate else 'BEGIN')\n"
+    )
+
+    assert raw_sql(source, transactions_allowed=True) == [
+        "2: exec_driver_sql(...)",
+        "3: exec_driver_sql(...)",
+        "4: exec_driver_sql(...)",
+    ]
 
 
 def test_die_transaktionsausnahme_gilt_nur_fuer_begin() -> None:
