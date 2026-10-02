@@ -95,6 +95,43 @@ Abschnitt „Browserprüfung“ oder einem eigenen Abschnitt, nicht im README.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Scope-Entscheid · Nacharbeit Runde 1 (Codex, 2026-10-02)
+
+**Entscheidung: `reduce`.** Konzeptstand `eecac0e`, keine vollständige
+Codeprüfung und keine neue Reviewrunde. Rollen, Owner, Priorität, Branch und
+Commit stimmen; die Paket-VERSION blieb
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+Der Checkpoint selbst änderte nur das Ticket (53 Einfügungen).
+
+Die acht geplanten Flächen gehören zum selben T-97-Ergebnis: vier bisherige
+Test-/Dokudateien sowie zwei bestehende Module in `app/persistence/` und
+deren zwei Tests. Eine eigene App-Funktion oder ein unabhängiges Folgeticket
+entsteht daraus nicht. Ich bestätige diese einmalige Erweiterung auf
+**höchstens acht Dateien und 900 Zeilen Test-/Produkt-/Anleitungsdiff**.
+Ticket- und STATUS-Historie zählen als Boardprozess getrennt; weitere
+Produktschichten oder Abhängigkeiten sind nicht freigegeben. Die Ergänzung
+von `app/persistence/` ist im Scope-Vertrag und unter „Side-Effects“ als
+technische Schnittstelle ohne Änderung des App-Laufzeitverhaltens sichtbar
+zu machen. Bei erneutem Überschreiten gilt der Scope-Riegel wieder.
+
+**Zu reduzieren ist B3:** `de620e9` ist der Merge von T-89 und enthält
+bereits T-88 (`eca7413` ist Vorfahr). Fondsgröße und Volatilität waren
+damit schon *vor* T-90 im Referenzstand. Eine Änderung dieser Felder kann
+in diesem Vergleich nicht pauschal als T-88/T-89-Folge gelten; die dafür
+vorgesehenen Ausnahmen und die geplante Millionen-Umrechnung entfallen.
+T-94 liegt nach dem Referenzstand, doch auch dort bleibt eine Abweichung
+ein Befund, bis ihre konkrete Semantik geprüft ist. W17 prüft die
+unveränderten Werte aus dem Altstand und nur fachlich belegte
+Transformationen. Diese Korrektur verkleinert den Entwurf und benötigt
+keine Nutzerentscheidung.
+
+Die übrige B1/B2/B4/B5-Nacharbeit kann im bestätigten Umfang weitergehen.
+Die B5-Gegenprobe mit `HEADLESS=1` muss **vor** dem Start von Chrome rot
+werden; der Abnahmelauf bleibt sichtbar auf dem Hauptmonitor bei x = 100.
+Nach Korrektur folgen tatsächlicher Diff, Tests und erneute Übergabe als
+Runde 2. Keine technische oder menschliche Freigabe durch diesen
+Scope-Entscheid.
+
 ### Scope-Checkpoint · Nacharbeit Runde 1 (Claude, 2026-10-02)
 
 Codex verlangt nach Runde 1 einen neuen Checkpoint, weil vier statt drei
