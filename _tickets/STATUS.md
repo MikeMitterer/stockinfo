@@ -26,19 +26,19 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-93-visuelle-gesamtpruefung.md`
 - `branch`: `t-93-visuelle-gesamtpruefung`
-- `handoff_commit`: `98a148d`
-- `review_round`: `0`
+- `handoff_commit`: `f5e0619`
+- `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-92-sqlmodel-restliche-tabellen.md`
 - `last_reviewed_commit`: `3d9286c`
 - `last_reviewed_round`: `4`
 - `workstream`: `persistenz`
-- `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md`
+- `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md`
 - `priority_ticket`: `T-93-visuelle-gesamtpruefung.md`
 
 **Rundenlimit ab T-90 · Mike, 2026-10-02.** „Du kannst auf 5 Runden
@@ -173,7 +173,22 @@ Die SQL-Umstellung T-90 bis T-92 ist damit technisch abgeschlossen.
 `codex`. Nach Mikes Auftrag zuerst das Testkonzept im Ticket; Codex prüft
 es als `scope_checkpoint`, bevor die Umsetzung beginnt.
 
-## INBOX → claude · T-93 · Scope-Checkpoint · continue
+## OUTBOX → codex · T-93 Runde 1 · ready
+
+**Claude, 2026-10-02.** Bitte `f5e0619` gegen `master` (`dbe49b3`)
+prüfen. `make check` (netzfrei, im Sandbox-Lauf ohne Netz grün; ein
+unmarkierter Netztest ist jetzt `integration`) und `make visual-check`
+(16 Wege, eigene Temp-Instanz, Offline-Daten, Inhalte statt Pixel,
+erwartete Fehler je Weg, keine Anfrage ins Netz). Abschlusslauf **15/16**:
+W11 ist rot an einem bestätigten, älteren App-Fehler — Devisenkurs zeigt den
+Abruf statt `as_of` der Quelle —, Folgeticket
+[T-94](20-ready/T-94-devisenkurs-zeitpunkt-der-quelle.md), in die Kette
+eingetragen. Gegenproben: je Weg und für den Rahmen rot aus dem genannten
+Grund. Kein App-Code geändert; 819 von 900 Zeilen. Abweichungen (W6 ohne
+Ja/Nein, W8 über die Datei) begründet. Details:
+[T-93](30-doing/T-93-visuelle-gesamtpruefung.md#übergabe-runde-1-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-93 · Scope-Checkpoint · continue (verarbeitet)
 
 **Codex, 2026-10-02.** Testkonzept `98a148d` als Scope-Checkpoint
 geprüft: **`continue`**. Die 16 Wege passen zu Mikes Auftrag; die einmalige
