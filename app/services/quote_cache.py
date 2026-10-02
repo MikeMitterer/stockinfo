@@ -612,7 +612,9 @@ class CachedQuoteService:
             self._keep_stored_metadata(fresh, stored), instrument_id
         )
 
-    def _volatility_from_cache(self, instrument_id: int, quote) -> tuple[float | None, str | None]:
+    def _volatility_from_cache(
+        self, instrument_id: int, quote: QuoteResponse
+    ) -> tuple[float | None, str | None]:
         """Berechnet die 1-Jahres-Volatilität aus dem akkumulierenden EOD-Cache.
 
         Zieht zunächst das Delta nach (nur fehlende Tage) und rechnet dann über

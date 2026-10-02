@@ -17,6 +17,7 @@ import structlog
 from app import detail_store
 from app.calculated_metrics import CALCULATED_SOURCE
 from app.db import get_connection
+from app.detail_models import DetailDefinition
 from app.exchanges import canonical_identity, identity_from_symbol
 from app.models import (
     IDENTITY_COLUMNS,
@@ -613,7 +614,9 @@ class QuoteRepository:
         with self._connect() as connection:
             return connection.execute("SELECT 1 FROM meta WHERE key='details_schema'").fetchone() is not None
 
-    def detail_catalog(self, definitions=None) -> tuple[list, int]:
+    def detail_catalog(
+        self, definitions: list[DetailDefinition] | None = None
+    ) -> tuple[list[DetailDefinition], int]:
         """Liest das Profilschema oder schreibt eine neue Version atomar."""
         with self._connect() as connection:
             if definitions is not None:

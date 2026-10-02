@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 
 from app import detail_store
 from app.config import get_settings
-from app.container import get_sources_config
+from app.container import get_cached_quote_service, get_sources_config
 from app.db import init_db
 from app.detail_models import DetailDefinition
 from app.main import app
@@ -185,3 +185,51 @@ def test_instruments_liefert_berechnete_und_justetf_volatilitaet(client: TestCli
     assert by_symbol["APC.DE"]["details"]["volatility"]["as_of"] == "2026-10-01"
     assert by_symbol["EUNL.DE"]["details"]["volatility"]["value"] == 10.67
     assert by_symbol["EUNL.DE"]["details"]["volatility"]["source"] == "justetf"
+
+
+@pytest.fixture
+def refresh_api() -> Iterator[tuple[TestClient, QuoteRepository]]:
+    """Echte App, deren Dienst auf der Temp-DB einen netzfreien Kursdienst nutzt."""
+    with TestClient(app) as opened:
+        repository = QuoteRepository(get_settings().database_path)
+        yield opened, repository
+    app.dependency_overrides.clear()
+
+
+def _use_service(service: CachedQuoteService) -> None:
+    app.dependency_overrides[get_cached_quote_service] = lambda: service
+
+
+def _api_volatility(client: TestClient, symbol: str) -> dict:
+    by_symbol = {item["symbol"]: item for item in client.get("/instruments").json()}
+    return by_symbol[symbol]["details"]["volatility"]
+
+
+def test_refresh_liefert_den_stand_bis_zur_api(
+    refresh_api: tuple[TestClient, QuoteRepository],
+) -> None:
+    client, repository = refresh_api
+    service, isin, last_date = _stock_with_closes(repository, 30)
+    _use_service(service)
+
+    assert client.post(f"/refresh/{isin}").status_code == 200
+
+    detail = _api_volatility(client, "VGWL.DE")
+    assert detail["source"] == "calculated"
+    assert detail["as_of"] == last_date
+
+
+def test_wiederhergestellter_wert_behaelt_seinen_stand_bis_zur_api(
+    refresh_api: tuple[TestClient, QuoteRepository],
+) -> None:
+    client, repository = refresh_api
+    service, isin, _ = _stock_with_closes(repository, 0)
+    repository.set_volatility(repository.get_instrument_by_isin(isin)["id"], 12.5,
+                              as_of="2026-09-30")
+    _use_service(service)
+
+    assert client.post(f"/refresh/{isin}").status_code == 200
+
+    detail = _api_volatility(client, "VGWL.DE")
+    assert detail["value"] == 12.5
+    assert detail["as_of"] == "2026-09-30"
