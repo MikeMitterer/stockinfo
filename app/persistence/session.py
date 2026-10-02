@@ -14,7 +14,7 @@ derselben Transaktion.
 
 **Die eine rohe Anweisung:** `BEGIN` beziehungsweise `BEGIN IMMEDIATE` über
 `exec_driver_sql`. Sie steuert die Transaktion, liest und schreibt keine
-Daten; ein ORM-Ausdruck dafür gibt es nicht. Sonst steht hier kein SQL.
+Daten; einen ORM-Ausdruck dafür gibt es nicht. Sonst steht hier kein SQL.
 """
 
 from collections.abc import Iterator
