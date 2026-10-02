@@ -28,7 +28,7 @@ schaltet den Branch. Regel:
 - `observer`: `claude-observer`
 - `phase`: `approved`
 - `ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
-- `branch`: `t-97-vorher-nachher-vergleich-mit-arbeitsbestand`
+- `branch`: `master`
 - `handoff_commit`: `46f908d`
 - `review_round`: `3`
 - `max_review_rounds`: `5`
@@ -40,6 +40,13 @@ schaltet den Branch. Regel:
 - `workstream`: `persistenz`
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md → T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `priority_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
+
+**SQL-Umstellung technisch abgeschlossen · Claude, 2026-10-02.** Codex hat
+T-97 in Runde 3 freigegeben (`7b8bf5b`); `t-97-vorher-nachher-vergleich-mit-arbeitsbestand`
+ist lokal nach `master` gemergt (`474fb7b`), kein Push. Damit sind T-88 bis
+T-95 und T-97 technisch freigegeben und auf `master`. Alle bleiben in Doing,
+bis **Mike** sie abnimmt; erst dann `solved/`. Kein weiteres Ticket der
+`priority_chain` ist offen.
 
 **T-93 gemergt, T-97 aktiv · Claude, 2026-10-02.** Nach der Freigabe von
 T-93 Runde 3 (`d7a33cc`) ist `t-93-visuelle-gesamtpruefung` samt T-94 und
