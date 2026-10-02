@@ -2,9 +2,8 @@
 
 Jede Methode öffnet eine eigene, kurz gehaltene Session (`open_session`) —
 so ist der Zugriff thread-safe (Request-Threadpool und Hintergrund-Scheduler
-teilen sich keine Verbindung). Die Kerntabellen laufen über die Modelle aus
-`tables.py`; `meta`, `daily_meta` und `fx_rates` bis T-92 über `text()` in
-derselben Session und Transaktion.
+teilen sich keine Verbindung). Alle Tabellen laufen über die Modelle aus
+`tables.py`; hier steht kein rohes SQL.
 """
 
 import json
@@ -24,7 +23,6 @@ from sqlalchemy import (
     func,
     or_,
     select,
-    text,
     update,
 )
 from sqlalchemy.dialects.sqlite import insert
@@ -46,12 +44,15 @@ from app.models import (
     identity_from_columns,
 )
 from app.persistence import detail_store
+from app.persistence.meta_store import get_meta
 from app.persistence.quote_store import PROTECTED_META_FIELDS, SavedQuote
 from app.persistence.session import fetch_all, fetch_one, open_session
 from app.persistence.tables import (
     DailyCloseRecord,
+    DailyMetaRecord,
     DetailOverrideRecord,
     DetailValueRecord,
+    FxRateRecord,
     InstrumentRecord,
     QuoteRecord,
     table_of,
@@ -481,23 +482,24 @@ class QuoteRepository:
         with self._session() as session:
             return fetch_one(
                 session,
-                text("SELECT * FROM daily_meta WHERE instrument_id = :id").bindparams(id=instrument_id),
+                select(table_of(DailyMetaRecord)).where(col(DailyMetaRecord.instrument_id) == instrument_id),
             )
 
     def set_daily_meta(
         self, instrument_id: int, fetched_from: str | None, fetched_to: str | None
     ) -> None:
         """Setzt die Fetch-Wasserzeichen für ein Instrument."""
+        statement = insert(DailyMetaRecord).values(
+            instrument_id=instrument_id, fetched_from=fetched_from, fetched_to=fetched_to
+        )
         with self._session(write=True) as session:
-            session.execute(
-                text(
-                    "INSERT INTO daily_meta (instrument_id, fetched_from, fetched_to) "
-                    "VALUES (:id, :fetched_from, :fetched_to) "
-                    "ON CONFLICT (instrument_id) DO UPDATE SET "
-                    "fetched_from = excluded.fetched_from, fetched_to = excluded.fetched_to"
-                ),
-                {"id": instrument_id, "fetched_from": fetched_from, "fetched_to": fetched_to},
-            )
+            session.execute(statement.on_conflict_do_update(
+                index_elements=["instrument_id"],
+                set_={
+                    "fetched_from": statement.excluded.fetched_from,
+                    "fetched_to": statement.excluded.fetched_to,
+                },
+            ))
 
     def list_instruments(self) -> list[dict]:
         """Gibt alle bekannten Instrumente zurück (für den Hintergrund-Refresh)."""
@@ -644,12 +646,16 @@ class QuoteRepository:
     def detail_generation(self) -> str:
         """Bleibt über Neustarts erhalten und reist mit Sicherungen mit."""
         with self._session() as session:
-            return session.execute(text("SELECT value FROM meta WHERE key='details_generation_id'")).one()[0]
+            generation = get_meta(session, "details_generation_id")
+        if generation is None:
+            # `init_db` legt sie an; fehlt sie, lief der Start nicht durch.
+            raise LookupError("details_generation_id fehlt in meta")
+        return generation
 
     def has_detail_catalog(self) -> bool:
         """Unterscheidet ein leeres Profilschema vom alten internen Aufruf ohne Schema."""
         with self._session() as session:
-            return session.execute(text("SELECT 1 FROM meta WHERE key='details_schema'")).first() is not None
+            return get_meta(session, "details_schema") is not None
 
     def detail_catalog(
         self, definitions: list[DetailDefinition] | None = None
@@ -659,8 +665,7 @@ class QuoteRepository:
             if definitions is not None:
                 version = detail_store.sync_catalog(session, definitions)
             else:
-                row = session.execute(text("SELECT value FROM meta WHERE key='details_version'")).first()
-                version = int(row[0]) if row else 0
+                version = int(get_meta(session, "details_version") or 0)
             return detail_store.catalog(session), version
 
     def get_instrument_by_listing_id(self, listing_id: str) -> dict | None:
@@ -1089,8 +1094,9 @@ class QuoteRepository:
         with self._session() as session:
             return fetch_one(
                 session,
-                text("SELECT * FROM fx_rates WHERE base = :base AND quote = :quote")
-                .bindparams(base=base, quote=quote),
+                select(table_of(FxRateRecord)).where(
+                    col(FxRateRecord.base) == base, col(FxRateRecord.quote) == quote
+                ),
             )
 
     def save_fx_rate(
@@ -1109,21 +1115,17 @@ class QuoteRepository:
         ersatzweise `"cache"` ein — eine Angabe, die `cached: true` ohnehin
         macht, und die den eigentlichen Lieferanten verschwieg.
         """
+        statement = insert(FxRateRecord).values(
+            base=base, quote=quote, rate=rate, quote_time=quote_time,
+            fetched_at=fetched_at, source=source,
+        )
         with self._session(write=True) as session:
-            session.execute(
-                text(
-                    "INSERT INTO fx_rates (base, quote, rate, quote_time, fetched_at, source) "
-                    "VALUES (:base, :quote, :rate, :quote_time, :fetched_at, :source) "
-                    "ON CONFLICT (base, quote) DO UPDATE SET "
-                    "rate = excluded.rate, quote_time = excluded.quote_time, "
-                    "fetched_at = excluded.fetched_at, source = excluded.source"
-                ),
-                {
-                    "base": base,
-                    "quote": quote,
-                    "rate": rate,
-                    "quote_time": quote_time,
-                    "fetched_at": fetched_at,
-                    "source": source,
+            session.execute(statement.on_conflict_do_update(
+                index_elements=["base", "quote"],
+                set_={
+                    "rate": statement.excluded.rate,
+                    "quote_time": statement.excluded.quote_time,
+                    "fetched_at": statement.excluded.fetched_at,
+                    "source": statement.excluded.source,
                 },
-            )
+            ))

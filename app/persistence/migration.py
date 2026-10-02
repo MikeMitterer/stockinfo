@@ -1,5 +1,11 @@
 """Der Identitäts-Umzug des Bestands — was er täte, bevor er es tut.
 
+**Warum hier rohes SQL bleibt:** Der Umzug liest und baut Tabellen in einer
+Form, die es nur vor und während des Umzugs gibt: Er fragt `PRAGMA
+table_info`, ergänzt Spalten mit `ALTER TABLE` und baut `instruments` über
+`instruments_hardened` neu auf. Die SQLModel-Modelle beschreiben erst das
+Ergebnis. Der Aufrufer hält dafür eine rohe Verbindung und Transaktion.
+
 Dieses Modul **rechnet vor**. Es ändert nichts. Das ist der ganze Zweck: Seit
 der Entscheidung nach Runde 16 darf eine nicht auflösbare Altzeile nirgends
 als halbe Identität weiterleben, und was nicht migriert werden kann, verlässt

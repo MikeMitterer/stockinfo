@@ -90,20 +90,6 @@ wegen des regelkonformen Persistenzumbaus vorerst bis zu acht reguläre
 Review-Runden. Das frühere Limit von fünf ist damit überholt; die drei
 bereits verbrauchten Runden bleiben gezählt.
 
-**Persistenzumbau als eigenes Ticket, befristete Ausnahme für T-89 ·
-Mike, 2026-10-02.** Nach Vorlage des gemessenen Umfangs (1.846 Zeilen rohes
-SQLite, 77 `execute`-Aufrufe, 7 weitere Module mit SQL, 25 Nutzerdateien,
-SQLModel als neue Abhängigkeit) entschied Mike: „Eigenes Ticket T-90“. Das
-ersetzt den Umbau innerhalb von T-89 aus der Persistenzentscheidung oben.
-Für T-89 gilt damit eine **ausdrückliche, befristete Ausnahme** von
-`code-standards/references/persistence.md`: T-89 darf `set_volatility` im
-bestehenden `app/repository.py` ändern. Der regelkonforme Umbau ist
-[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md); die Ausnahme endet mit
-dessen Abschluss und gilt nicht für neue Arbeit. Das Limit von acht Runden
-bleibt stehen. **Nachtrag 2026-10-02:** Mike teilte den Umbau in drei
-Tickets (T-90 Ordner und Interface, T-91 und T-92 SQLModel); die Ausnahme
-endet damit erst mit T-92.
-
 **Aktivierung T-90 · Mike, 2026-10-02.** „Ich reviewe erst wenn doing durch
 ist – sprich vorher kommt noch T-90. Fang gleich damit an.“
 [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md) ist aktiv auf
@@ -160,7 +146,12 @@ Message von vorhin in das Board ein“).
   Kommandozeile und im Browser bestanden sind.
 - **Visuelle Tests (geklärt):** Mike: „Eigenes Ticket T-93“.
   [T-93](20-ready/T-93-visuelle-gesamtpruefung.md) liegt in `20-ready/`
-  und folgt nach T-92; erst danach nimmt Mike T-88 bis T-93 ab.
+  und folgt nach T-92; erst danach nimmt Mike T-88 bis T-93 ab. Mike,
+  2026-10-02: „Die Applikation muss nach der massiven Umstellung gründlich
+  im Browser getestet werden … Überleg dir ein sauberes Testkonzept, lass es
+  von Codex verifizieren und startet dann durch.“ Ablauf für T-93: zuerst
+  das Testkonzept im Ticket, Codex prüft es als eigenen Schritt vor der
+  Umsetzung, danach Umsetzung und Durchlauf mit vollem Review.
 - **Aktivierung:** Der Coder aktiviert T-92 nach Workflow (Ticket nach
   `30-doing/`, `ticket`, `branch`, Phase, Owner und `review_round: 0` in
   einem Commit). Der Observer hat nur diese Entscheidung eingetragen und
@@ -394,10 +385,11 @@ gemergt, der Root steht auf `master`. Kein Push. Offen:
    (Runde 2, `f4bc8ef`) sind technisch freigegeben und lokal nach `master`
    gemergt. Prüfbar ohne Handgriff: Verhalten unverändert; Dashboard,
    Detailbereich, Aufnahme, Löschen, Backup und Wiederherstellen laufen wie
-   bisher. **Damit sind vier Tickets in Doing — die harte Grenze.** T-92
-   (übrige Tabellen, beendet die T-89-Ausnahme) startet, sobald du
-   mindestens eines abnimmst. Zum Fortsetzen genügt z. B. „T-88 und T-89
-   sind abgenommen“.
+   bisher. [T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md) (übrige
+   Tabellen) läuft auf deine Freigabe als fünftes Ticket; danach folgt
+   [T-93](20-ready/T-93-visuelle-gesamtpruefung.md), die gründliche
+   Browserprüfung nach der Umstellung. Abnahme von T-88 bis T-93 erst
+   danach.
 3. **Docker Hub und Unraid:** Image 1.4.0 ist gebaut, aber nicht gepusht
    und enthält T-88/T-89 noch nicht. Neues Image, Docker-Hub-Beschreibung
    (`make push`) und Unraid-Listing brauchen deinen Auftrag.

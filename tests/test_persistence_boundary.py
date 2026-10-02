@@ -31,6 +31,8 @@ import ast
 import re
 from pathlib import Path
 
+import pytest
+
 APP_DIR = Path(__file__).resolve().parent.parent / "app"
 PERSISTENCE_DIR = APP_DIR / "persistence"
 SQL_CALLS = frozenset({"execute", "executemany", "executescript"})
@@ -230,13 +232,54 @@ def test_nur_die_persistenzschicht_spricht_mit_der_datenbank() -> None:
 
 
 def test_die_persistenzschicht_selbst_wird_gefunden() -> None:
-    """Gegenprobe am echten Code: Im Persistenzordner muss die Prüfung anschlagen."""
-    repository = (PERSISTENCE_DIR / "repository.py").read_text(encoding="utf-8")
+    """Gegenprobe am echten Code: Im Schema- und Migrationsmodul muss die Prüfung anschlagen."""
+    schema = (PERSISTENCE_DIR / "db.py").read_text(encoding="utf-8")
 
-    found = database_accesses(repository)
+    found = database_accesses(schema)
 
     assert any("SQL im String" in finding for finding in found)
     assert any(".execute(...)" in finding for finding in found)
+
+
+# Die Laufzeitwege laufen vollständig über die SQLModel-Modelle (T-92). Rohes
+# SQL bleibt nur in Schema, Migration, Backup und Plugin-Migration — und ist
+# dort begründet.
+ORM_ONLY_MODULES = ["repository.py", "detail_store.py", "meta_store.py", "session.py", "tables.py"]
+
+
+def raw_sql(source: str) -> list[str]:
+    """Nennt SQL-Text und `text(...)`-Aufrufe — das, was ein ORM-Modul nicht hat."""
+    found = [finding for finding in database_accesses(source) if "SQL im String" in finding]
+    found += [
+        f"{node.lineno}: text(...)"
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "text"
+    ]
+    return sorted(found)
+
+
+@pytest.mark.parametrize("module", ORM_ONLY_MODULES)
+def test_die_laufzeitmodule_enthalten_kein_rohes_sql(module: str) -> None:
+    source = (PERSISTENCE_DIR / module).read_text(encoding="utf-8")
+
+    assert raw_sql(source) == []
+
+
+def test_gegenprobe_rohes_sql_im_ormmodul_wird_gefunden() -> None:
+    source = (
+        "from sqlalchemy import text\n"
+        "def read(session):\n"
+        "    return session.execute(text('SELECT value FROM meta WHERE key = :key'))\n"
+        "def write(session):\n"
+        "    session.execute(text('DELETE FROM instrument_overrides'))\n"
+    )
+
+    assert raw_sql(source) == [
+        "3: SQL im String",
+        "3: text(...)",
+        "5: SQL im String",
+        "5: text(...)",
+    ]
 
 
 def test_gegenprobe_die_pruefung_findet_jeden_verstoss() -> None:

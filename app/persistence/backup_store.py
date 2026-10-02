@@ -5,6 +5,12 @@ welche Sicherung; hier steht nur, wie die Datenbank dafür angesprochen wird.
 Dazu gehört jeder Zugriff auf die **laufende** Datenbankdatei samt ihren
 Journalen. Die Sicherungsdateien selbst verwaltet der Dienst als Archiv
 (Namen, Rotation, Manifeste); ihren Inhalt liest er nur über `read_stamp`.
+
+**Warum hier rohes SQL bleibt:** `VACUUM INTO` und `PRAGMA user_version`
+haben im ORM keine Entsprechung. `read_stamp` öffnet fremde Sicherungsdateien
+nur lesend und muss auch ältere Schemata lesen, die die Modelle nicht
+abbilden. Der Stempel der **laufenden** Datenbank (`write_stamp_if_missing`)
+geht über die Modelle.
 """
 
 import os
@@ -13,6 +19,8 @@ import sqlite3
 from pathlib import Path
 
 from app.persistence.db import connect_read_only, get_connection
+from app.persistence.meta_store import put_meta_if_missing
+from app.persistence.session import open_session
 
 _JOURNAL_SUFFIXES = ("-wal", "-shm")
 
@@ -29,16 +37,8 @@ def write_stamp_if_missing(database_path: str | Path, key: str, value: str) -> N
         key: Schlüssel in der Tabelle `meta`.
         value: Der zu schreibende Wert.
     """
-    connection = get_connection(str(database_path))
-    try:
-        connection.execute(
-            "INSERT INTO meta (key, value) VALUES (?, ?) "
-            "ON CONFLICT(key) DO NOTHING",
-            (key, value),
-        )
-        connection.commit()
-    finally:
-        connection.close()
+    with open_session(str(database_path), immediate=True) as session:
+        put_meta_if_missing(session, key, value)
 
 
 def read_stamp(database_file: Path, key: str) -> tuple[str | None, int]:
