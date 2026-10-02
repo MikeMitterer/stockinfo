@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 
-from sqlalchemy import Engine, Executable, event
+from sqlalchemy import URL, Engine, Executable, event
 from sqlalchemy.pool import NullPool
 from sqlmodel import Session, create_engine
 
@@ -29,8 +29,11 @@ from app.persistence.db import configure_connection
 def _engine(database_path: str) -> Engine:
     """Die Engine für eine Datenbankdatei, einmal je Pfad gebaut."""
     Path(database_path).parent.mkdir(parents=True, exist_ok=True)
+    # **Der Pfad als Feld, nicht im URL-Text.** In `sqlite:///{pfad}` läse
+    # SQLAlchemy ein `?` im Dateinamen als Beginn der Optionen und öffnete eine
+    # andere Datei als `sqlite3` in `init_db`.
     engine = create_engine(
-        f"sqlite:///{database_path}",
+        URL.create("sqlite", database=database_path),
         poolclass=NullPool,
         connect_args={"timeout": 10.0, "check_same_thread": False},
     )
