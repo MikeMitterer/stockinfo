@@ -78,7 +78,7 @@ Docstring; sie greifen nicht auf die Datenbank zu. 38 Dateien in `app`,
 - [ ] Außerhalb von `app/persistence/` gibt es kein SQL, kein
       `sqlite3`-Verbindungsobjekt und keinen Datenbankzugriff; ein Test
       sichert das ab.
-- [ ] Dienste kennen das Repository nur über ein Protocol und bekommen es
+- [x] Dienste kennen das Repository nur über ein Protocol und bekommen es
       per Dependency Injection.
 - [x] Bestehende Daten, Migrationen, Backup und Wiederherstellung
       funktionieren unverändert; Tests mit temporärer Datenbank belegen das.
@@ -96,19 +96,110 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | `tests/test_persistence_boundary.py` | Kein SQL und kein direkter SQLite-Zugriff außerhalb `app/persistence/`; die Gegenprobe muss auch SQL-Fragmente ohne `execute` finden | ⚠️ B1 |
+| 1 | `tests/test_persistence_boundary.py` | Kein SQL und kein direkter Zugriff auf die aktive SQLite-Datei außerhalb `app/persistence/`; Gegenproben für SQL-Fragmente und physischen Restore | ⚠️ B4 |
 | 2 | `git diff -M --summary master..HEAD` | Fünf Umbenennungen nach `app/persistence/`, keine Weiterleitungsmodule an den alten Pfaden | ✅ |
-| 3 | `app/container.py`, Dienste, `routers/fields.py` | `QuoteRepository` wird nur in `get_quote_store()` gebaut; Dienste und Feldrouter kennen nur `QuoteStore` und unabhängige Domänentypen | ⚠️ B3 |
-| 4 | Backend, Plugin-API, Ruff | Backend 1269 grün, Plugin-API 324 grün, `ruff check app tests scripts` und `plugin_api` ohne Befund | ✅ |
+| 3 | `app/container.py`, Dienste, `routers/fields.py` | `QuoteRepository` wird nur in `get_quote_store()` gebaut; Dienste und Feldrouter kennen nur `QuoteStore` und unabhängige Domänentypen | ✅ |
+| 4 | Backend, Plugin-API, Ruff | Backend 1271 grün, Plugin-API 324 grün, `ruff check app tests scripts` und `plugin_api` ohne Befund | ✅ |
 | 5 | Browser mit Temp-Datenbank | Dashboard und Detailbereich wie vorher; Backup anlegen, vormerken, Neustart stellt den gelöschten Eintrag wieder her | ✅ |
 | 6 | Browser mit Alt-Datenbank | Migrationsvorschau, Bestätigung und Bericht laufen über die verlagerten Funktionen | ✅ |
-| 7 | Doku | Projektaufbau im `README.md` nennt `persistence/` und seine Aussage „data access (only here)“ stimmt mit dem Code überein | ⚠️ B1 |
+| 7 | Doku | Projektaufbau im `README.md` nennt `persistence/` und seine Aussage „data access (only here)“ stimmt mit dem Code überein | ⚠️ B4 |
 
 ## Review-Verlauf (neueste Runde zuerst)
 
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 2 (Codex, 2026-10-02)
+
+**Prüfstand:** `88d54d8` gegen `8804575`, Gesamtstand gegen `de620e9`.
+Rollen, Owner, Priorität, Ticketpfad und Branch stimmten; der Übergabecommit
+`a5b4ac3` enthielt nur Boarddateien. Paket-VERSION
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`
+vor dem Durchlauf unverändert. **Ergebnis: `changes_requested`**. Runde 2
+von höchstens 3; eine reguläre Runde bleibt. Keine technische oder
+menschliche Abnahme.
+
+**B1–B3 behoben.** `identity_where` liegt jetzt beim einzigen Aufrufer in
+`app/persistence/repository.py`. Die neue AST-Gegenprobe meldet am alten
+`app/models.py` genau die drei SQL-Fragmente in Zeilen 361, 365 und 367,
+am neuen Modell keinen Treffer. `_REPORT_COLUMNS` entfiel; `stored_rejections`
+liest `SELECT *`, und der Router leitet seine Feldliste aus
+`RejectedInstrument.model_fields` ab. Die neun Felder stimmen im Lauf
+überein. `SavedQuote` und `PROTECTED_META_FIELDS` stehen einmalig im
+Interface-Modul; dessen Import lädt die konkrete Repository-Datei nicht.
+`quote_cache.py` importiert keine Repository-Implementierung mehr. Der
+Type-/Feldvertrag ist damit unabhängig.
+
+### Befund für Runde 3
+
+**B4 · Der Restore ersetzt die Datenbankdatei außerhalb des
+Persistenzordners.** `app/services/backup.py:365–419` enthält
+`apply_pending`. Die Funktion kopiert das gewählte Backup mit
+`shutil.copy2(source, temporary)`, ersetzt die aktive SQLite-Datei mit
+`os.replace(temporary, database)` und löscht danach deren `-wal`-/`-shm`-
+Dateien. Das ist ein direkter Schreibzugriff auf Datenbankdatei und Journale
+außerhalb `app/persistence/`; T-90 verspricht ausdrücklich auch „keinen
+Datenbankzugriff“ außerhalb dieses Ordners. Der neue
+`database_accesses`-Wächter meldet für das gesamte
+`app/services/backup.py` dennoch `[]`, weil er nur SQLite-Importe,
+`execute` und SQL-Strings erkennt. Bitte den physischen Austausch samt
+Journalbereinigung in `app/persistence/backup_store.py` oder eine dortige
+zuständige Funktion verlegen. Der Dienst soll Zeitpunkt, Auswahl,
+Vorabsicherung und Fehlermeldung steuern. Den echten Restore mit temporärer
+DB erneut prüfen und die Grenze so gegenprüfen, dass genau dieser übersehene
+Pfad sichtbar wäre; kein neues Test-Subsystem.
+
+**Rest für die Maximalrunde:** B4 ist blockierend, weil er dem eigenen
+T-90-Akzeptanzkriterium und der technischen Zugriffsgrenze widerspricht;
+der Restore schreibt tatsächlich auf die aktive Datenbankdatei. Er blieb
+offen, weil Runde 1 SQL, Verbindung und Interface inventarisierte, den
+physischen Wiederherstellungstausch im schon vorhandenen Backup-Dienst aber
+übersah. Nächster Schritt: Claude verlegt diesen Tausch im T-90-Branch,
+belegt die Grenze und die unveränderte Wiederherstellung; Codex prüft die
+konkrete Runde-3-Fassung. T-91/T-92 hängen von einem technisch freigegebenen
+T-90 ab. Weitere Befunde sind derzeit nicht offen.
+
+### Weitere Gegenproben und Standards
+
+- **#4:** Unabhängig **1271 passed, 35 skipped** im Backend, gezielt
+  **33 passed** für Persistenzgrenze und Migrationsendpunkte; Ruff für
+  `app tests scripts plugin_api` und Gesamt-Diff-Prüfung grün. Die
+  Plugin-API **324 passed, 1 skipped** aus Runde 1 ist seitdem ohne
+  Plugin-Diff. Grüne Tests lösen B4 nicht auf.
+- **#5–#6:** Das neue Bild der Alt-Datenbank-Vorschau angesehen: zwei
+  umziehende, ein abgelehntes Instrument. Dashboard- und Backupbilder aus
+  Runde 1 gelten für den dort unveränderten Code; die physischen
+  Restore-Operationen blieben bis jetzt unverändert.
+- **Bezeichner:** Eigenes AST-Inventar über alle 78 im Gesamtstand
+  geänderten Python-Dateien: 22.163 Name-/Argument-/Funktions-/
+  Klassenvorkommen, nur ein zulässiger deutscher Testname mit Nicht-ASCII.
+- **Doku-Abgleich:** `README.md:527` sagt „data access (only here)“; das
+  trifft wegen B4 noch nicht vollständig zu. `docker/README.md`,
+  `unraid/README.md`, `docs/plugin-authors.md` und `AGENTS.md` nennen keine
+  alten Modulpfade und widersprechen dem geplanten Endstand nicht. T-91/T-92
+  und die befristete ORM-Ausnahme bleiben im Board sichtbar.
+
+**Gelesener Standard:**
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md`, Referenzen
+`architecture.md`, `python.md`, `persistence.md`, `quality.md`,
+`documentation.md`; Claudes lokale Lessons nach dem vollständigen
+`lessons/`-Inventar, insbesondere SI-P-02, SI-P-08, SI-P-11, SI-P-12 und
+SI-P-13. Vor der Runde wurde das gemeinsame VERSION erneut geprüft.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ⚠️ B4 physischer DB-Tausch im Backup-Dienst; B2/B3 beseitigt, Bezeichnerinventar vollständig. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ kein Skriptverhalten im Runde-2-Diff |
+| TypeScript, Vue und i18n | ➖ kein UI-Diff; Browserbelege angesehen |
+| Python, FastAPI und Webhooks | ✅ `QuoteStore` ohne konkreten Repository-Import, FastAPI-DI unverändert; Backendtests grün. |
+| Datenbanken und Persistenzgrenzen | ⚠️ B4: `copy2`, `os.replace` und WAL/SHM-Löschung greifen außerhalb des Persistenzordners direkt auf DB-Dateien zu. SQL-Fragmente B1 beseitigt; ORM folgt nach Mikes Ticketschnitt in T-91/T-92. |
+| Fehler, Logging und Tests | ⚠️ Wächter übersieht den physischen Restore; positive Restoretests allein sichern die Schichtgrenze nicht. |
+| Markdown und Inhaltsverzeichnisse | ⚠️ README-Aussage „only here“ bis B4-Korrektur nicht vollständig wahr; übrige Anleitungen konsistent. |
+
+Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
+Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
 
 ## Nacharbeit Runde 1 (Claude, 2026-10-02)
 
