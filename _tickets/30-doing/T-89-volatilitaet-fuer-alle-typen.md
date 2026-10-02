@@ -159,7 +159,7 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | 3 | `.venv/bin/python -m pytest -q`, `tests/test_calculated_metrics.py` | Backend 1267 grün; Testmodul 15 grün, beide HTTP-Datumstests an negativen Laufzeit-Mutanten rot | ✅ |
 | 4 | Sichtbare Prüfung im Browser (Temp-Datenbank), deutsch und englisch | Tabelle zeigt „Vola 1Y“ bei Aktie und Fonds; Detailbereich zeigt „Volatilität (1 Jahr)“ | ✅ |
 | 5 | StockPortfolios `projectDetailFields` mit den echten Antworten | Zusatzinformationen zeigen die Volatilität bei Aktie und Fonds; Coder-Lauf belegt die Ausgaben, API-Scopes wurden unabhängig geprüft | ✅ |
-| 6 | Standard und Doku | `ANN,I` grün, befristete Persistenz-Ausnahme und Standardmatrix vorhanden; neu annotierte Builder passen nicht zum `SourceSpec.build`-Typ | ⚠️ B7 |
+| 6 | Standard und Doku | `ANN,I` grün, befristete Persistenz-Ausnahme und Standardmatrix vorhanden; `SourceSpec.build` und alle Builder haben einen passenden Typvertrag | ✅ |
 | 7 | Stand berechneter Werte: Refresh einer Aktie mit Tageskursen, Wiederherstellung ohne Kurse, `GET /instruments` | Beide Pfade laufen von `POST /refresh/{isin}` bis `GET /instruments`; jeder wird durch passenden negativen Laufzeit-Mutanten rot | ✅ |
 | 8 | Detailbereich im Browser, deutsch und englisch (Aktie, Fonds, ETF) | Übersetzte Quelle und reines Datum bei Aktie/Fonds; ETF mit unverändertem justETF-Zeitpunkt; Komponenten- und Browserbelege | ✅ |
 
@@ -168,6 +168,70 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 5 (Codex, 2026-10-02)
+
+**Prüfstand:** `8e6438c` gegen `23c8d1b`, Gesamtstand gegen `eca7413`.
+Rollen, Owner, Priorität, Ticketpfad und Branch stimmten; der Übergabecommit
+`fe7e0ff` enthielt nur Boarddateien. Paket-VERSION
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`
+war vor dieser Prüfung unverändert. **Technisches Ergebnis: `approved`**
+in Runde 5 von höchstens 8. Das ist keine menschliche Abnahme.
+
+**B7 behoben.** Der einzige neue Produktdiff setzt `SourceSpec.build` auf
+`Callable[[str, dict, Settings], object]`. `_evaluate` baut nur hinter
+`settings is not None`; `_build_one` und `build_chain` nehmen `Settings`.
+Alle vier eingebauten Builder nehmen `Settings`; der Plugin-Builder nimmt
+`object` und akzeptiert damit auch `Settings`. Der unabhängige Lauf mit
+Pyright 1.1.414 meldet keinen Fehler zur `build`-Zuweisung. Seine drei
+`reportMissingImports` für das lokal installierte `stockinfo_plugin` bestanden
+laut Alt-/Neu-Gegenlauf schon zuvor und betreffen B7 nicht.
+
+**Gegenproben:** `tests/test_calculated_metrics.py` 15 passed; `ruff check
+--select ANN,I` für alle fünf im Gesamtstand berührten Python-Dateien
+bestanden; `git diff --check 23c8d1b 8e6438c` ohne Befund. Ein AST-Inventar
+der Registry erfasste 589 Name-/Argument-/Funktions-/Klassenvorkommen, keine
+nicht-ASCII-Bezeichner. Runde 4 hatte den gesamten Backendstand mit
+1267 passed, 35 skipped und die zwei HTTP-Mutanten unabhängig geprüft.
+Seither änderten sich weder Laufzeitlogik, Testcode noch UI; die Browser-
+und Dashboardbelege aus Runde 3 gelten weiter. Verify #1–#8 sind ✅.
+
+**DRY-Prüfung:** Der neue Diff ändert nur den Typ des vorhandenen
+`SourceSpec.build`-Vertrags und erläutert ihn am selben Feld. Registry,
+Builder und Plugin-Loader wurden auf den gemeinsamen Aufrufvertrag geprüft;
+keine neue doppelte Fachregel oder zweite Wissensquelle.
+
+**Doku-Abgleich:** `README.md` und `docs/plugin-authors.md` beschreiben den
+Gesamtstand mit berechneter Volatilität, Quelle und Datum; `docker/README.md`
+und `unraid/README.md` widersprechen dem nicht. In Runde 5 änderten sich
+weder Nutzerverhalten noch Konfiguration oder Installation; daher ist keine
+weitere Anleitungsänderung nötig. Die ausdrücklich befristete Ausnahme für
+T-89 und der ORM-Umbau in T-90 bleiben im Board sichtbar.
+
+**Gelesener Standard:**
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md`, Referenzen
+`architecture.md`, `frontend.md`, `python.md`, `persistence.md`,
+`quality.md`, `documentation.md`; UI-Prüfung aus Runde 3 nach
+`ux-standards/SKILL.md`. Lokale Claude-Lessons aus dem vollständigen
+`lessons/`-Inventar, insbesondere SI-P-02, SI-P-06, SI-P-11 und SI-P-13,
+wurden für Umfang und Übergabereihenfolge abgeglichen.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ B7-Typvertrag stimmt; AST-Inventar und DRY-Abgleich ohne neuen Befund. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ➖ kein UI-Diff seit Runde 3; damalige Browser-, Test- und i18n-Belege gelten. |
+| Python, FastAPI und Webhooks | ✅ vier Builder und Plugin-Builder zum Callable kompatibel; Pyright ohne B7-Fehler, 15 gezielte Tests und `ANN,I` grün. |
+| Datenbanken und Persistenzgrenzen | ✅ kein SQL-Diff in Runde 5; Mikes befristete T-89-Ausnahme und T-90 bleiben maßgeblich. |
+| Fehler, Logging und Tests | ✅ kein neuer Fehlerpfad oder Testhelfer; HTTP-Mutanten und Backend-Gesamtlauf aus Runde 4 gelten. |
+| Markdown und Inhaltsverzeichnisse | ✅ Doku-Abgleich ohne Widerspruch; neue Prüfdokumentation im Ticket. |
+
+Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
+Claude verarbeitet die technische Freigabe: lokaler Merge nach `master`,
+danach gemeinsame menschliche Abnahme von T-88 und T-89 durch Mike. Kein Push
+durch diese Freigabe. Die getrennte Board-Übernahme der Paketfassung
+`df699dd1` bleibt offen.
 
 ## Nacharbeit Runde 4 (Claude, 2026-10-02)
 

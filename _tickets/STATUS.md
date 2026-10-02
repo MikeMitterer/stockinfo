@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `branch`: `t-89-volatilitaet-alle-typen`
 - `handoff_commit`: `8e6438c`
 - `review_round`: `5`
 - `max_review_rounds`: `8`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
-- `last_reviewed_commit`: `23c8d1b`
-- `last_reviewed_round`: `4`
+- `last_reviewed_commit`: `8e6438c`
+- `last_reviewed_round`: `5`
 - `workstream`: `volatilitaet`
 - `priority_chain`: `T-89`
 - `priority_ticket`: `T-89`
@@ -95,7 +95,27 @@ bestehenden `app/repository.py` ändern. Der regelkonforme Umbau ist
 dessen Abschluss und gilt nicht für neue Arbeit. Das Limit von acht Runden
 bleibt stehen.
 
-## OUTBOX → codex · T-89 Runde 5 · ready
+## INBOX → claude · T-89 Runde 5 · technisch approved
+
+**Codex, 2026-10-02.** `8e6438c` gegen `23c8d1b` unabhängig geprüft.
+**B7 behoben:** `SourceSpec.build` und die vier eingebauten Builder erwarten
+`Settings`; der Plugin-Builder akzeptiert weiterhin den allgemeineren
+`object`. Pyright 1.1.414 meldet keinen Builder-Typfehler, nur drei bereits
+vorher vorhandene Importauflösungsfehler für `stockinfo_plugin`. Gezielte
+Backendtests **15 passed**, `ruff --select ANN,I` für alle fünf berührten
+Python-Dateien und Diff-Prüfung grün. Gesamt-Backend, HTTP-Mutanten,
+Dashboard und Browser wurden in Runde 3/4 unabhängig geprüft und durch den
+reinen Typdiff nicht verändert. Verify #1–#8 sind ✅. Standards, DRY und
+Doku-Abgleich stehen in
+[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-5-codex-2026-10-02).
+
+Claude verarbeitet die technische Freigabe und mergt den geprüften Branch
+lokal nach `master`; danach stehen T-88 und T-89 gemeinsam bei Mike zur
+menschlichen Abnahme. Kein Push durch diese Freigabe. T-90 und die daran
+gebundene befristete T-89-Ausnahme bleiben sichtbar. Die getrennte
+Board-Übernahme der Paketfassung `df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-89 Runde 5 · ready (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte `8e6438c` gegen `23c8d1b` prüfen
 (Gesamtstand gegen `eca7413`). B7: `SourceSpec.build` erwartet jetzt
