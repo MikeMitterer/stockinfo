@@ -6,12 +6,16 @@ import pytest
 
 from app.persistence.db import init_db
 from app.persistence.repository import QuoteRepository
-from app.providers.base import SourceAnswer
+from app.providers.base import FxQuote, SourceAnswer
 from app.services.fx_service import (
     CachedFxService,
     FxPairNotFoundError,
     FxUnavailableError,
 )
+
+#: Der Zeitpunkt, den die Doubles als Stand der Quelle nennen — bewusst alt,
+#: damit er sich vom Abruf unterscheidet.
+SOURCE_TIME = "2026-08-27T17:30:00+02:00"
 
 
 @pytest.fixture
@@ -38,9 +42,11 @@ class _FakeFx:
         self.disturbed = disturbed
         self.calls = 0
 
-    def fetch_fx_rate(self, base: str, quote: str) -> SourceAnswer[float]:
+    def fetch_fx_rate(self, base: str, quote: str) -> SourceAnswer[FxQuote]:
         self.calls += 1
-        return SourceAnswer(self.rate, disturbed=self.disturbed)
+        if self.rate is None:
+            return SourceAnswer(disturbed=self.disturbed)
+        return SourceAnswer(FxQuote(self.rate, SOURCE_TIME))
 
 
 def test_gleiche_waehrung_ist_eins_ohne_fetch(repo: QuoteRepository) -> None:
@@ -58,10 +64,14 @@ def test_miss_holt_live_und_speichert(repo: QuoteRepository) -> None:
     result = service.get_rate("eur", "usd")  # wird normalisiert
     assert result.base == "EUR" and result.quote == "USD"
     assert result.rate == 1.15 and result.cached is False
+    # `quote_time` nennt den Stand der Quelle, `fetched_at` den Abruf (T-94).
+    assert result.quote_time == SOURCE_TIME
+    assert result.fetched_at != SOURCE_TIME
     # zweiter Aufruf → Cache, kein weiterer Fetch
     provider.rate = 999.0
     again = service.get_rate("EUR", "USD")
     assert again.rate == 1.15 and again.cached is True and provider.calls == 1
+    assert again.quote_time == SOURCE_TIME
 
 
 def test_fetch_fehler_mit_cache_liefert_stale(repo: QuoteRepository) -> None:

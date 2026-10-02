@@ -12,7 +12,7 @@ from typing import Protocol
 import structlog
 
 from app.models import FxRate
-from app.providers.base import FxRateProvider, declared_name
+from app.providers.base import FxQuote, FxRateProvider, declared_name
 from app.services.freshness import is_fresh
 
 logger = structlog.get_logger()
@@ -127,18 +127,18 @@ class CachedFxService:
         # Feld am Dienst: Zwei gleichzeitige Anfragen schrieben sich sonst
         # gegenseitig die Herkunft um, und ein Kurs trüge den Namen einer
         # Quelle, die ihn nicht geliefert hat.
-        rate: float | None = None
+        found: FxQuote | None = None
         source: str | None = None
         disturbed = False
         for provider in self._providers:
             answer = provider.fetch_fx_rate(base, quote)
             if answer.is_hit:
-                rate = answer.value
+                found = answer.value
                 source = declared_name(provider)
                 break
             disturbed = disturbed or answer.disturbed
 
-        if rate is None:
+        if found is None:
             # Erst nach dem **Gesamtausfall**: Solange irgendeine Quelle
             # antwortet, ist ein veralteter Wert die schlechtere Auskunft.
             if cached:
@@ -151,10 +151,12 @@ class CachedFxService:
                 raise FxUnavailableError(f"{base}{quote}")
             raise FxPairNotFoundError(f"{base}{quote}")
 
+        # `quote_time` ist der Zeitpunkt der Quelle, `fetched_at` der Abruf.
+        # Nur `fetched_at` entscheidet über die Frische des Caches.
         now = datetime.now(timezone.utc).isoformat()
-        self._repository.save_fx_rate(base, quote, rate, now, now, source)
+        self._repository.save_fx_rate(base, quote, found.rate, found.quote_time, now, source)
         return FxRate(
-            base=base, quote=quote, rate=rate, quote_time=now,
+            base=base, quote=quote, rate=found.rate, quote_time=found.quote_time,
             source=source,
             cached=False, stale=False, fetched_at=now,
         )

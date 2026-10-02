@@ -91,7 +91,9 @@ eigene Erkennungslogik. Auch eine Kursabfrage kann ein Instrument speichern.
 Kurs an der Börse galt; das zweite, wann StockInfo ihn geholt hat. Ein am
 Montagmorgen frisch beschaffter Kurs vom Freitagabend hat ein junges
 `fetched_at` und ein altes `quote_time`. Wer Aktualität anzeigen will, braucht
-beide.
+beide. Bei `/fx` gilt dasselbe: `quote_time` ist der Stand, den die Quelle
+nennt, etwa `as_of` in der YAML-Datei. Yahoo nennt für Devisen keinen
+Zeitpunkt; dort ist `quote_time` der Abruf.
 
 **`cached` gegen `stale`.** `cached` heißt nur: Diese Antwort kam ohne
 Anbieteraufruf zustande. Über die Güte sagt das nichts — ein Kurs von vor zehn
