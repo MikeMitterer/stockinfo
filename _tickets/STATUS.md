@@ -26,7 +26,7 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-91-sqlmodel-kerntabellen.md`
 - `branch`: `t-91-sqlmodel-kerntabellen`
 - `handoff_commit`: `6366844`
