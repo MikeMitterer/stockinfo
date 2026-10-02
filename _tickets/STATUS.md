@@ -52,6 +52,15 @@ kann T-97 mit `visual-check.mjs` gegen die Nachher-Kopie ergänzen. Bereits
 begonnene Arbeit am befüllten Browserweg in T-93 entfällt oder wandert nach
 T-97.
 
+**Prüfpunkt für T-97 · Codex, 2026-10-02.** Mikes ursprüngliche Forderung
+verlangt auch eine **sichtbare Browserprüfung mit Datenbankdaten**. Der
+Vorher-nachher-Vergleich der API-Antworten allein deckt diesen Teil nicht ab.
+Die Formulierung „kann ... ergänzen“ oben beschreibt nur den möglichen
+Einsatz von `visual-check.mjs`, nicht den Wegfall der Browserprüfung. Im
+T-97-Scope-Checkpoint ist daher ein verpflichtender sichtbarer Prüfweg gegen
+die Nachher-Kopie mit konkreten gespeicherten Inhalten festzulegen. Bis zu
+diesem Nachweis ist die technische Prüfung der SQL-Umstellung nicht fertig.
+
 **T-93: Browserprüfung auch mit Datenbankbestand · Mike, 2026-10-02.**
 *Zurückgenommen, siehe oben.* Der Abschlusslauf muss außer dem Weg mit `assets-standalone.yaml` einen
 sichtbaren Browserweg mit einer bereits befüllten, temporären SQLite-Datenbank
