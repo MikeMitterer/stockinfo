@@ -14,6 +14,12 @@ Wirklichkeit, prüft eine Migration, die niemand fahren wird.
 Nachgesehen wurde mit `PRAGMA table_info(quotes)` auf `data/stockinfo.db`:
 ``id, instrument_id, price, quote_time, volume, currency, fetched_at``.
 
+Dasselbe galt für `instruments` und `daily_closes`: `provider`, `ter`,
+`replication`, `fund_size` und `meta_fetched_at` stehen seit dem ersten
+Schema (`e5947bf`), `daily_closes.currency` seit dessen erster Fassung
+(`8fd0738`). Ohne sie bildeten die SQLModel-Modelle eine umgezogene
+Datenbank nicht ab, die es so nie gab (T-91).
+
 Was hier bewusst **nicht** steht: `ticker`, `mic` und `listing_id`. Genau ihr
 Fehlen macht diese Datenbank zu einer, die den Umzug braucht.
 """
@@ -25,7 +31,8 @@ LEGACY_SCHEMA = """
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         isin TEXT UNIQUE, symbol TEXT NOT NULL,
         exchange TEXT, name TEXT, type TEXT, currency TEXT,
-        first_seen TEXT NOT NULL
+        provider TEXT, ter REAL, replication TEXT, fund_size REAL,
+        first_seen TEXT NOT NULL, meta_fetched_at TEXT
     );
     CREATE TABLE quotes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -37,7 +44,7 @@ LEGACY_SCHEMA = """
     CREATE TABLE daily_closes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         instrument_id INTEGER NOT NULL REFERENCES instruments(id),
-        date TEXT NOT NULL, close REAL NOT NULL,
+        date TEXT NOT NULL, close REAL NOT NULL, currency TEXT,
         UNIQUE (instrument_id, date)
     );
 """

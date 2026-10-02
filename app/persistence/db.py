@@ -168,10 +168,20 @@ def get_connection(database_path: str) -> sqlite3.Connection:
     Path(database_path).parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(database_path, timeout=10.0, check_same_thread=False)
     connection.row_factory = sqlite3.Row
+    configure_connection(connection)
+    return connection
+
+
+def configure_connection(connection: sqlite3.Connection) -> None:
+    """Setzt die PRAGMAs, die jede Verbindung braucht — rohe wie ORM-Verbindungen.
+
+    Foreign-Keys trägt das `ON DELETE CASCADE` beim Löschen eines Instruments;
+    WAL und Wartezeit erlauben, dass Request-Threadpool und Scheduler parallel
+    schreiben.
+    """
     connection.execute("PRAGMA foreign_keys = ON")
     connection.execute("PRAGMA journal_mode = WAL")
     connection.execute("PRAGMA busy_timeout = 10000")
-    return connection
 
 
 def is_fresh_database(database_path: str | Path) -> bool:

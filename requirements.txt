@@ -18,3 +18,6 @@ pydantic-settings==2.14.2
 pyyaml==6.0.3
 httpx==0.28.1
 structlog==26.1.0
+# Die ORM-Schicht für `app/persistence/` (Hausstandard). Zieht SQLAlchemy nach;
+# dessen Version legt sqlmodel fest.
+sqlmodel==0.0.47
