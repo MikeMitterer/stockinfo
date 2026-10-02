@@ -100,7 +100,7 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
 | 1 | `tests/test_persistence_tables.py` | Jedes der fünf Modelle trägt genau die Spalten seiner Tabelle, frisch und aus dem Altformat umgezogen | ✅ |
-| 2 | `app/persistence/repository.py`, `detail_store.py` | Die fünf Kerntabellen nur über Modelle und SQLAlchemy-Ausdrücke; `meta`, `daily_meta`, `fx_rates`, `instrument_overrides` über `text()` in derselben Session | ✅ |
+| 2 | `app/persistence/repository.py`, `detail_store.py` | Die fünf Kerntabellen nur über Modelle und SQLAlchemy-Ausdrücke; `meta`, `daily_meta`, `fx_rates`, `instrument_overrides` über `text()` in derselben Session | ⚠️ |
 | 3 | `tests/test_persistence_boundary.py` | Kein `sqlite3`/`sqlalchemy`/`sqlmodel` und kein Import von `tables`/`session` außerhalb `app/persistence/`; Gegenproben | ✅ |
 | 4 | Parallele Schreiber, verlorener Anlegeversuch | 8 echte Threads: genau einer legt an; nachgestellter UNIQUE-Konflikt: Retry findet die Zeile, Kurs wird in derselben Transaktion geschrieben | ✅ |
 | 5 | Backend, Plugin-API, Ruff | Backend 1286, Plugin-API 324, Ruff grün | ✅ |
@@ -113,6 +113,58 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 1 (Codex, 2026-10-02)
+
+**Prüfstand:** `6366844` gegen `21b5c84`. Rollen, Owner, Priorität,
+Ticketpfad und Branch stimmten; nach dem Claim gab es keinen Produktdiff.
+Paket-VERSION vor der Prüfung unverändert:
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+**Ergebnis: `changes_requested`**, Runde 1 von höchstens 5. Keine
+menschliche Abnahme, kein Merge und kein Push durch Codex.
+
+**B1 · Ein gültiger Datenbankpfad mit `?` verhindert den Start.**
+`app/persistence/session.py` baut den SQLAlchemy-URL per
+`f"sqlite:///{database_path}"`. Das Fragezeichen beginnt darin einen
+URL-Query-Teil, obwohl es zum Dateinamen von `DATABASE_PATH` gehört. Meine
+Gegenprobe mit einer temporären `quotes?archive.db` ruft `init_db` auf:
+`sqlite3` legt die erwartete Datei samt Schema an; die SQLModel-Session
+öffnet zusätzlich eine Datei `quotes` und bricht mit `no such table: meta`
+ab. Vor T-91 verwendete dieser Pfad durchgängig `sqlite3.connect` mit dem
+Dateinamen. Bitte die Engine mit einem strukturierten SQLAlchemy-URL
+erzeugen, der `database_path` als unveränderten Dateinamen übergibt, und
+den Start sowie einen Repository-Lesezugriff mit diesem Pfad als Gegenprobe
+prüfen. [SQLAlchemy beschreibt `URL.create` für unverändert übergebene
+URL-Felder](https://docs.sqlalchemy.org/en/20/core/engines.html#creating-urls-programmatically).
+
+**Übrige Prüfung:** Die fünf Kerntabellen laufen innerhalb
+`app/persistence/` über SQLModel/SQLAlchemy; die vier übrigen Tabellen
+bleiben im vereinbarten T-92-Schnitt. Das gemeinsame PRAGMA-Setup, die
+kurzlebige Session und `BEGIN IMMEDIATE` für Schreiber habe ich gegen Code,
+Tests und das [offizielle SQLite-Transaktionsrezept von SQLAlchemy](https://docs.sqlalchemy.org/en/20/dialects/sqlite.html)
+geprüft. Der UNIQUE-Retry bleibt nach einem fehlgeschlagenen Core-Insert
+nutzbar; der gezielte Test ist grün. Spaltenabgleich frisch/umgezogen,
+Grenzwächter und parallele Schreiber sind in der Backend-Suite grün.
+Die Browserbilder für manuelle Eingabe, Aufnahme, Löschen und Altdaten
+angesehen; sie zeigen die beschriebenen Zustände. Kein weiterer
+Produktbefund.
+
+**Unabhängige Läufe:** 1271 netzunabhängige Backend-Tests bestanden,
+35 übersprungen; die 15 netzabhängigen Tests bestanden außerhalb der
+Sandbox nach DNS-Fehlern im ersten Gesamtlauf — zusammen 1286 bestanden,
+35 übersprungen. Plugin-API 324 bestanden, 1 übersprungen; Ruff für
+`app/persistence` und `tests` sowie `git diff --check` grün. AST-Inventar
+über alle 20 geänderten Python-Dateien: 6805 Bezeichnervorkommen;
+verdächtige deutsche Namen sind ausschließlich zulässige Testnamen.
+
+**Doku-Abgleich:** `README.md` nennt nun SQLModel im Projektaufbau.
+`docker/README.md` und `unraid/README.md` beschreiben den Containerbetrieb
+und die SQLite-Datei ohne veraltete Aussage zur internen Zugriffsschicht;
+keine Änderung nötig. Die Paket-Übernahme `df699dd1` bleibt getrennt offen.
+Standards: `code-standards` mit `architecture.md`, `python.md`,
+`persistence.md`, `quality.md` und `documentation.md`; die
+Autor-Lessons und `task-verification-workflow` wurden abgeglichen.
+Verify #2 bleibt wegen B1 ⚠️; #1 und #3–#8 sind ✅.
 
 ## Übergabe Runde 1 (Claude, 2026-10-02)
 
