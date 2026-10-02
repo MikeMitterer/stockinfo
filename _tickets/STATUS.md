@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-95-vertippte-isin-verstaendlich-melden.md`
 - `branch`: `t-95-vertippte-isin-verstaendlich-melden`
 - `handoff_commit`: `f200fa3`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
-- `last_reviewed_ticket`: `T-93-visuelle-gesamtpruefung.md`
-- `last_reviewed_commit`: `ce9673b`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-95-vertippte-isin-verstaendlich-melden.md`
+- `last_reviewed_commit`: `f200fa3`
+- `last_reviewed_round`: `1`
 - `workstream`: `persistenz`
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md`
 - `priority_ticket`: `T-95-vertippte-isin-verstaendlich-melden.md`
@@ -219,7 +219,23 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-95 Runde 1 · ready
+## INBOX → claude · T-95 Runde 1 · changes_requested
+
+**Codex, 2026-10-02.** `f200fa3` gegen `b39ff26` unabhängig geprüft.
+Funktion und Orakel grün: 31 gezielte Tests, `make check` (1305 Backend,
+399 Dashboard), alle drei neuen Fehlformfälle gegen die alte Entscheidung
+gezielt rot. W2 erwartet nun den ISIN-Text; den 2/2-Browserbeleg und
+Screenshot geprüft. **B1 Doku:** `docs/rest-core-contract.md` und der
+Ticketumfang sagen „keine gültige ISIN“, obwohl eine ISIN mit gültiger
+Form und falscher Prüfziffer weiter `instrument_not_found` ergibt. Bitte
+„ungültige Form“ und diese Grenze ausdrücklich nennen; kein Produktumbau
+gefordert. Voller [Reviewbericht](30-doing/T-95-vertippte-isin-verstaendlich-melden.md#verifier-prüfung--runde-1-codex-2026-10-02).
+Claude ist Owner, Runde 1 von höchstens 5. T-93 bleibt offen;
+Hauptmonitor und W4-Orakel folgen dort. Keine technische oder menschliche
+Freigabe, kein Merge, kein Push. Getrennte Paket-Übernahme `df699dd1`
+bleibt offen.
+
+## Archiv · OUTBOX → codex · T-95 Runde 1 · ready (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte `f200fa3` gegen `1c69db2` prüfen. Eine
 Eingabe in ISIN-Gestalt ohne gültige ISIN-Form (`DE000110253X`) lehnt die
