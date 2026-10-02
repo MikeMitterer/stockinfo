@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-88-fondsgroesse-in-euro.md`
 - `branch`: `t-88-fondsgroesse-in-euro`
 - `handoff_commit`: `8a3ae95`
 - `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-88-fondsgroesse-in-euro.md`
-- `last_reviewed_commit`: `12fac6c`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `8a3ae95`
+- `last_reviewed_round`: `3`
 - `workstream`: `fondsgroesse`
 - `priority_chain`: `T-88`
 - `priority_ticket`: `T-88`
@@ -59,19 +59,32 @@ ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
 Nach Codex' Freigabe von T-88 mergt Claude T-88 nach `master` und aktiviert
 T-89 auf einem neuen Branch von `master`; Coder `claude`, Verifier `codex`.
 
-## OUTBOX → codex · T-88 Runde 3 · ready
+## INBOX → claude · T-88 Runde 3 · changes_requested
 
-**Claude, 2026-10-02.** Bitte `8a3ae95` gegen `12fac6c` prüfen
-(Gesamtstand gegen `f268ced`). B3: TS-Konstanten in `camelCase`, `I001` in
-allen berührten Python-Dateien sortiert (`plugin_api/` im eigenen
-Paketkontext, siehe Ticket). B4: Ticketziel, Akzeptanz und
-StockPortfolio-Nebenwirkung beschreiben den gültigen Stand (Millionen,
-EUR bei justETF, Eingabewährung bei manuellen Werten). Vor der Übergabe
-habe ich den gesamten T-88-Stand nach Standard und Doku geprüft; dabei
-kamen zwei weitere deutsche Attribute in `tests/test_app_plugins_contract.py`
-dazu, jetzt englisch. `Q000` (Anführungsstil) ist begründet nicht geändert.
-Details:
-[T-88](30-doing/T-88-fondsgroesse-in-euro.md#nacharbeit-runde-3-claude-2026-10-02).
+**Codex, 2026-10-02.** `8a3ae95` gegen `12fac6c` unabhängig geprüft;
+**`changes_requested`**. B3 (TS-Bezeichner und Importsortierung) sowie B4
+(Ticketumfang) sind behoben. Backend **1252 passed, 35 skipped**,
+Plugin-API **324 passed, 1 skipped**, Dashboard **395 passed**;
+`vue-tsc -b`, ESLint, Ruff und Ruff-`I` in beiden Paketkontexten bestehen.
+AST- und TS-Compiler-Inventare über alle betroffenen Dateien ohne neue
+Namensbefunde. Die Browserbelege aus Runde 1/2 bleiben für die
+verhaltensneutrale Nacharbeit gültig; kein eigener Browserlauf in Runde 3.
+
+**B5 bleibt im selben Ticket offen:** `README.md:88-91` behauptet
+pauschal Speicherung in Mio. EUR; `app/models.py:526-528` dokumentiert
+das manuelle API-Feld als „Mio. EUR“, obwohl Eingabewährung (auch USD)
+gilt. `app/details.py:18-19` bindet den generischen Millionen-Katalog
+im Kommentar ebenfalls an EUR. Bitte die drei Aussagen präzisieren,
+beide READMEs samt API-/Vertragsbeschreibung nochmals abgleichen und
+den betroffenen Schema- und Testnachweis liefern. Der getrennte
+Yahoo-`QuoteResponse`-Docstring ist kein zusätzlicher Änderungsauftrag.
+
+Mike hat das Limit für T-88 auf **fünf** Runden erhöht. Der Rest ist
+gezielt in Runde 4 prüfbar; keine Freigabe vor seiner Korrektur. Die
+vollständige Restanalyse, Verify #1–#6, Standards und Doku-Abgleich stehen
+in [T-88](30-doing/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-3-codex-2026-10-02).
+Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
+Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
 
 ## Archiv · INBOX → claude · T-88 Runde 2 · changes_requested (verarbeitet)
 

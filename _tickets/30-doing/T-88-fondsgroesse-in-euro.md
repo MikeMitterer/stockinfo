@@ -91,12 +91,12 @@ Prüfgegenstand: `67c86f8` gegen `master` (`f268ced`); darin `20b673a`
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | Einheit über alle Stellen verfolgen (`git grep fund_size`, `ABSOLUTE`, `2_000_000`) | Nirgends mehr „absolut“ für die Fondsgröße; Grenzen passen zu Millionen. Coder-Suche nach `fund_size` neben `ABSOLUTE`/„absolut“ und nach `1_200_000_000` über `app`, `tests`, `plugin_api`, `dashboard`, `contract`: einziger Treffer ist der Docstring des Mutantentests, der bewusst beide Einheiten prüft | ⚠️ B1 |
+| 1 | Einheit über alle Stellen verfolgen (`git grep fund_size`, `ABSOLUTE`, `2_000_000`) | Katalog, Plugin, Adapter und Anzeige nutzen Millionen; Quelle und manuelle Eingabe tragen ihre jeweilige Währung. Die Reststellen mit „Mio. EUR“ in aktueller Erklärung stehen unter #6/B5 | ✅ |
 | 2 | `.venv/bin/python -m pytest -q` und `cd plugin_api && ../.venv/bin/python -m pytest -q` | grün | ✅ |
 | 3 | `cd dashboard && npx vitest run && npx vue-tsc -b && npx eslint src tests` | grün | ✅ |
-| 4 | Detailansicht im Browser (Temp-Datenbank, ETF aufklappen, deutsch und englisch) | „129,791 million EUR“ / „129.791 Mio. EUR“, „Physical (Optimized sampling)“ | ◑ |
-| 5 | Bezeichner-Inventar (Python `ast`, TS-Compiler-API) über die geänderten Dateien | nur englische Bezeichner | ⚠️ B2 |
-| 6 | Doku- und Vertragsabgleich | README, Docker-README und `contract/` nennen Millionen; Docker-Hub-Vorschau unter 25.000 Bytes | ✅ |
+| 4 | Detailansicht im Browser (Temp-Datenbank, ETF aufklappen, deutsch und englisch) | EN-Beleg aus Runde 1, DE-Belege für EUNL und manuelle USD-Größe aus Runde 2; alle unabhängig visuell angesehen. Runde 3 ändert kein Anzeigeverhalten | ✅ |
+| 5 | Bezeichner-Inventar (Python `ast`, TS-Compiler-API) über die geänderten Dateien | elf Python- und neun TS-/Vue-Dateien vollständig inventarisiert; keine deutschen Nicht-Testbezeichner oder `UPPER_SNAKE_CASE`-Variablen im TS-Scope | ✅ |
+| 6 | Doku- und Vertragsabgleich | Vertrag und Docker-README korrekt; Root-README und aktuelle API-Beschreibung widersprechen manuellen USD-Werten (B5) | ⚠️ B5 |
 
 **Coder-Belege:**
 
@@ -450,3 +450,92 @@ Standard und Doku geprüft, nicht nur die Befunde.
   weiter.
 - **Umfang Gesamtstand** gegen `f268ced`: 27 Dateien, 321 Zeilen hinzu,
   106 entfernt (ohne `_tickets/`).
+
+## Verifier-Prüfung · Runde 3 (Codex, 2026-10-02)
+
+**Prüfstand:** `8a3ae95` gegen `12fac6c`, Gesamtstand gegen `f268ced`.
+Nach dem Handoff-Commit betrafen alle Commits nur `_tickets/`; der
+Arbeitsbaum war sauber. Ergebnis: **`changes_requested`** wegen B5.
+Mike hat während dieser Prüfung das Limit ausdrücklich von drei auf fünf
+Review-Runden erhöht (`STATUS.md`). Keine technische oder menschliche
+Abnahme.
+
+### Befunde und offener Rest
+
+1. **B3 behoben.** Die fünf lokalen TS-Konstanten sind `camelCase`.
+   Compiler-API-Inventar über alle neun im Gesamtstand berührten
+   TS-/Vue-Dateien: keine lokale `UPPER_SNAKE_CASE`-Deklaration und keine
+   nichtenglischen Identifikatoren. Das Python-`ast`-Inventar über elf
+   berührte Dateien umfasst Namen, Parameter, Funktionen, Klassen,
+   Attribute und Keyword-Namen; die zwei weiteren deutschen Attribute
+   sind englisch. Ruff mit `I` besteht im Root und separat im
+   `plugin_api`-Paket; dessen Importkontext ist eigenständig. `Q000`
+   begründet keinen Verstoß gegen die geltenden Projektstandards.
+2. **B4 behoben.** Der aktive Tickettext nennt Millionen mit EUR für
+   justETF und mit Eingabewährung für manuelle Werte. Die Nebenwirkung
+   in StockPortfolio beschreibt den sichtbaren `details`-Eintrag und
+   verweist auf T-78/T-79. Die alte EUR-Entscheidung ist als Historie
+   gekennzeichnet.
+3. **B5 blockierend · aktuelle Währungsbeschreibung.** Das Root-README
+   behauptet unter „ETFs outside Europe“ in `README.md:88-91`, die App
+   speichere Fondsgrößen in Millionen EUR. Der aktuelle Vertrag und die
+   USD-Tests erlauben aber manuelle Millionen in der Eingabewährung.
+   Die öffentliche Override-API dokumentiert das Feld ebenfalls falsch:
+   `app/models.py:526-528` hat für `InstrumentOverrides.fund_size` die
+   Beschreibung „Fondsvolumen in Mio. EUR“; die Modell-Schema-Gegenprobe
+   liefert genau diesen Text. Der generische Katalog in
+   `app/details.py:18-19` nennt EUR, obwohl er nur die Einheit
+   `millions` festlegt. Bitte diese drei aktuellen Aussagen präzisieren
+   und die beiden READMEs sowie den API-/Vertragsabgleich danach nochmals
+   durchführen. `docker/README.md:71` bezieht sich konkret auf
+   quellengelieferte ETF-Metadaten und ist zutreffend. Der Yahoo-Docstring
+   in `app/providers/yfinance_etf_provider.py:32-34` beschreibt den
+   gesonderten alten `QuoteResponse`-Pfad; daraus leite ich keinen
+   zusätzlichen Änderungsauftrag ab.
+
+**Restanalyse:** B5 ist der einzige offene Befund. Die drei Fundstellen
+sind inhaltlich eng verwandt und ohne Produktentscheidung korrigierbar;
+zuerst die öffentliche API-Beschreibung, dann Root-README und Katalogkommentar,
+anschließend Schema-Gegenprobe, Doku-Abgleich und betroffene Tests. Claude
+bearbeitet die Korrektur, Codex prüft sie in Runde 4 gezielt. Sie blieb
+offen, weil Runde 1 die Einheitenumstellung und Runde 2 den Tickettext
+prüften und beide Rollen die pauschalen EUR-Aussagen im Gesamtstand
+übersahen. Mein eigener Runde-2-Doku-Befund war insoweit unvollständig.
+Der Schaden ist eine falsche Anweisung an API- und README-Leser für den
+bereits unterstützten manuellen USD-Fall. Es gibt keinen Hinweis auf einen
+weiteren Funktionsfehler. Der ausdrückliche Nutzerauftrag erlaubt Codex
+keine Produktdatei-Änderung; daher keine Verifier-Selbstheilung.
+
+### Verify und Standards
+
+- **#1:** ✅ Millionen als Einheit in Katalog, Plugin, Adapter und Anzeige;
+  Währungen im Verhalten getrennt. Falsche Beschreibung unter #6/B5.
+- **#2:** ✅ Backend **1252 passed, 35 skipped, 1 warning**; Plugin-API
+  **324 passed, 1 skipped**.
+- **#3:** ✅ Dashboard **52 Testdateien, 395 passed**; `vue-tsc -b` und
+  `eslint src tests` ohne Befund.
+- **#4:** ✅ Die unveränderten englischen und deutschen Browserbelege aus
+  Runde 1/2 einschließlich manuellem USD-Fall sind visuell geprüft;
+  Runde 3 ist verhaltensneutral. Kein eigener Browserlauf behauptet.
+- **#5:** ✅ Python-`ast` für elf Dateien und TS-Compiler-API für neun
+  Dateien; normaler Ruff-Lauf und `ruff --select I` in beiden
+  Paketkontexten bestehen.
+- **#6 / Doku-Abgleich:** ⚠️ B5. `README.md` ist zur manuellen Währung
+  missverständlich, die Override-API-Beschreibung falsch;
+  `docker/README.md` und `contract/core-contract.json` sind für ihren
+  jeweiligen Gegenstand zutreffend. `unraid/README.md` enthält keine
+  Fondsgrößenaussage. Docker-README blieb seit der Vorschau aus Runde 1
+  unverändert (8.784 UTF-8-Bytes). `git diff --check` für Nacharbeit und
+  Gesamtstand besteht.
+
+**Standard-Riegel:** `code-standards/SKILL.md` und die passenden
+Referenzen zu Architektur, Frontend, Python, Qualität und Dokumentation
+wurden berücksichtigt. DRY, Zuständigkeit und i18n im Nacharbeitsdiff
+ohne neuen Befund; TS/Python-Namensschema sowie Importsortierung bestehen
+die vollständigen Inventare und Checks. Bash, Datenbanken, Konfiguration
+und Persistenzverhalten wurden in Runde 3 nicht verändert. Die aktuelle
+Dokumentation bleibt wegen B5 offen.
+
+**Offene Board-Übernahme:** Activity-/Observer-/Lessons-Abgleich aus
+Paketfassung `df699dd1` bleibt getrennt sichtbar. Codex änderte keinen
+Produktcode und erteilte keine menschliche Abnahme; kein Merge oder Push.
