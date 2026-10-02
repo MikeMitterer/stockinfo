@@ -36,7 +36,7 @@ Folgeticket in der `priority_chain` (Mike, Aussetzung der Doing-Grenze).
 
 | Befehl | Was er prüft |
 |---|---|
-| `make check` | `make test` (Backend, Plugin-API, Beispiel-Plugin, Dashboard-ESLint und Vitest), dazu `ruff check app tests scripts` und die Typprüfung des Dashboards (`vue-tsc -b`) |
+| `make check` | **netzfrei:** Backend ohne die mit `integration` markierten Online-Tests (`-m "not integration"`), Plugin-API, Beispiel-Plugin, Dashboard-ESLint und Vitest, dazu `ruff check app tests scripts` und die Typprüfung des Dashboards (`vue-tsc -b`). Die Online-Tests laufen weiter mit `make test` und werden nicht als netzfrei ausgegeben. |
 | `make visual-check` | den Browser-Durchlauf unten; Ergebnis je Weg bestanden/nicht bestanden, Exit-Code ≠ 0 bei einem Fehler |
 
 ### Aufbau des Browser-Durchlaufs
@@ -49,7 +49,8 @@ Folgeticket in der `priority_chain` (Mike, Aussetzung der Doing-Grenze).
   einem freien Port und beendet nur diesen eigenen Prozess. Es bricht ab,
   wenn das Datenverzeichnis im Projekt-`data/` läge.
 - **Daten ohne Netz:** Quellenprofil wie `examples/sources-standalone.yaml`
-  (alle fünf Rollen `yaml-file`), Fachdaten aus
+  (alle fünf Rollen `yaml-file`; der Pfad `/data/assets-standalone.yaml`
+  zeigt in der Temp-Instanz auf deren eigenes Datenverzeichnis), Fachdaten aus
   `examples/assets-standalone.yaml` — damit läuft die Vorlage für
   Betreiber gleich mit. Sie deckt alle drei Identitätsformen (`listed`,
   `pair`, `isin_only`), alle Gattungen, einen Verlauf (Anleihe) und einen
@@ -62,8 +63,11 @@ Folgeticket in der `priority_chain` (Mike, Aussetzung der Doing-Grenze).
 
 ### Allgemeine Prüfungen in jedem Schritt
 
-- keine Konsolenfehler im Browser;
-- keine Antwort `5xx`; `4xx` nur dort, wo der Weg sie erwartet;
+- jeder Weg nennt, welche Konsolenmeldungen und HTTP-Fehler er
+  **erwartet** (etwa W2: `422` und `404` der Aufnahme samt der
+  `consola.error`-Zeile dazu; W11: die Ablehnung des unbekannten Paars).
+  Jeder andere Konsolenfehler und jede andere Antwort ab `400` lässt den
+  Weg scheitern; ein erwarteter Fehler, der **nicht** kommt, ebenfalls;
 - ein Screenshot je Prüfpunkt;
 - **Inhalte werden geprüft, nicht nur angesehen:** sichtbarer Text, Zahl
   von Zeilen, Werte aus den Testdaten, dazu die passende API-Antwort.
@@ -78,7 +82,7 @@ Folgeticket in der `priority_chain` (Mike, Aussetzung der Doing-Grenze).
 | W4 | Detailbereich | je Form ein Papier: Kennzahlen, Quelle, Datumsformat |
 | W5 | Kursverlauf | Papier mit Verlauf: Chart erscheint, Zeitraum wechselt |
 | W6 | Manuelle Eingabe | Zahl, Text und Ja/Nein in einem nicht gelieferten Feld; übersteht Neuladen; wieder entfernen |
-| W7 | Aktualisieren | Zeile und „Alle aktualisieren“ ohne Fehler, Stand ändert sich |
+| W7 | Aktualisieren | Zeile und „Alle aktualisieren“: Antwort erfolgreich und der gespeicherte Abrufzeitpunkt (`latest_fetched_at`) rückt vor. Der Kurszeitpunkt bleibt bei der festen Offline-Datei gleich und ist kein Orakel. |
 | W8 | Löschen | Dialog abbrechen ändert nichts; bestätigen entfernt Zeile und Kurse |
 | W9 | Börsen | Liste lädt, Filter wirkt |
 | W10 | Analyse | Analyse eines Papiers zeigt die Stufen |
