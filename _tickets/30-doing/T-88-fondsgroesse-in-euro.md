@@ -1,4 +1,4 @@
-# T-88 · Fondsgröße einheitlich in Mio. EUR
+# T-88 · Fondsgröße einheitlich in Millionen
 
 Die Detailansicht eines ETFs zeigte die Fondsgröße ohne Einheit „Mio.“. Beim
 iShares Core MSCI World (`EUNL.DE`) stand „129,791 EUR“; der Fonds verwaltet
@@ -18,9 +18,12 @@ rund 129,8 Milliarden Euro. Dazu stand die Replikation ohne Leerzeichen da:
 
 **Stand:** Gefunden am 2026-10-01 beim Erneuern der Screenshots. Mike:
 „Erst Fehler beheben“, „Das Ticket kannst du gleich bei doing ablegen“ und
-zur Einheit „Mio. EUR überall“. Coder `claude`, Verifier `codex`;
-maßgeblich ist `STATUS.md`. Der Dateiname `…-in-euro` stammt aus dem ersten
-Entwurf vor Mikes Einheiten-Entscheidung.
+zur Einheit „Mio. EUR überall“. In Runde 2 präzisierte Mike die Währung:
+„Eingabewährung behalten“. Gültig ist damit: **Millionen überall; die
+Währung ist EUR bei justETF-Werten und die Eingabewährung bei manuellen
+Werten.** Codex' Praxisprüfung in Runde 2 empfiehlt, dabei zu bleiben.
+Coder `claude`, Verifier `codex`; maßgeblich ist `STATUS.md`. Der Dateiname
+`…-in-euro` stammt aus dem ersten Entwurf vor Mikes Entscheidungen.
 
 ## Scope-Vertrag (Claude, 2026-10-01, nach Mikes Entscheidung)
 
@@ -30,9 +33,11 @@ Vertrag berührt (Plugin-Einheit, Fixtures, Feldbeschreibung). Das ist ein
 Scope-Checkpoint-Auslöser; die nötige Produktentscheidung hat Mike direkt
 getroffen, deshalb ging die Arbeit ohne Verifier-Zwischenstopp weiter.
 
-- **Ergebnis:** Die Fondsgröße hat überall eine Einheit: Mio. EUR. Die
-  Detailansicht zeigt „129,791 million EUR“ bzw. „129.791 Mio. EUR“. Die
-  Replikation steht als „Physical (Optimized sampling)“ da.
+- **Ergebnis:** Die Fondsgröße steht überall in Millionen, mit ihrer
+  Währung: EUR bei justETF, die Eingabewährung bei manuellen Werten. Die
+  Detailansicht zeigt „129,791 million EUR“ bzw. „129.791 Mio. EUR“, eine
+  manuelle Angabe etwa „30 Mio. USD“. Die Replikation steht als
+  „Physical (Optimized sampling)“ da.
 - **Fachliche Änderungen (3):**
   1. Einheit: Katalog (`app/details.py`) `millions`; justETF-Plugin und
      Adapter `Unit.MILLIONS`. Der Plugin-Vertrag erhält `MONEY_UNITS`
@@ -40,7 +45,8 @@ getroffen, deshalb ging die Arbeit ohne Verifier-Zwischenstopp weiter.
      Vertragsprüfsuite nutzen diese eine Menge.
   2. Anzeige: ein Katalogtext `details.amountMillions` für alle drei
      Anzeigewege (`DetailEditor`, `MetricValue`, `MetricEditor`); die
-     flachen Altfelder nutzen `utils/fundSize.ts` mit EUR.
+     flachen Felder lesen die Währung über `utils/fundSize.ts` aus dem
+     `details`-Eintrag (wirksam bzw. manuell), EUR nur ohne `details`.
   3. Replikation: `JustEtfProvider` setzt das fehlende Leerzeichen vor „(“.
 - **Vertrag:** `contract/core-contract.json` beschreibt `fund_size` als
   Millionen; drei Fixtures von `89123000000.0` auf `89123.0`.
@@ -56,20 +62,25 @@ getroffen, deshalb ging die Arbeit ohne Verifier-Zwischenstopp weiter.
 ### Akzeptanzkriterien
 
 - [ ] Die Fondsgröße hat in Katalog, Plugin, Adapter, Vertrag und Anzeige
-      dieselbe Einheit: Mio. EUR.
+      dieselbe Einheit: Millionen. Die Währung ist EUR bei justETF und die
+      Eingabewährung bei manuellen Werten, in allen Anzeigewegen.
 - [ ] Ein Betrag in Millionen verlangt eine Währung (App und Vertragsprüfsuite).
-- [ ] Die Detailansicht zeigt „129,791 million EUR“ / „129.791 Mio. EUR“.
+- [ ] Die Detailansicht zeigt „129,791 million EUR“ / „129.791 Mio. EUR“;
+      eine manuelle Angabe erscheint in ihrer Währung, etwa „30 Mio. USD“.
 - [ ] Die Replikation enthält das Leerzeichen vor der Klammer.
 - [ ] Doku-Abgleich für `README.md`, `docker/README.md` und `contract/`.
 
 ### Side-Effects
 
-StockPortfolio liest `fund_size` (`frontend/src/api/types.ts`,
-`normalizers.ts`) und zeigt es in keiner `.vue`-Datei an. Der Wert kam schon
-immer in Millionen; nur StockInfos Vertrags-Fixtures sagten „absolut“.
-StockPortfolio führt eine eigene Kopie der Fixtures unter
-`frontend/tests/fixtures/stockinfo/`; der Abgleich auf `89123.0` gehört ins
-StockPortfolio-Board.
+StockPortfolio zeigt die Fondsgröße in den Zusatzinformationen einer
+Position über den generischen `details`-Eintrag (`projectDetailFields`);
+das flache Feld `fund_size` nutzt es nicht. Mit StockPortfolios Code
+geprüft: Vor T-88 erschien dort „129.791,00 €“ (falsche Größenordnung),
+nach T-88 „129.791,00 € Mio.“, eine manuelle USD-Angabe als „30,00 $ Mio.“.
+StockPortfolio braucht dafür keine Codeänderung. Nachzuziehen dort: die
+Fixture-Kopie unter `frontend/tests/fixtures/stockinfo/` auf `89123.0`
+(StockPortfolio T-78) sowie Darstellung und kurzzeitiges „—“ aus dem
+IndexedDB-Cache (StockPortfolio T-79).
 
 ## Übergabe Runde 1 (Claude, 2026-10-01)
 
@@ -386,3 +397,56 @@ und `documentation.md`.
 lokalen Paketfassung `df699dd1` bleibt getrennt offen. Er erweitert das
 T-88-Review nicht. Kein Produktcode, keine menschliche Abnahme und kein
 Merge oder Push durch Codex.
+
+## Nacharbeit Runde 3 (Claude, 2026-10-02)
+
+Prüfgegenstand: `8a3ae95` gegen `12fac6c` (Nacharbeit) und gegen `f268ced`
+(Gesamtstand). Vor der Übergabe habe ich den **gesamten** T-88-Stand nach
+Standard und Doku geprüft, nicht nur die Befunde.
+
+- **B3 · TS-Namen:** `DEFAULT_FUND_SIZE_CURRENCY` → `defaultFundSizeCurrency`,
+  `DIGITS` → `twoDecimals` (MetricValue, MetricEditor), `FIELD_KIND` →
+  `fieldKinds`, `NUMBER_MAX` → `numberMaxByField`. TS-Compiler-Inventar
+  über alle neun berührten TS-/Vue-Dateien (Quellen und Tests): keine
+  `UPPER_SNAKE_CASE`-Variablen mehr, keine deutschen Namen.
+- **B3 · Importblöcke:** `I001` in allen berührten Python-Dateien behoben,
+  nicht nur in den zwei genannten: `tests/test_providers.py`,
+  `tests/test_app_plugins_contract.py`, `tests/test_open_details.py`,
+  `tests/test_plugin_justetf_integration.py`,
+  `plugin_api/src/stockinfo_plugin/testing/contracts.py`. Wichtig:
+  `plugin_api/` ist ein eigenes Paket. Vom Projekt-Root aus hält Ruff
+  `stockinfo_plugin` für fremd und verlangt in
+  `plugin_api/tests/test_contract_mutants.py` das Entfernen der Leerzeile;
+  aus `plugin_api/` heraus verlangt es sie. Die Datei gehört zum Paket,
+  geprüft wird sie deshalb dort; dort ist sie sauber.
+- **Vollständigkeit über B2 hinaus:** Das AST-Inventar über alle elf
+  berührten Python-Dateien (Namen, Parameter, Klassen, Attribute) fand noch
+  `_quelle` und `_europaeisch` in `tests/test_app_plugins_contract.py`;
+  jetzt `_source` und `_european`.
+- **Nicht geändert, `Q000`:** Ruff `Q` meldet einfache Anführungszeichen in
+  `app/details.py` und `tests/test_open_details.py`. Beide Dateien sind
+  durchgehend so geschrieben; weder `code-standards` noch die
+  Ruff-Konfiguration des Projekts legen einen Anführungsstil fest. Kein
+  Verstoß, daher kein Umbau ganzer Dateien.
+- **Keine Prozesshistorie im Code:** Suche über alle hinzugefügten Zeilen
+  außerhalb von `_tickets/` nach Ticketnummern, „Runde“, „Codex“, „Mike“,
+  „Befund“: kein Treffer.
+- **B4 · Tickettext:** Titel, Stand, Ergebnis, Änderung 2, Akzeptanzkriterien
+  und Side-Effects beschreiben jetzt den gültigen Stand: Millionen überall,
+  Währung EUR bei justETF und Eingabewährung bei manuellen Werten.
+  StockPortfolios Nebenwirkung steht mit dem geprüften Befund aus
+  StockPortfolios Code da (Zusatzinformationen über `details`, T-78 und
+  T-79). „Mio. EUR überall“ bleibt nur als Historie stehen.
+- **Doku-Abgleich:** `README.md` und `docker/README.md` sprechen von
+  justETF-Werten „in millions of EUR“ und stimmen damit. Das Root-README
+  nennt keine manuellen Fondsgrößen, also auch keine Währungszusage.
+  `unraid/README.md` enthält keine Fondsgröße. `contract/core-contract.json`
+  beschreibt Quell- und Eingabewährung. `docker/README.md` ist seit Runde 1
+  unverändert (Docker-Hub-Vorschau 8.784 Bytes).
+- **Läufe:** Backend 1252 passed, 35 skipped; Plugin-Vertrag 324 passed,
+  1 skipped; Ruff (Projektlauf und `I` je Paket) ohne Befund; Dashboard
+  52 Dateien, 395 Tests; `vue-tsc -b` und ESLint ohne Befund. Die
+  Umbenennungen ändern kein Verhalten; der Browserbeleg aus Runde 2 gilt
+  weiter.
+- **Umfang Gesamtstand** gegen `f268ced`: 27 Dateien, 321 Zeilen hinzu,
+  106 entfernt (ohne `_tickets/`).

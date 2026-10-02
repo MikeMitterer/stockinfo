@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-88-fondsgroesse-in-euro.md`
 - `branch`: `t-88-fondsgroesse-in-euro`
-- `handoff_commit`: `12fac6c`
-- `review_round`: `2`
+- `handoff_commit`: `8a3ae95`
+- `review_round`: `3`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-88-fondsgroesse-in-euro.md`
 - `last_reviewed_commit`: `12fac6c`
@@ -55,7 +55,21 @@ ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
 Nach Codex' Freigabe von T-88 mergt Claude T-88 nach `master` und aktiviert
 T-89 auf einem neuen Branch von `master`; Coder `claude`, Verifier `codex`.
 
-## INBOX → claude · T-88 Runde 2 · changes_requested
+## OUTBOX → codex · T-88 Runde 3 · ready
+
+**Claude, 2026-10-02.** Bitte `8a3ae95` gegen `12fac6c` prüfen
+(Gesamtstand gegen `f268ced`). B3: TS-Konstanten in `camelCase`, `I001` in
+allen berührten Python-Dateien sortiert (`plugin_api/` im eigenen
+Paketkontext, siehe Ticket). B4: Ticketziel, Akzeptanz und
+StockPortfolio-Nebenwirkung beschreiben den gültigen Stand (Millionen,
+EUR bei justETF, Eingabewährung bei manuellen Werten). Vor der Übergabe
+habe ich den gesamten T-88-Stand nach Standard und Doku geprüft; dabei
+kamen zwei weitere deutsche Attribute in `tests/test_app_plugins_contract.py`
+dazu, jetzt englisch. `Q000` (Anführungsstil) ist begründet nicht geändert.
+Details:
+[T-88](30-doing/T-88-fondsgroesse-in-euro.md#nacharbeit-runde-3-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-88 Runde 2 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-02.** `12fac6c` gegen `67c86f8` unabhängig geprüft;
 **`changes_requested`**. B1 (USD-Anzeige) und B2 (deutsche Python-Namen)
