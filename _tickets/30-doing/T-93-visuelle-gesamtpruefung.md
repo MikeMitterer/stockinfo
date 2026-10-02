@@ -57,9 +57,11 @@ Folgeticket in der `priority_chain` (Mike, Aussetzung der Doing-Grenze).
   `examples/assets-standalone.yaml` — damit läuft die Vorlage für
   Betreiber gleich mit. Sie deckt alle drei Identitätsformen (`listed`,
   `pair`, `isin_only`), alle Gattungen, einen Verlauf (Anleihe) und einen
-  Wechselkurs (CAD→EUR) ab. Reicht der Verlauf nicht für Chart und
-  berechnete Volatilität, kommt eine kleine Ergänzungsdatei unter
-  `dashboard/e2e/` dazu; die Vorlage bleibt unverändert.
+  Wechselkurs (CAD→EUR) ab. Der Fonds trägt seit Runde 3 Detailwerte
+  (`ter_bps`, `provider`, `fund_domicile`) direkt in der Vorlage (Mike,
+  2026-10-02: „B passt, trag es ein“; ein Fonds-Beispiel mit TER und
+  Anbieter zeigt Betreibern, was eintragbar ist). Bitcoin hat keine
+  Kurshistorie; seine Volatilität fehlt deshalb ausdrücklich.
 - **Alt-Datenbank** für den Migrationsweg über `tests/legacy_schema.py`
   (ein kleiner Python-Helfer erzeugt sie, eine zweite Instanz öffnet sie).
 - **Neustart** innerhalb des Laufs für die Wiederherstellung.
@@ -215,6 +217,52 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | 5 | Anleitung | README „Tests“ nennt `make check` und Node 24; Skriptkopf nennt Aufruf und Optionen; `AGENTS.md` verweist darauf; kein Make-Target | ✅ |
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+## Übergabe Runde 3 (Claude, 2026-10-02)
+
+Prüfgegenstand: `fa2a29f` gegen `ce9673b`. Darin enthalten ist T-95
+(`f200fa3`, `c0dd47e`, Freigabe `04daa2b`) per Fast-Forward. Die
+Datenbankprüfung ist laut Mikes Entscheidung nicht Teil von T-93 (STATUS,
+`09f18af`); sie liegt in T-97, dort jetzt mit Mikes Vorgabe „mindestens 15
+verschiedene Assets“.
+
+| Befund | Behebung |
+|---|---|
+| **B5** vertippte ISIN | Produktfehler in T-95 behoben. W2 erwartet „DE000110253X is not shaped like an ISIN.“ und schlägt an, sobald „exchange suffix“ erscheint. |
+| **B6** W4 nur Labels | W4 prüft den Feldteil bis „Source as of“ **wörtlich**, wo kein Text-Treffer reicht: Bitcoin `Volatility (1y)` / `-` (keine Kurshistorie in der Datei); Anleihe „No detail fields …“; Fonds TER `-`, Anbieter `DWS`, Sitz leer, `Source: yaml-file`. EUNL wie bisher mit iShares, Ireland, 0.2 %. |
+| **Hauptmonitor** (Mike) | Sichtbare Läufe starten mit `--window-position=100,0`: Hauptmonitor, 100 px links frei für das Dock (Präzisierung im STATUS). `checkOnMainDisplay` prüft je geöffneter Seite `screen.availLeft === 0`, `availTop` im Menüleistenbereich und `screenX ≥ 100`. |
+
+**Fonds-Vorlage:** Mike hat `ter_bps`, `provider` und `fund_domicile` für
+den Fonds in `examples/assets-standalone.yaml` erlaubt. Eingetragen ist nur
+`provider: DWS`. Grund: Ein von der Quelle gelieferter Wert ist im Dashboard
+absichtlich nicht editierbar (`DetailEditor.vue`, `editable`). Mit allen
+drei Werten bliebe für W6 kein leeres Text- und kein leeres Zahlenfeld zum
+Eintragen von Hand. W6 trägt jetzt Sitz (Text) und TER (Zahl) ein und
+prüft zusätzlich, dass der gelieferte Anbieter kein Eingabefeld hat.
+
+### Nachweise
+
+- **Browser, vollständig und sichtbar** auf dem Hauptmonitor:
+  **16/16** (`.tmp/visual-check/2026-10-02T17-38-31-894Z/`).
+- **Gegenproben:** zuerst alle Wege, danach die geänderten Wege W2, W4, W6
+  und W15 erneut: **15/15 rot** aus dem genannten Grund. Darunter die neuen
+  für B6 (Bitcoin-Feld, Fondsanbieter, Anleihe-Feldteil), W6
+  (gelieferter Anbieter editierbar) und den Hauptmonitor (sichtbar
+  gestartet; die Meldung zeigt die echte Lage `{"left":0,"top":0,"x":100}`).
+  Zwei alte Gegenproben fanden ihre Stelle nach B5/B6 nicht mehr; das
+  Gegenprobenskript hatte das still übergangen. Beide sind umgestellt, und
+  ungültige Stellen werden jetzt ausgegeben.
+- **`make check`:** auf `fa2a29f` Exit 0 (1305 Backend, 399 Dashboard,
+  Ruff, `vue-tsc`).
+
+### Doku-Abgleich
+
+- `examples/assets-standalone.yaml`: Kommentar beim Fonds, was geliefert
+  wird und was man selbst einträgt.
+- Konzept „Testdaten“ in diesem Ticket nennt die Fonds-Vorlage.
+- `docs/plugins.md` nennt die Vorlage nur beim Namen; `README.md`,
+  `docker/README.md`, `unraid/README.md` beschreiben ihren Inhalt nicht.
+  Keine Anpassung nötig.
 
 ## Verifier-Prüfung · Runde 2 (Codex, 2026-10-02)
 

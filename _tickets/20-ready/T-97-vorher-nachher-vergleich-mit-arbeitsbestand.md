@@ -72,6 +72,11 @@ Kopie des Arbeitsbestands ist erteilt (siehe Grenzen).
       unverändert (Prüfsumme vor und nach dem Vergleich).
 - [ ] Der Vergleich deckt die oben genannten Bereiche ab und nennt die Zahl
       der verglichenen Instrumente und Felder.
+- [ ] Der sichtbare Datenbankweg prüft **mindestens 15 verschiedene
+      Assets** (Mike, 2026-10-02: „Zwei Papiere sind mir zu wenig … ich denke
+      da mindestens 15“): verschiedene Gattungen, Identitätsformen, Börsen
+      und Währungen, mit und ohne Details. Reicht der Arbeitsbestand dafür
+      nicht, wird er mit einem eigenen Testbestand ergänzt.
 - [ ] Jeder Unterschied ist als erwartet (mit Ticket) oder als Befund
       eingeordnet; Befunde stehen als Folgetickets in der Kette.
 - [ ] Der Schreibweg auf der Nachher-Kopie ändert nur die erwarteten Zeilen.

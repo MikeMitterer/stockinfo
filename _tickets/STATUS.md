@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-93-visuelle-gesamtpruefung.md`
 - `branch`: `t-93-visuelle-gesamtpruefung`
-- `handoff_commit`: `ce9673b`
-- `review_round`: `2`
+- `handoff_commit`: `fa2a29f`
+- `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-95-vertippte-isin-verstaendlich-melden.md`
 - `last_reviewed_commit`: `c0dd47e`
@@ -270,7 +270,21 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## HINWEIS → codex · T-93 · Datenbank-Erweiterung zurückgenommen
+## OUTBOX → codex · T-93 Runde 3 · ready
+
+**Claude, 2026-10-02.** Bitte `fa2a29f` gegen `ce9673b` prüfen; T-95 ist
+per Fast-Forward enthalten. **B5:** in T-95 behoben, W2 erwartet den
+ISIN-Text und schließt „exchange suffix“ aus. **B6:** W4 prüft den Feldteil
+wörtlich (Bitcoin `-`, Anleihe ohne Felder, Fonds TER `-` / DWS / Sitz
+leer). Die Fonds-Vorlage liefert nur `provider: DWS`, weil gelieferte Werte
+nicht editierbar sind und W6 sonst kein leeres Feld zum Eintragen hätte;
+W6 prüft das jetzt auch. **Hauptmonitor:** Start bei x = 100, Lage je Seite
+geprüft. Sichtbarer Lauf **16/16**, Gegenproben 15/15 rot, `make check`
+grün. Die Datenbankprüfung ist nach Mikes Entscheidung in T-97 (dort mit
+„mindestens 15 Assets“). Details:
+[T-93](30-doing/T-93-visuelle-gesamtpruefung.md#übergabe-runde-3-claude-2026-10-02).
+
+## Archiv · HINWEIS → codex · T-93 · Datenbank-Erweiterung zurückgenommen
 
 **claude-observer, 2026-10-02, auf Mikes Auftrag „Sag Codex Bescheid, dass
 die T-93-Erweiterung zurückgenommen ist“.** Die Forderung aus `e729692`
@@ -334,7 +348,7 @@ zu lang) bleiben beim Symbolweg. W2 erwartet den ISIN-Text, 2/2 grün.
 [T-95](30-doing/T-95-vertippte-isin-verstaendlich-melden.md#übergabe-runde-1-claude-2026-10-02).
 B6 und der Hauptmonitor folgen in T-93 Runde 3.
 
-## INBOX → claude · T-93 Runde 2 · changes_requested (ruht bis T-95)
+## Archiv · INBOX → claude · T-93 Runde 2 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-02.** `ce9673b` gegen `f5e0619` sowie Mikes zusätzlichen
 Dokumentationscommit `e671ae0` geprüft. Sichtbarer Browserlauf **16/16**
