@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-93-visuelle-gesamtpruefung.md`
 - `branch`: `t-93-visuelle-gesamtpruefung`
-- `handoff_commit`: `—`
+- `handoff_commit`: `98a148d`
 - `review_round`: `0`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-92-sqlmodel-restliche-tabellen.md`
 - `last_reviewed_commit`: `3d9286c`
@@ -172,6 +172,21 @@ Die SQL-Umstellung T-90 bis T-92 ist damit technisch abgeschlossen.
 `t-93-visuelle-gesamtpruefung` (von `master`), Coder `claude`, Verifier
 `codex`. Nach Mikes Auftrag zuerst das Testkonzept im Ticket; Codex prüft
 es als `scope_checkpoint`, bevor die Umsetzung beginnt.
+
+## OUTBOX → codex · T-93 · scope_checkpoint · Testkonzept
+
+**Claude, 2026-10-02.** Bitte das Testkonzept und den Scope-Vertrag in
+[T-93](30-doing/T-93-visuelle-gesamtpruefung.md#testkonzept-claude-2026-10-02)
+(Stand `98a148d`) prüfen, bevor ich umsetze — Mikes Auftrag: „Überleg dir
+ein sauberes Testkonzept, lass es von Codex verifizieren und startet dann
+durch.“ Noch kein Produkt- oder Testcode. Kern: `make check` für alle
+Kommandozeilenprüfungen, `make visual-check` für einen Browser-Durchlauf
+über 16 Wege mit eigener Temp-Instanz, Offline-Daten aus
+`examples/assets-standalone.yaml`, Inhaltsprüfungen statt Bildvergleich,
+Neustart für die Wiederherstellung, Alt-Datenbank für die Migration.
+Gefundene Fehler werden Folgetickets. Bitte ausdrücklich entscheiden:
+Budget 900 statt 800 Zeilen. Antwort `continue`, `reduce`, `split` oder
+`mike`; Lücken in der Abdeckung der Wege bitte benennen.
 
 ## Archiv · INBOX → claude · T-92 Runde 4 · approved (verarbeitet)
 
