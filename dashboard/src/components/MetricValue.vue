@@ -60,14 +60,14 @@ const fromSource = computed(() => applicable.value && sourceProvides(props.item,
  * wenn die Oberfläche deutsch ist — vorher stand dort „25.80 %" neben
  * deutschen Beschriftungen.
  */
-const DIGITS = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+const twoDecimals = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
 
 /**
  * Formatiert eine Zahl passend zum Feld: Prozent bei ter/volatility,
  * Millionen mit Währung bei fund_size.
  */
 function formatNumber(raw: number, which: FundSizeValue): string {
-  const formatted = n(raw, DIGITS)
+  const formatted = n(raw, twoDecimals)
   if (props.field === 'fund_size') return fundSizeText(t, formatted, fundSizeCurrency(props.item, which))
   return isPercentField.value ? `${formatted} %` : formatted
 }

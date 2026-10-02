@@ -12,7 +12,6 @@ from app.providers.openfigi_provider import OpenFigiClient
 from app.providers.yfinance_etf_provider import YFinanceEtfEnricher
 from app.providers.yfinance_provider import YFinanceProvider
 
-
 # ─── OpenFIGI ─────────────────────────────────────────────────────────────────
 
 

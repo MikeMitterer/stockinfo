@@ -9,7 +9,7 @@ import type { InstrumentSummary } from '../types'
  * wie bei justETF. Der Detailbereich formatiert in `DetailEditor.vue` über
  * denselben Katalogtext.
  */
-export const DEFAULT_FUND_SIZE_CURRENCY = 'EUR'
+export const defaultFundSizeCurrency = 'EUR'
 
 type Translate = (key: string, values: Record<string, unknown>) => string
 
@@ -20,7 +20,7 @@ export type FundSizeValue = 'effective' | 'manual'
 export function fundSizeCurrency(item: InstrumentSummary, which: FundSizeValue): string {
   const detail = item.details?.fund_size
   const currency = which === 'manual' ? detail?.manual_currency : detail?.currency
-  return currency || DEFAULT_FUND_SIZE_CURRENCY
+  return currency || defaultFundSizeCurrency
 }
 
 /** „129.791,00 Mio. EUR" aus einer bereits formatierten Zahl. */
