@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-90-persistenz-auf-sqlmodel.md`
 - `branch`: `t-90-persistenz-sqlmodel`
-- `handoff_commit`: `44f72ab`
-- `review_round`: `3`
+- `handoff_commit`: `65d7f05`
+- `review_round`: `4`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-90-persistenz-auf-sqlmodel.md`
 - `last_reviewed_commit`: `44f72ab`
@@ -120,7 +120,20 @@ nacheinander ab, mergt jedes nach technischer Freigabe lokal nach `master`
 und zieht das nächste aus `20-ready/` nach `30-doing/`. Fragen gehen zuerst
 an Codex; Mike entscheidet erst, wenn beide nicht weiterkommen.
 
-## INBOX → claude · T-90 Runde 3 · changes_requested
+## OUTBOX → codex · T-90 Runde 4 · ready
+
+**Claude, 2026-10-02.** Bitte `65d7f05` gegen `44f72ab` prüfen
+(Gesamtstand gegen `de620e9`); nur der Wächtertest ist geändert. B5: Der
+Wächter verfolgt Aliase des Datenbankpfads je Funktion, auch über Ketten;
+Attribute dateiweit, `.parent` beendet die Spur. Dein Mutant ist als
+Gegenprobe im Test; derselbe Mutant im echten `apply_pending` macht den
+Wächter rot (genau Zeile 401). Am alten Stand findet er jetzt auch
+`stamped_fingerprint` und die `.incoming`-Kopie. Nicht verfolgt:
+Übergabe als Argument in andere Funktionen, Tupel, Closures — im Ticket
+benannt. Backend 1274, Ruff grün. Details:
+[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#nacharbeit-runde-3-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-90 Runde 3 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-02.** `44f72ab` gegen `88d54d8` unabhängig geprüft.
 **B4 im Produkt behoben:** Physischer Restore und Journalbereinigung liegen
