@@ -26,20 +26,20 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
-- `branch`: `master`
-- `handoff_commit`: `8e6438c`
-- `review_round`: `5`
-- `max_review_rounds`: `8`
-- `owner`: `mike`
+- `phase`: `claude_working`
+- `ticket`: `T-90-persistenz-auf-sqlmodel.md`
+- `branch`: `t-90-persistenz-sqlmodel`
+- `handoff_commit`: `—`
+- `review_round`: `0`
+- `max_review_rounds`: `3`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `last_reviewed_commit`: `8e6438c`
 - `last_reviewed_round`: `5`
-- `workstream`: `volatilitaet`
-- `priority_chain`: `T-89`
-- `priority_ticket`: `T-89`
+- `workstream`: `persistenz`
+- `priority_chain`: `T-90`
+- `priority_ticket`: `T-90`
 
 **Rundenlimit T-88 · Mike, 2026-10-02.** Mike möchte das Ticket sauber
 abschließen und erlaubt bis zu fünf reguläre Review-Runden. Die frühere
@@ -91,9 +91,16 @@ ersetzt den Umbau innerhalb von T-89 aus der Persistenzentscheidung oben.
 Für T-89 gilt damit eine **ausdrückliche, befristete Ausnahme** von
 `code-standards/references/persistence.md`: T-89 darf `set_volatility` im
 bestehenden `app/repository.py` ändern. Der regelkonforme Umbau ist
-[T-90](20-ready/T-90-persistenz-auf-sqlmodel.md); die Ausnahme endet mit
+[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md); die Ausnahme endet mit
 dessen Abschluss und gilt nicht für neue Arbeit. Das Limit von acht Runden
 bleibt stehen.
+
+**Aktivierung T-90 · Mike, 2026-10-02.** „Ich reviewe erst wenn doing durch
+ist – sprich vorher kommt noch T-90. Fang gleich damit an.“
+[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md) ist aktiv auf
+`t-90-persistenz-sqlmodel` (von `master`, mit T-88 und T-89), Coder
+`claude`, Verifier `codex`. Die Abnahme von T-88 und T-89 erfolgt
+gemeinsam, wenn `30-doing/` abgearbeitet ist.
 
 ## An Mike · T-88 und T-89 auf `master` zur gemeinsamen Abnahme
 
@@ -109,7 +116,7 @@ gemergt, der Root steht auf `master`. Kein Push. Offen:
      aus Tageskursen“, „Stand der Quelle“ mit Datum ohne Uhrzeit.
    Bestehende Werte bekommen ihr Datum beim nächsten Refresh. Beide Tickets
    bleiben bis zu deiner Bestätigung in `30-doing/`.
-2. **Danach:** [T-90](20-ready/T-90-persistenz-auf-sqlmodel.md)
+2. **Danach:** [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md)
    (Persistenz auf SQLModel) beendet die befristete T-89-Ausnahme.
 3. **Docker Hub und Unraid:** Image 1.4.0 ist gebaut, aber nicht gepusht
    und enthält T-88/T-89 noch nicht. Neues Image, Docker-Hub-Beschreibung
@@ -154,7 +161,7 @@ keinen. Nur `app/sources_registry.py` geändert. Details:
 B4 ist behoben: Beide neuen HTTP-Tests laufen von `POST /refresh/{isin}`
 bis `GET /instruments` und werden an den passenden negativen
 Laufzeit-Mutanten unabhängig rot. B5 ist durch Mikes ausdrückliche,
-befristete T-89-Ausnahme und [T-90](20-ready/T-90-persistenz-auf-sqlmodel.md)
+befristete T-89-Ausnahme und [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md)
 eingeordnet. B6: Die Referenzgruppen-Matrix steht im Ticket. Backend
 **1267 passed, 35 skipped**, normaler Ruff und Diff-Prüfung grün;
 Dashboard seit Runde 3 unverändert.
