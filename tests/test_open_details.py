@@ -112,6 +112,7 @@ def test_fondsgroesse_steht_in_millionen_mit_waehrung(value, accepted):
 
 def test_plausibilitaet_verwendet_die_deklarierte_einheit():
     from stockinfo_plugin import Reading
+
     from app.plugin_adapters import MetadataAdapter
 
     class RatioSource(SampleSource):
@@ -129,6 +130,7 @@ def test_plausibilitaet_verwendet_die_deklarierte_einheit():
 
 def test_migration_uebernimmt_waehrung_des_manuellen_betrags():
     import sqlite3
+
     from app import detail_store
 
     connection = sqlite3.connect(':memory:')

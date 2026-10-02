@@ -33,8 +33,8 @@ Verwendung::
         unknown = ResolveRequest(isin="CA0679011084")
 """
 
-from types import SimpleNamespace
 from datetime import date
+from types import SimpleNamespace
 
 import pytest
 
@@ -57,11 +57,11 @@ from stockinfo_plugin.sources import (
 )
 from stockinfo_plugin.types import (
     API_VERSION,
+    MONEY_UNITS,
     DailyRequest,
     DailySeries,
     FxRate,
     FxRequest,
-    MONEY_UNITS,
     ListedIdentity,
     NotFound,
     NotResponsible,

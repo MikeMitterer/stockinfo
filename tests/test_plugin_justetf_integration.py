@@ -14,12 +14,11 @@ den Unit-Tests, wo er auch ohne Netz läuft.
 **Keine festgenagelten Kennzahlen.** Ein Fondsvolumen ändert sich täglich, eine
 Kostenquote gelegentlich. Festgenagelt wird, was sich nicht ändert: dass die
 Antwort überhaupt Felder trägt, dass jedes davon **deklariert** ist, und dass
-ein absoluter Betrag seine Währung mitbringt. Genau die drei Zusagen hat der
+ein Betrag seine Währung mitbringt. Genau die drei Zusagen hat der
 Vertrag an den Doubles gefunden — hier stehen sie gegen die Wirklichkeit.
 """
 
 import pytest
-
 from stockinfo_plugin import ResolveRequest
 from stockinfo_plugin.invariants import currency_problem
 from stockinfo_plugin.types import MONEY_UNITS

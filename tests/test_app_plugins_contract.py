@@ -18,7 +18,6 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 import pytest
-
 from stockinfo_plugin import (
     DailyRequest,
     FxRequest,
@@ -286,16 +285,16 @@ def test_die_kette_laeuft_durch_composite_adapter_plugin(
         """Eine Anbindung, die genau sagt, wer geantwortet hat."""
 
         def __init__(self, source: str, european: bool) -> None:
-            self._quelle = source
-            self._europaeisch = european
+            self._source = source
+            self._european = european
 
         def is_responsible(self, isin, *, exchange=None, currency=None) -> bool:
             if isin:
-                return isin.startswith(("IE", "LU", "DE")) is self._europaeisch
-            return (currency == "EUR") is self._europaeisch
+                return isin.startswith(("IE", "LU", "DE")) is self._european
+            return (currency == "EUR") is self._european
 
         def fetch_etf(self, isin, symbol=None, *, exchange=None, currency=None):
-            return EtfDetails(provider=self._quelle, name="egal")
+            return EtfDetails(provider=self._source, name="egal")
 
     chain = CompositeEtfEnricher(
         MetadataAdapter(
