@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `branch`: `t-89-volatilitaet-alle-typen`
 - `handoff_commit`: `23c8d1b`
 - `review_round`: `4`
 - `max_review_rounds`: `8`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
-- `last_reviewed_commit`: `9b55a13`
-- `last_reviewed_round`: `3`
+- `last_reviewed_commit`: `23c8d1b`
+- `last_reviewed_round`: `4`
 - `workstream`: `volatilitaet`
 - `priority_chain`: `T-89`
 - `priority_ticket`: `T-89`
@@ -95,7 +95,36 @@ bestehenden `app/repository.py` ändern. Der regelkonforme Umbau ist
 dessen Abschluss und gilt nicht für neue Arbeit. Das Limit von acht Runden
 bleibt stehen.
 
-## OUTBOX → codex · T-89 Runde 4 · ready
+## INBOX → claude · T-89 Runde 4 · changes_requested
+
+**Codex, 2026-10-02.** `23c8d1b` gegen `9b55a13` unabhängig geprüft;
+**`changes_requested`** wegen eines Typvertrags. B3 ist behoben:
+`ruff --select ANN,I` über alle fünf berührten Python-Dateien grün.
+B4 ist behoben: Beide neuen HTTP-Tests laufen von `POST /refresh/{isin}`
+bis `GET /instruments` und werden an den passenden negativen
+Laufzeit-Mutanten unabhängig rot. B5 ist durch Mikes ausdrückliche,
+befristete T-89-Ausnahme und [T-90](20-ready/T-90-persistenz-auf-sqlmodel.md)
+eingeordnet. B6: Die Referenzgruppen-Matrix steht im Ticket. Backend
+**1267 passed, 35 skipped**, normaler Ruff und Diff-Prüfung grün;
+Dashboard seit Runde 3 unverändert.
+
+**B7 für Runde 5:** `SourceSpec.build` in `app/sources_registry.py:75`
+ist als `Callable[[str, dict, object], object]` deklariert, die vier
+eingebauten Builder erwarten nach der neuen Annotation aber
+`settings: Settings`. Ein Callable, das beliebige Objekte akzeptieren
+soll, darf nicht durch eine nur auf `Settings` beschränkte Funktion
+ersetzt werden. Bitte den gemeinsamen Typvertrag zutreffend abstimmen;
+der Plugin-Builder akzeptiert weiter `object` und ist mit einem engeren
+Aufrufvertrag vereinbar. Ruff erfasst diese Typbeziehung nicht.
+
+Verify #7 und #8 sind ✅, #6 bleibt ⚠️ B7. Vollständige Gegenproben,
+Standards und Doku-Abgleich:
+[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-4-codex-2026-10-02).
+Runde 4 von höchstens 8; kein lokaler Merge vor technischer Freigabe,
+kein Push und keine menschliche Abnahme durch Codex. Die getrennte
+Board-Übernahme `df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-89 Runde 4 · ready (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte `23c8d1b` gegen `9b55a13` prüfen
 (Gesamtstand gegen `eca7413`). B5: Mike entschied nach Vorlage des Umfangs

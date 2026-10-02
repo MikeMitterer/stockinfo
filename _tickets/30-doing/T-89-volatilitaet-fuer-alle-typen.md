@@ -133,7 +133,7 @@ der Coder im Scope-Vertrag fest.
       Screenshots als Beleg im Ticket.
 - [x] `unraid/screenshots/dashboard.png` wird danach neu aufgenommen.
 - [x] Doku-Abgleich für `README.md` und `docker/README.md`.
-- [ ] Scope-Erweiterung: Der Detailbereich zeigt die Quelle `calculated`
+- [x] Scope-Erweiterung: Der Detailbereich zeigt die Quelle `calculated`
       übersetzt („berechnet aus Tageskursen“ / „calculated from daily
       closes“) und als Stand das Datum des letzten Schlusskurses.
 
@@ -156,11 +156,11 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 |---|---|---|:--:|
 | 1 | `GET /fields`, Feld `volatility` | `sources` = `justetf`, `calculated`; Scope `calculated` mit allen Gattungen, `listed` und `pair` | ✅ |
 | 2 | `GET /instruments` mit Aktie, Fonds, ETF | Aktie und Fonds: `details.volatility` mit Quelle `calculated`; ETF mit justETF-Wert: Quelle `justetf` | ✅ |
-| 3 | `.venv/bin/python -m pytest -q`, `tests/test_calculated_metrics.py` | Backend 1265 grün; Testmodul 13 grün, zwei neue Datumstests an negativen Laufzeit-Mutanten rot | ✅ |
+| 3 | `.venv/bin/python -m pytest -q`, `tests/test_calculated_metrics.py` | Backend 1267 grün; Testmodul 15 grün, beide HTTP-Datumstests an negativen Laufzeit-Mutanten rot | ✅ |
 | 4 | Sichtbare Prüfung im Browser (Temp-Datenbank), deutsch und englisch | Tabelle zeigt „Vola 1Y“ bei Aktie und Fonds; Detailbereich zeigt „Volatilität (1 Jahr)“ | ✅ |
 | 5 | StockPortfolios `projectDetailFields` mit den echten Antworten | Zusatzinformationen zeigen die Volatilität bei Aktie und Fonds; Coder-Lauf belegt die Ausgaben, API-Scopes wurden unabhängig geprüft | ✅ |
-| 6 | Standard und Doku | Doku und Namensinventar passen; `ANN,I` in den berührten Python-Produktdateien rot, Persistenzstandard ohne lokale Ausnahme, Standards-Matrix der Runde 3 fehlt | ⚠️ B3, B5, B6 |
-| 7 | Stand berechneter Werte: Refresh einer Aktie mit Tageskursen, Wiederherstellung ohne Kurse, `GET /instruments` | Servicepfade samt Datum grün und gezielt rot; API-Test setzt `as_of` direkt und belegt den Refresh bis `GET /instruments` nicht | ⚠️ B4 |
+| 6 | Standard und Doku | `ANN,I` grün, befristete Persistenz-Ausnahme und Standardmatrix vorhanden; neu annotierte Builder passen nicht zum `SourceSpec.build`-Typ | ⚠️ B7 |
+| 7 | Stand berechneter Werte: Refresh einer Aktie mit Tageskursen, Wiederherstellung ohne Kurse, `GET /instruments` | Beide Pfade laufen von `POST /refresh/{isin}` bis `GET /instruments`; jeder wird durch passenden negativen Laufzeit-Mutanten rot | ✅ |
 | 8 | Detailbereich im Browser, deutsch und englisch (Aktie, Fonds, ETF) | Übersetzte Quelle und reines Datum bei Aktie/Fonds; ETF mit unverändertem justETF-Zeitpunkt; Komponenten- und Browserbelege | ✅ |
 
 ## Review-Verlauf (neueste Runde zuerst)
@@ -168,6 +168,107 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 4 (Codex, 2026-10-02)
+
+**Prüfstand:** `23c8d1b` gegen `9b55a13`, Gesamtstand gegen `eca7413`.
+Nach dem Produktcommit betraf der Übergabecommit nur Ticket-/Statusdateien;
+der Arbeitsbaum war beim Claim sauber. Rollen, Owner, Priorität und Branch
+stimmten; Paket-VERSION `df699dd1` unverändert. Ergebnis:
+**`changes_requested`** wegen eines Typvertrags in der erweiterten
+`sources_registry.py`. Runde 4 von höchstens 8; keine technische oder
+menschliche Abnahme des erweiterten Stands.
+
+### Befund für Runde 5
+
+**B7 · `SourceSpec.build` verspricht einen zu breiten Parameter.**
+`app/sources_registry.py:75` deklariert
+`Callable[[str, dict, object], object]`. Die vier eingebauten Builder
+`_openfigi`, `_yahoo_search`, `_yfinance` und `_justetf` sind nach der
+Runde-4-Nacharbeit dagegen mit `settings: Settings` annotiert. Die
+Runtime-Typinspektion bestätigt `object` im Bauplan und `Settings` in
+allen vier Funktionen. Ein Callable, das beliebige `object`-Werte
+akzeptieren soll, kann nicht durch eine Funktion ersetzt werden, die nur
+`Settings` annimmt. Die tatsächlichen Aufrufe reichen `Settings`, deshalb
+bleiben Laufzeittests grün; Ruff `ANN,I` prüft diese Vertragsbeziehung
+nicht. Bitte den gemeinsamen Callable-Typ und die Builder zutreffend
+aufeinander abstimmen. Der geladene Plugin-Builder in
+`app/plugin_loader.py:120` akzeptiert `object` und bleibt bei einem
+engeren Aufrufvertrag kompatibel. Danach das vollständige Python-
+Annotationsinventar und die betroffenen Tests erneut prüfen; kein
+zusätzliches Test-Subsystem.
+
+### Behobene Befunde und Gegenproben
+
+- **B3 behoben:** `quote: QuoteResponse` und
+  `definitions: list[DetailDefinition] | None` stimmen mit den genutzten
+  Objekten überein. Die zusätzlichen 13 Parameter-/Rückgabetypen in
+  `app/sources_registry.py` sind vorhanden; AST-Inventar der fünf
+  berührten Python-Dateien findet keine fehlenden Funktionsannotationen.
+  `.venv/bin/ruff check --select ANN,I` für alle fünf Dateien ist grün.
+  B7 betrifft die **Beziehung** zwischen vorhandenen Typen, nicht eine
+  fehlende Annotation.
+- **B4 behoben:** Die zwei neuen Tests verwenden die echte App und die
+  temporäre Datenbank: `POST /refresh/{isin}` mit netzfreiem Kursdienst,
+  danach `GET /instruments`. Der erste zeigt das Datum des letzten
+  Schlusskurses, der zweite erhält beim Wiederherstellen das alte Datum.
+  Meine unabhängige Laufzeit-Mutation „Berechnung gibt kein Datum“ macht
+  den ersten HTTP-Test rot (`None` statt `2026-10-01`); die Mutation
+  „Wiederherstellung verliert `as_of`“ macht den zweiten rot (`None`
+  statt `2026-09-30`). Kein Produktdatei-Edit. Am Handoff-Stand sind
+  beide grün.
+- **B5 durch Mikes Entscheidung eingeordnet:** STATUS nennt die
+  ausdrückliche, auf T-89 begrenzte Persistenz-Ausnahme und den späteren
+  Umbau in [T-90](../20-ready/T-90-persistenz-auf-sqlmodel.md). T-90
+  erfasst Ordner, ORM, Interface, Migrationen, Backups und sichtbare
+  Prüfung. Das aktuelle T-89 fügt keine weitere SQL-Stelle hinzu.
+  Die Ausnahme ist eine Projektentscheidung, keine Verifier-Freigabe
+  des Standards für andere Arbeit.
+- **B6 behoben:** Die Nacharbeit enthält die Referenzgruppen-Matrix
+  samt Belegen. Die Quellenkennung als Protokollwert ist in
+  `docs/plugin-authors.md` dokumentiert; Backend und Dashboard teilen
+  keine Codebasis. Keine zweite Datumslogik oder Testinfrastruktur.
+
+### Verify, Standards und Doku-Abgleich
+
+- **#1–#2:** ✅ Deklaration und Quellenrangfolge aus Runde 2 unverändert;
+  die Runde-4-Nacharbeit verändert weder den Katalog noch die API-Form.
+- **#3:** ✅ Backend **1267 passed, 35 skipped, 1 Starlette-Warnung**;
+  Testmodul **15 passed**. Normaler Ruff und `ANN,I` für alle fünf
+  berührten Python-Dateien, `git diff --check` für Nacharbeit und
+  Gesamtstand grün. Plugin-API **324 passed, 1 skipped** aus Runde 1
+  bleibt für unveränderten Plugin-Code gültig.
+- **#4–#5, #8:** ✅ Die DE-/EN-Browserbilder aus Runde 3 wurden dort
+  unabhängig angesehen; seitdem kein UI-Diff. Dashboard **399 passed**,
+  `vue-tsc -b`, ESLint aus Runde 3 gelten weiter. StockPortfolios
+  Konsumentenlauf bleibt Claudes Beleg aus Runde 1.
+- **#6:** ⚠️ B7. **#7:** ✅ Beide HTTP-Ende-zu-Ende-Pfade und ihre
+  negativen Gegenfälle unabhängig geprüft.
+- **Doku-Abgleich:** `README.md` beschreibt die berechnete Volatilität und
+  verlinkt die Detailfeld-Doku; `docs/plugin-authors.md` nennt Quelle,
+  Rangfolge und `as_of`. `docker/README.md` und `unraid/README.md`
+  machen keine gegenteilige Aussage; diese Runde änderte keine dieser
+  Anleitungen. T-90 bleibt als eigenes Zukunftsticket erkennbar.
+
+**Gelesener Standard:**
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md`, Referenzen
+`architecture.md`, `frontend.md`, `python.md`, `persistence.md`,
+`quality.md`, `documentation.md`; `ux-standards/SKILL.md` für den
+unveränderten UI-Teil aus Runde 3.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ⚠️ B7: Bauplan-/Builder-Typen widersprechen sich; sonst keine neue doppelte Logik, AST-Inventar englisch. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ➖ kein UI-Diff in Runde 4; Runde-3-Belege gelten. |
+| Python, FastAPI und Webhooks | ⚠️ B7 trotz grünem `ANN,I`: der Callable-Typ der Registry passt nicht zu den vier Buildern; echte HTTP-Tests und 1267 Backendtests grün. |
+| Datenbanken und Persistenzgrenzen | ✅ temporäre DB und Mikes befristete, im Projekt dokumentierte T-89-Ausnahme mit T-90; kein neues SQL. |
+| Fehler, Logging und Tests | ✅ beide HTTP-Mutanten rot, Endstand grün, keine neue Testinfrastruktur. |
+| Markdown und Inhaltsverzeichnisse | ✅ aktuelle Doku ohne Widerspruch, T-90 als Zukunftsticket. |
+
+Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
+Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
 
 ## Nacharbeit Runde 3 (Claude, 2026-10-02)
 
