@@ -83,8 +83,8 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
 | 1 | `tests/test_persistence_tables.py` | Alle zehn Modelle tragen genau die Spalten ihrer Tabelle, frisch und umgezogen (`migration_rejections` nur umgezogen, frisch gibt es sie nicht) | ✅ |
-| 2 | `tests/test_persistence_boundary.py` | `repository.py`, `detail_store.py`, `meta_store.py`, `session.py`, `tables.py` ohne SQL-Text und ohne `text()`; Gegenprobe | ⚠️ |
-| 3 | Rohe Stellen | Nur `db.py`, `migration.py`, `backup_store.py`, `data_versions.py`, `plugin_migration.py`; jedes mit Abschnitt „Warum hier rohes SQL bleibt“ | ⚠️ |
+| 2 | `tests/test_persistence_boundary.py` | `repository.py`, `detail_store.py`, `meta_store.py`, `tables.py` ohne rohes SQL (SQL-Text, `text()`, `exec_driver_sql`, `execute` mit String); `session.py` ebenso bis auf genau `BEGIN`/`BEGIN IMMEDIATE`; Gegenproben | ⚠️ |
+| 3 | Rohe Stellen | Daten-SQL nur in `db.py`, `migration.py`, `backup_store.py`, `data_versions.py`, `plugin_migration.py`, je mit „Warum hier rohes SQL bleibt“; dazu die Transaktionsanweisung in `session.py`, dort begründet | ⚠️ |
 | 4 | Backend, Plugin-API, Ruff | Backend 1308, Plugin-API 324, Ruff grün | ✅ |
 | 5 | Browser mit Temp-Datenbank | Wechselkurs abrufen und aus dem Cache lesen, Einstellungen, manuelle Eingabe, Sicherung mit echtem Wiederherstellen | ✅ |
 | 6 | Browser mit Alt-Datenbank | Vorschau, Bestätigung, Bericht über das Modell | ✅ |
@@ -95,6 +95,33 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Nacharbeit Runde 1 (Claude, 2026-10-02)
+
+Prüfgegenstand: `7d0be5e` gegen `833e3cf` (Nacharbeit) und gegen `master`
+`f4bc8ef` (Gesamtstand).
+
+- **B1 · `BEGIN` in `session.py`:** Die Ausnahme ist jetzt benannt —
+  im Modul-Docstring und am Aufruf von `session.py` sowie in Verify #2/#3.
+  Der Wächter zählt zusätzlich jeden `exec_driver_sql(...)`-Aufruf und
+  jedes `execute(...)`, dessen erstes Argument ein String ist (Spaltennamen
+  in SQLAlchemy-Ausdrücken zählen nicht). Für `session.py` sind genau
+  `BEGIN` und `BEGIN IMMEDIATE` zugelassen. Belege:
+  - `raw_sql(session.py)` ohne Ausnahme: `49: exec_driver_sql(...)`; mit
+    Ausnahme leer — der Wächter sieht die Stelle also wirklich.
+  - Neue Gegenprobe `test_die_transaktionsausnahme_gilt_nur_fuer_begin`:
+    `PRAGMA …`, `COMMIT` und `execute('VACUUM')` neben dem erlaubten
+    `BEGIN` werden gefunden; ohne Ausnahme auch das `BEGIN`.
+  - Mutant im echten `session.py` (zusätzliches
+    `exec_driver_sql("PRAGMA defer_foreign_keys = ON")`):
+    `test_die_laufzeitmodule_enthalten_kein_rohes_sql[session.py]` rot;
+    zurückgesetzt.
+  - Gegen den Stand von T-91 meldet der Wächter weiterhin die alten
+    `text()`-Stellen in `repository.py`.
+- **Läufe:** Backend **1309 passed, 36 skipped** (+1 Gegenprobe), Ruff
+  `app tests`, `git diff --check` grün.
+
+**Doku-Abgleich:** unverändert; keine Anleitung betroffen.
 
 ## Verifier-Prüfung · Runde 1 (Codex, 2026-10-02)
 
