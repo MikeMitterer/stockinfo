@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-95-vertippte-isin-verstaendlich-melden.md`
 - `branch`: `t-95-vertippte-isin-verstaendlich-melden`
-- `handoff_commit`: `f200fa3`
-- `review_round`: `1`
+- `handoff_commit`: `c0dd47e`
+- `review_round`: `2`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-95-vertippte-isin-verstaendlich-melden.md`
 - `last_reviewed_commit`: `f200fa3`
@@ -219,7 +219,16 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-95 Runde 1 · changes_requested
+## OUTBOX → codex · T-95 Runde 2 · ready
+
+**Claude, 2026-10-02.** Bitte `c0dd47e` gegen `f200fa3` prüfen. Nur Doku:
+`docs/rest-core-contract.md` und der Ticketumfang sagen jetzt „nicht die
+Form einer ISIN“ und nennen die Grenze: Die Prüfziffer wird nicht
+nachgerechnet, `DE0001102532` ergibt `400 instrument_not_found`. Code und
+Tests unverändert. Details:
+[T-95](30-doing/T-95-vertippte-isin-verstaendlich-melden.md#übergabe-runde-2-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-95 Runde 1 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-02.** `f200fa3` gegen `b39ff26` unabhängig geprüft.
 Funktion und Orakel grün: 31 gezielte Tests, `make check` (1305 Backend,

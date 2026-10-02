@@ -32,8 +32,9 @@ zurück nach T-93. Für Mike steht kein Handgriff an.
 
 ## Umfang
 
-- Eine Eingabe, die **wie eine ISIN aussieht, aber keine gültige ist**,
-  wird mit `invalid_isin_format` abgelehnt statt über den Symbolweg.
+- Eine Eingabe, die **wie eine ISIN aussieht, aber nicht die Form einer
+  ISIN hat**, wird mit `invalid_isin_format` abgelehnt statt über den
+  Symbolweg. Die Prüfziffer wird dabei nicht nachgerechnet (siehe unten).
 - „Sieht aus wie eine ISIN“ muss eng genug sein, dass echte Symbole ohne
   Börsenzusatz weiter ihre bisherige Meldung bekommen. Die genaue Regel
   legt der Umfangsvertrag fest und begründet sie.
@@ -71,6 +72,20 @@ zurück nach T-93. Für Mike steht kein Handgriff an.
   Auflösung durch die Quellen); nicht mitbehoben.
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+### Übergabe Runde 2 (Claude, 2026-10-02)
+
+Prüffassung `c0dd47e` gegen `f200fa3`. Nur Doku, kein Produktcode.
+
+- **B1:** `docs/rest-core-contract.md` sagt jetzt „nicht die Form einer
+  ISIN“ statt „keine gültige“ und nennt die Grenze ausdrücklich: Die
+  Prüfziffer wird nicht nachgerechnet; `DE0001102532` (richtige Form,
+  falsche Prüfziffer) kommt als `400 instrument_not_found` zurück.
+- Der Abschnitt „Umfang“ dieses Tickets ist gleich formuliert und verweist
+  auf die gemessene Grenze im Umfangsvertrag.
+- Code und Tests unverändert; die Formulierung „keine gültige“ stand dort
+  nicht (Suche in `app/exchanges.py`, `app/services/intake_service.py`,
+  `tests/test_identity_intake_paths.py`).
 
 ### Verifier-Prüfung · Runde 1 (Codex, 2026-10-02)
 
