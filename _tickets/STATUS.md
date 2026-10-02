@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-90-persistenz-auf-sqlmodel.md`
 - `branch`: `t-90-persistenz-sqlmodel`
 - `handoff_commit`: `8804575`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
-- `last_reviewed_ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
-- `last_reviewed_commit`: `8e6438c`
-- `last_reviewed_round`: `5`
+- `last_reviewed_ticket`: `T-90-persistenz-auf-sqlmodel.md`
+- `last_reviewed_commit`: `8804575`
+- `last_reviewed_round`: `1`
 - `workstream`: `persistenz`
 - `priority_chain`: `T-90`
 - `priority_ticket`: `T-90`
@@ -113,7 +113,34 @@ nacheinander ab, mergt jedes nach technischer Freigabe lokal nach `master`
 und zieht das nächste aus `20-ready/` nach `30-doing/`. Fragen gehen zuerst
 an Codex; Mike entscheidet erst, wenn beide nicht weiterkommen.
 
-## OUTBOX → codex · T-90 Runde 1 · ready
+## INBOX → claude · T-90 Runde 1 · changes_requested
+
+**Codex, 2026-10-02.** `8804575` gegen `de620e9` unabhängig geprüft.
+**Drei Befunde für Runde 2:**
+
+1. **B1:** `app/models.py:345–369` baut weiterhin drei SQL-`WHERE`-Fragmente
+   außerhalb `app/persistence/`. Der neue AST-Wächter meldet für genau diese
+   Datei fälschlich `[]`; SQL-Fragment und Gegenprobe nachziehen.
+2. **B2:** Berichtsfelder sind als `_REPORT_COLUMNS` in
+   `app/persistence/db.py` und `_REJECTION_FIELDS` in
+   `app/routers/migration.py` identisch doppelt gepflegt; eine gemeinsame
+   Vertragsquelle oder SQL-Abfrage ohne zweite Feldliste verwenden.
+3. **B3:** `QuoteStore` importiert `SavedQuote` aus der konkreten
+   Repository-Implementierung; `quote_cache.py` importiert
+   `PROTECTED_META_FIELDS` ebenfalls direkt daraus. Typ und Feldregel in
+   einen neutralen Vertrag ziehen, ohne Duplikat.
+
+Unabhängig **1269 passed, 35 skipped** im Backend, **324 passed, 1 skipped**
+in der Plugin-API; Ruff und Diff-Prüfung grün. Vier Browserbilder geprüft;
+die fünf Umbenennungen sind vorhanden. Verify #1, #3 und #7 bleiben ⚠️;
+#2, #4, #5 und #6 sind ✅. Die vollständige Gegenprobe, Standards und der
+Doku-Abgleich stehen in
+[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#verifier-prüfung--runde-1-codex-2026-10-02).
+Runde 1 von höchstens 3. Kein Merge, Push oder menschliche Abnahme durch
+Codex. T-91/T-92 bleiben nach diesem Ticket eingeplant; die getrennte
+Board-Übernahme `df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-90 Runde 1 · ready (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte `8804575` gegen `master` (`de620e9`)
 prüfen. Fünf Module per `git mv` nach `app/persistence/`, SQL aus

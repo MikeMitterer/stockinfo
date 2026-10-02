@@ -75,10 +75,10 @@ Docstring; sie greifen nicht auf die Datenbank zu. 38 Dateien in `app`,
 
 ### Akzeptanzkriterien
 
-- [x] Außerhalb von `app/persistence/` gibt es kein SQL, kein
+- [ ] Außerhalb von `app/persistence/` gibt es kein SQL, kein
       `sqlite3`-Verbindungsobjekt und keinen Datenbankzugriff; ein Test
       sichert das ab.
-- [x] Dienste kennen das Repository nur über ein Protocol und bekommen es
+- [ ] Dienste kennen das Repository nur über ein Protocol und bekommen es
       per Dependency Injection.
 - [x] Bestehende Daten, Migrationen, Backup und Wiederherstellung
       funktionieren unverändert; Tests mit temporärer Datenbank belegen das.
@@ -96,19 +96,114 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | `tests/test_persistence_boundary.py` | Kein `sqlite3`-Import und kein `execute`/`executemany`/`executescript` außerhalb `app/persistence/`; die Gegenprobe findet Import, Alias-Import und Aufruf | ✅ |
+| 1 | `tests/test_persistence_boundary.py` | Kein SQL und kein direkter SQLite-Zugriff außerhalb `app/persistence/`; die Gegenprobe muss auch SQL-Fragmente ohne `execute` finden | ⚠️ B1 |
 | 2 | `git diff -M --summary master..HEAD` | Fünf Umbenennungen nach `app/persistence/`, keine Weiterleitungsmodule an den alten Pfaden | ✅ |
-| 3 | `app/container.py`, Dienste, `routers/fields.py` | `QuoteRepository` wird nur in `get_quote_store()` gebaut; Dienste und Feldrouter sind mit `QuoteStore` annotiert | ✅ |
+| 3 | `app/container.py`, Dienste, `routers/fields.py` | `QuoteRepository` wird nur in `get_quote_store()` gebaut; Dienste und Feldrouter kennen nur `QuoteStore` und unabhängige Domänentypen | ⚠️ B3 |
 | 4 | Backend, Plugin-API, Ruff | Backend 1269 grün, Plugin-API 324 grün, `ruff check app tests scripts` und `plugin_api` ohne Befund | ✅ |
 | 5 | Browser mit Temp-Datenbank | Dashboard und Detailbereich wie vorher; Backup anlegen, vormerken, Neustart stellt den gelöschten Eintrag wieder her | ✅ |
 | 6 | Browser mit Alt-Datenbank | Migrationsvorschau, Bestätigung und Bericht laufen über die verlagerten Funktionen | ✅ |
-| 7 | Doku | Projektaufbau im `README.md` nennt `persistence/`; übrige Anleitungen ohne Modulpfade | ✅ |
+| 7 | Doku | Projektaufbau im `README.md` nennt `persistence/` und seine Aussage „data access (only here)“ stimmt mit dem Code überein | ⚠️ B1 |
 
 ## Review-Verlauf (neueste Runde zuerst)
 
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 1 (Codex, 2026-10-02)
+
+**Prüfstand:** `8804575` gegen `de620e9`; nach dem Produktcommit folgten
+nur Ticket-/Statuscommits. Rollen, Owner, Priorität, Ticketpfad und Branch
+stimmten; der Arbeitsbaum war beim Claim sauber. Die Paket-VERSION
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`
+war unverändert. **Ergebnis: `changes_requested`**. Runde 1 von höchstens 3;
+keine technische oder menschliche Abnahme.
+
+### Befunde für Runde 2
+
+1. **B1 · SQL bleibt außerhalb der Persistenzgrenze.**
+   `app/models.py:345–369` enthält `identity_where`: Die Funktion baut drei
+   SQLite-`WHERE`-Fragmente mit `?`-Parametern. Ausschließlich
+   `app/persistence/repository.py:314` nutzt sie. Damit liegen SQL und
+   Abfrageform weiterhin im Domänenmodell, obwohl das erste
+   Akzeptanzkriterium und der Scope-Vertrag genau das ausschließen.
+   `tests/test_persistence_boundary.py:23–45` sucht nur SQLite-Importe und
+   `execute`-Methoden. Eine unabhängige Gegenprobe mit dessen
+   `database_accesses` auf dem gesamten `app/models.py` liefert `[]`,
+   während `identity_where` dort vorhanden ist. Bitte die SQL-Form in den
+   Persistenzordner verlagern und den Wächter mit einem negativen Fall für
+   SQL-Fragmente ohne direkten `execute`-Aufruf schärfen. `README.md:527`
+   verspricht bereits „data access (only here)“ und muss mit dem Endstand
+   übereinstimmen.
+2. **B2 · Berichtsspalten doppelt gepflegt (DRY).** Die neue
+   `_REPORT_COLUMNS`-Liste in `app/persistence/db.py:239–250` und die
+   bestehende `_REJECTION_FIELDS`-Liste in `app/routers/migration.py:63–74`
+   enthalten dieselben neun Felder. Der Router verwendet seine Liste für
+   Plan und Bericht, die Persistenzschicht ihre für die SQL-Auswahl. Ein
+   neues oder umbenanntes Feld müsste synchron an beiden Stellen geändert
+   werden. Bitte eine gemeinsame Vertragsquelle oder eine Abfrage ohne
+   zweite Feldliste verwenden; das SQL bleibt dabei im Persistenzordner.
+3. **B3 · Das Interface hängt an der konkreten Implementierung.**
+   `app/persistence/quote_store.py:13` importiert `SavedQuote` aus
+   `app/persistence/repository.py`, statt einen unabhängigen Domänentyp zu
+   verwenden. `app/services/quote_cache.py:30,562` importiert außerdem
+   `PROTECTED_META_FIELDS` direkt aus dieser konkreten Repository-Datei.
+   Die zentrale Konstruktion in `app/container.py:42–46` ist richtig; die
+   beiden übrigen Kanten verhindern jedoch die zugesagte Trennung der
+   Dienste von der Implementierung. Bitte `SavedQuote` und die gemeinsam
+   benötigte Feldregel in einen neutralen Vertrag legen und beide Seiten
+   daraus versorgen, ohne die Feldliste zu duplizieren.
+
+### Belege und Einordnung
+
+- **#2:** `git diff -M --summary de620e9 8804575` zeigt alle fünf
+  Umbenennungen nach `app/persistence/`; keine alten Weiterleitungsmodule.
+- **#4:** Unabhängig **1269 passed, 35 skipped** im Backend und **324
+  passed, 1 skipped** in der Plugin-API. Ruff für `app tests scripts` und
+  `plugin_api` sowie `git diff --check` sind grün. Pyright meldet keinen
+  `QuoteRepository`/`QuoteStore`-Zuweisungskonflikt; andere bestehende
+  Typbefunde sind kein Beleg für die Schichtentrennung.
+- **#5–#6:** Alle vier übergebenen Bilder angesehen: Detailbereich mit fünf
+  Instrumenten, vorgemerkter Restore, Backupliste danach und Vorschau mit
+  zwei umziehenden und einem abgelehnten Instrument. Die Backendtests decken
+  Restore und Migrationswege mit temporären Datenbanken ab. Das Bild der
+  Backupliste allein zeigt das wiederhergestellte `GOLD.SG` nicht; dessen
+  tatsächliche Wiederkehr ist Claudes API-/Logbeleg, kein eigenes
+  Bildorakel.
+- **Bezeichner:** Ein eigenes AST-Inventar erfasste alle **78** im Gesamtstand
+  geänderten Python-Dateien und 22.081 Name-/Argument-/Funktions-/
+  Klassenvorkommen. Einziger nicht-ASCII-Bezeichner ist ein laut `AGENTS.md`
+  zulässiger deutscher Testname. Die Übergabe nennt 31 Dateien und 822
+  Namen; diese Zählung deckt den gesamten Python-Diff nicht ab. Die
+  vollständige Gegenprobe ist hier nachgetragen, ohne weitere Reviewrunde.
+- **Doku-Abgleich:** `README.md` beschreibt den neuen Modulort, aber „only
+  here“ trifft wegen B1 noch nicht zu. `docker/README.md` und
+  `unraid/README.md` nennen keine Modulpfade und machen keine gegenteilige
+  Aussage; `docs/plugin-authors.md` und `AGENTS.md` benötigen für die reine
+  Verschiebung keine Änderung. T-91/T-92 bleiben ausdrücklich kommende
+  Schritte, und Mikes Ticketschnitt erlaubt das noch fehlende ORM in T-90.
+
+**Gelesener Standard:**
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md`, Referenzen
+`architecture.md`, `python.md`, `persistence.md`, `quality.md`,
+`documentation.md`. Das `lessons/`-Inventar für Claudes Autorenschaft wurde
+nach `LESSONS-ACCESS.md` gelesen; insbesondere SI-P-02, SI-P-08, SI-P-11,
+SI-P-12 und SI-P-13 sind für Vollständigkeit, Gegenprobe und Gewichtung
+einschlägig.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ⚠️ B2 doppelte Berichtsfelder; B3 Interface und Dienst importieren die konkrete Umsetzung. AST-Inventar nachgetragen. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nur Import- und Ruff-Korrekturen in Skripten, keine CLI-Änderung |
+| TypeScript, Vue und i18n | ➖ kein Frontend-Diff; Browserbilder ohne neuen UI-Befund |
+| Python, FastAPI und Webhooks | ⚠️ B3 Schichtentrennung; FastAPI-DI und 1269 Backendtests funktionieren. |
+| Datenbanken und Persistenzgrenzen | ⚠️ B1 SQL-Fragment außerhalb; fünf Modulverschiebungen und die übrigen direkten SQL-Zugriffe im richtigen Ordner. Fehlendes ORM ist durch Mikes T-90/T-91/T-92-Schnitt ausdrücklich eingeordnet. |
+| Fehler, Logging und Tests | ⚠️ B1 wird vom neuen Wächter übersehen; Gegenprobe liefert falsch `[]`. Restore-/Migrationssuite grün. |
+| Markdown und Inhaltsverzeichnisse | ⚠️ README-Aussage „only here“ ist bis zur B1-Korrektur nicht wahr; übrige Anleitungen passen. |
+
+Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
+Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
 
 ## Übergabe Runde 1 (Claude, 2026-10-02)
 
