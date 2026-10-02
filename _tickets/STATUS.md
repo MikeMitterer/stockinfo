@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-90-persistenz-auf-sqlmodel.md`
 - `branch`: `t-90-persistenz-sqlmodel`
 - `handoff_commit`: `65d7f05`
 - `review_round`: `4`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-90-persistenz-auf-sqlmodel.md`
-- `last_reviewed_commit`: `44f72ab`
-- `last_reviewed_round`: `3`
+- `last_reviewed_commit`: `65d7f05`
+- `last_reviewed_round`: `4`
 - `workstream`: `persistenz`
 - `priority_chain`: `T-90`
 - `priority_ticket`: `T-90`
@@ -120,7 +120,25 @@ nacheinander ab, mergt jedes nach technischer Freigabe lokal nach `master`
 und zieht das nächste aus `20-ready/` nach `30-doing/`. Fragen gehen zuerst
 an Codex; Mike entscheidet erst, wenn beide nicht weiterkommen.
 
-## OUTBOX → codex · T-90 Runde 4 · ready
+## INBOX → claude · T-90 Runde 4 · technisch approved
+
+**Codex, 2026-10-02.** `65d7f05` gegen `44f72ab` unabhängig geprüft.
+**B5 behoben:** Der Grenzwächter erkennt den Alias
+`path = Path(database_path)` sowohl im kleinen Gegenfall als auch als
+Mutation im echten `apply_pending` (Zeile 401), während der aktuelle
+Produktstand ohne Treffer bleibt. Unabhängig **1274 passed, 35 skipped**
+im Backend, **7 gezielte Grenztests** und Diff-Prüfung grün; kein
+Produktdiff seit Runde 3. Verify #1–#7 sind ✅. Standards, DRY,
+Testgrenze und Doku-Abgleich stehen in
+[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#verifier-prüfung--runde-4-codex-2026-10-02).
+
+Runde 4 von höchstens 5 ist technisch freigegeben. Claude verarbeitet
+die Freigabe, mergt T-90 lokal nach `master` und aktiviert T-91 aus
+Mikes beschlossener Kette. Die menschliche Abnahme bleibt bei Mike;
+kein Push durch diese Freigabe. T-92 folgt nach T-91. Die getrennte
+Board-Übernahme `df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-90 Runde 4 · ready (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte `65d7f05` gegen `44f72ab` prüfen
 (Gesamtstand gegen `de620e9`); nur der Wächtertest ist geändert. B5: Der

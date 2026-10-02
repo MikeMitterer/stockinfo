@@ -75,7 +75,7 @@ Docstring; sie greifen nicht auf die Datenbank zu. 38 Dateien in `app`,
 
 ### Akzeptanzkriterien
 
-- [ ] Außerhalb von `app/persistence/` gibt es kein SQL, kein
+- [x] Außerhalb von `app/persistence/` gibt es kein SQL, kein
       `sqlite3`-Verbindungsobjekt und keinen Datenbankzugriff; ein Test
       sichert das ab.
 - [x] Dienste kennen das Repository nur über ein Protocol und bekommen es
@@ -96,10 +96,10 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | `tests/test_persistence_boundary.py` | Kein SQL und kein direkter Zugriff auf die aktive SQLite-Datei außerhalb `app/persistence/`; Gegenproben erkennen auch einfache Pfad-Aliase beim physischen Restore | ⚠️ B5 |
+| 1 | `tests/test_persistence_boundary.py` | Kein SQL und kein direkter Zugriff auf die aktive SQLite-Datei außerhalb `app/persistence/`; Gegenproben erkennen auch einfache Pfad-Aliase beim physischen Restore | ✅ |
 | 2 | `git diff -M --summary master..HEAD` | Fünf Umbenennungen nach `app/persistence/`, keine Weiterleitungsmodule an den alten Pfaden | ✅ |
 | 3 | `app/container.py`, Dienste, `routers/fields.py` | `QuoteRepository` wird nur in `get_quote_store()` gebaut; Dienste und Feldrouter kennen nur `QuoteStore` und unabhängige Domänentypen | ✅ |
-| 4 | Backend, Plugin-API, Ruff | Backend 1273 grün, Plugin-API 324 grün, `ruff check app tests scripts` und `plugin_api` ohne Befund | ✅ |
+| 4 | Backend, Plugin-API, Ruff | Backend 1274 grün, Plugin-API 324 grün, `ruff check app tests scripts` und `plugin_api` ohne Befund | ✅ |
 | 5 | Browser mit Temp-Datenbank | Dashboard und Detailbereich wie vorher; Backup anlegen, vormerken, Neustart stellt den gelöschten Eintrag wieder her | ✅ |
 | 6 | Browser mit Alt-Datenbank | Migrationsvorschau, Bestätigung und Bericht laufen über die verlagerten Funktionen | ✅ |
 | 7 | Doku | Projektaufbau im `README.md` nennt `persistence/` und seine Aussage „data access (only here)“ stimmt mit dem aktuellen Code überein | ✅ |
@@ -109,6 +109,75 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 4 (Codex, 2026-10-02)
+
+**Prüfstand:** `65d7f05` gegen `44f72ab`, Gesamtstand gegen `de620e9`.
+Rollen, Owner, Priorität, Ticketpfad und Branch stimmten; der Übergabecommit
+`bf81e7f` enthielt nur Boarddateien. Paket-VERSION
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`
+vor dem Durchlauf unverändert. **Technisches Ergebnis: `approved`** in
+Runde 4 von höchstens 5. Keine menschliche Abnahme.
+
+**B5 behoben.** Nur `tests/test_persistence_boundary.py` wurde in Runde 4
+geändert. Der Wächter verfolgt jetzt `path = Path(database_path)` und eine
+weitere lokale Zuweisung bis zum Dateiaufruf. Meine unabhängige
+In-Memory-Gegenprobe mit `os.replace(incoming, path)` meldet
+`5: os.replace(Datenbank)`; dieselbe Mutation im echten
+`app/services/backup.py` meldet Zeile 401. Der unveränderte aktuelle
+Backup-Dienst liefert `[]`. Am alten Stand `88d54d8` findet der neue
+Wächter auch die zuvor übersehenen `.incoming`-Kopie und
+`stamped_fingerprint`-Abfrage; das Archiv `resolve` bleibt ohne
+Falschtreffer. Die Grenze für Funktionsübergaben, Tupel und Closures ist
+im Ticket benannt. Für den konkreten Restore-Pfad und den einfachen
+Gegenfall erfüllt die Prüfung das vereinbarte Gate ohne eigenes
+Test-Subsystem.
+
+**Läufe und Verify:** Unabhängig **1274 passed, 35 skipped** im Backend,
+**7 passed** gezielt im Grenztest; Ruff für den geänderten Test und
+`git diff --check` grün. Die Plugin-API **324 passed, 1 skipped** aus
+Runde 1 ist seitdem ohne Plugin-Diff. Verify #1–#7 sind ✅. Die fünf
+Modulverschiebungen, API- und Restorepfade, Browserbilder sowie der
+Doku-Abgleich wurden in Runden 1–3 geprüft; Runde 4 änderte keinen
+Produktcode. Ein eigenes AST-Inventar über alle 78 im Gesamtstand
+geänderten Python-Dateien zählte 22.420 Bezeichnervorkommen; nur ein
+nach `AGENTS.md` erlaubter deutscher Testname enthält Nicht-ASCII.
+
+**DRY-Prüfung:** Der Runde-4-Diff ergänzt eine lokale Aliasprüfung im
+bestehenden Grenztest; kein zweites Datenbankregelwerk oder wiederholte
+Feldliste. Die zuvor doppelte Berichtsfeldliste und die Abhängigkeit des
+Interfaces von der konkreten Repository-Datei sind seit Runde 2 beseitigt.
+
+**Doku-Abgleich:** `README.md` beschreibt `app/persistence/` als Ort für
+Schema, Migrationen und Datenbankzugriffe; das entspricht dem geprüften
+Produktstand. `docker/README.md`, `unraid/README.md`,
+`docs/plugin-authors.md` und `AGENTS.md` nennen keine alten Modulpfade.
+T-91/T-92 bleiben als folgende ORM-Schritte sichtbar; Mikes ausdrücklicher
+Ticketschnitt begrenzt die vorübergehende Abweichung vom ORM-Standard.
+
+**Gelesener Standard:**
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md`, Referenzen
+`architecture.md`, `python.md`, `persistence.md`, `quality.md`,
+`documentation.md`; lokale Claude-Lessons aus dem vollständigen
+`lessons/`-Inventar, insbesondere SI-P-02, SI-P-08, SI-P-11, SI-P-12 und
+SI-P-13.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ technische DB-Operationen und physischer Restore im Persistenzordner; keine neue doppelte Regel; AST-Inventar geprüft. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ➖ kein UI-Diff; Bilder der echten Pfade aus Runden 1–3 angesehen |
+| Python, FastAPI und Webhooks | ✅ Dienste nutzen `QuoteStore`; Backend 1274 passed, 35 skipped. |
+| Datenbanken und Persistenzgrenzen | ✅ SQL, Verbindung, Dateiaustausch und Journale im zuständigen Ordner; ORM folgt nach Mikes Ticketschnitt in T-91/T-92. |
+| Fehler, Logging und Tests | ✅ Alias-Mutant am echten Restore-Pfad rot, aktueller Stand grün; 7 gezielte Grenztests und Gesamtlauf. |
+| Markdown und Inhaltsverzeichnisse | ✅ aktuelle README-Aussage stimmt mit Code überein, weitere Anleitungen ohne widersprüchliche Pfade. |
+
+Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
+Claude verarbeitet die technische Freigabe: T-90 lokal nach `master`
+mergen und T-91 aus der beschlossenen Kette aktivieren. Kein Push durch
+diese Freigabe. Die getrennte Board-Übernahme aus Paketfassung
+`df699dd1` bleibt offen.
 
 ## Nacharbeit Runde 3 (Claude, 2026-10-02)
 
