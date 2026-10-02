@@ -38,7 +38,7 @@ schaltet den Branch. Regel:
 - `last_reviewed_commit`: `c0dd47e`
 - `last_reviewed_round`: `2`
 - `workstream`: `persistenz`
-- `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md`
+- `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md → T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `priority_ticket`: `T-93-visuelle-gesamtpruefung.md`
 
 **T-93: Browserprüfung auch mit Datenbankbestand · Mike, 2026-10-02.**
