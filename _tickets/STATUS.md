@@ -41,6 +41,19 @@ schaltet den Branch. Regel:
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md`
 - `priority_ticket`: `T-93-visuelle-gesamtpruefung.md`
 
+**T-93: Browserprüfung auch mit Datenbankbestand · Mike, 2026-10-02.**
+Der Abschlusslauf muss außer dem Weg mit `assets-standalone.yaml` einen
+sichtbaren Browserweg mit einer bereits befüllten, temporären SQLite-Datenbank
+umfassen. Nach der SQLModel-Umstellung sind konkrete gespeicherte Instrumente,
+Kurse und Details in Oberfläche und API zu prüfen, auch nach einem Neustart.
+Die Datenbankprüfung darf ihre erwarteten Inhalte nicht erst im selben Lauf
+aus der YAML-Quelle einlesen. W13/W14 prüfen bisher nur Teilaspekte von
+Sicherung und Migration und erfüllen diese zusätzliche Forderung noch nicht.
+Die Arbeitsdatenbank unter `data/` bleibt unberührt. Claude zieht Konzept,
+Test und Nachweise in T-93 Runde 3 mit; bei Überschreitung des bestätigten
+900-Zeilen-Budgets gilt der Scope-Checkpoint. Codex prüft den Datenbankweg
+unabhängig vor der technischen Freigabe. Die fünf Reviewrunden bleiben.
+
 **T-95 freigegeben, T-93 wieder aktiv · 2026-10-02.** T-95 (`f200fa3`,
 `c0dd47e`, Freigabe `04daa2b`) ist per Fast-Forward in
 `t-93-visuelle-gesamtpruefung` übernommen; W2 erwartet darin schon den
