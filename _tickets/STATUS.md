@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `blocked`
-- `ticket`: `T-91-sqlmodel-kerntabellen.md`
-- `branch`: `master`
-- `handoff_commit`: `b84351e`
-- `review_round`: `2`
+- `phase`: `claude_working`
+- `ticket`: `T-92-sqlmodel-restliche-tabellen.md`
+- `branch`: `t-92-sqlmodel-restliche-tabellen`
+- `handoff_commit`: `—`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
-- `owner`: `mike`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-91-sqlmodel-kerntabellen.md`
 - `last_reviewed_commit`: `b84351e`
@@ -137,7 +137,12 @@ Tickets (T-88, T-89, T-90, T-91), alle technisch erledigt und bei Mike zur
 Abnahme. Das ist die harte Obergrenze; T-92 darf erst nach `30-doing/`,
 wenn mindestens eines davon abgenommen ist (Regel
 [Ticketgrenzen](.agents/AGENT-WORKFLOW.md#ticketgrenzen)). Deshalb
-`blocked`, `owner: mike`.
+`blocked`, `owner: mike` — aufgehoben durch Mikes Entscheidung unten.
+
+**Aktivierung T-92 · Claude, 2026-10-02.** Auf Mikes Freigabe unten ist
+[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md) aktiv auf
+`t-92-sqlmodel-restliche-tabellen` (von `master` mit T-91), Coder `claude`,
+Verifier `codex`, bis zu fünf Runden.
 
 **T-92 startet trotz Doing-Grenze · Mike, 2026-10-02.** „T-92 kann auch
 starten, ich nehme erst ab wenn die SQL-Umstellung durch ist. Danach müssen
@@ -1732,11 +1737,11 @@ T-70 ist keine zweite fortgeschriebene Fassung des Haupttickets.
 
 Die [Aufnahmeregel](.agents/AGENT-WORKFLOW.md#ticketgrenzen) erlaubt höchstens
 zwei zusätzliche Tickets bei begründetem Bedarf. Andere Ordner haben kein Limit.
-Aktuelle Ausnahmen: `30-doing` mit vier Tickets (T-88, T-89, T-90, T-91),
-zwei über der Zielgrenze und damit an der harten Obergrenze. Bedarf: Mike
-nimmt die Tickets erst ab, wenn die Tickets in Doing technisch erledigt
-sind, und hat T-90 bis T-92 als Kette beauftragt (2026-10-02). Alle vier
-sind technisch erledigt; T-92 wartet in `20-ready/` auf einen freien Platz.
+Aktuelle Ausnahmen: `30-doing` mit fünf Tickets (T-88, T-89, T-90, T-91,
+T-92), eins über der harten Obergrenze. Bedarf: Mike nimmt die Tickets erst
+ab, wenn die SQL-Umstellung fertig ist und die visuellen Tests bestanden
+sind, und hat T-90 bis T-92 als Kette beauftragt (2026-10-02). T-88 bis
+T-91 sind technisch erledigt; T-92 ist aktiv.
 Mike erlaubt T-92 ausdrücklich als fünftes Ticket über der harten
 Obergrenze (2026-10-02, siehe „T-92 startet trotz Doing-Grenze“). Bei einer Überschreitung hier Ordner, betroffene
 Tickets und konkreten Bedarf nennen; nach Rückkehr zur Zielgrenze entfernen.
