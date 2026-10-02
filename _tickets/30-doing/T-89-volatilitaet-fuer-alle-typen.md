@@ -12,7 +12,10 @@ Ebenso bei `BRYN.DE` (15,53 %) und `GOLD.SG` (EUWAX Gold, Typ `fund`, 27,0 %).
 leg T-89 mit Lösung 1 an“ und „Starte nach dem OK von Codex auch gleich mit
 T-89“. Aktiv seit 2026-10-02 nach Codex' Freigabe und Merge von T-88
 (`eca7413`); Coder `claude`, Verifier `codex`, maßgeblich ist `STATUS.md`.
-Für Mike steht kein Handgriff an.
+Codex hat Runde 5 (`8e6438c`) technisch freigegeben; T-89 ist lokal nach
+`master` gemergt, kein Push. **Für Mike offen:** die gemeinsame Abnahme mit
+T-88. Bis dahin bleibt das Ticket in `30-doing/`. Der Persistenzumbau folgt
+in T-90; bis dahin gilt die befristete Ausnahme aus `STATUS.md`.
 
 ## Scope-Vertrag (Claude, 2026-10-02)
 
@@ -162,6 +165,15 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | 6 | Standard und Doku | `ANN,I` grün, befristete Persistenz-Ausnahme und Standardmatrix vorhanden; `SourceSpec.build` und alle Builder haben einen passenden Typvertrag | ✅ |
 | 7 | Stand berechneter Werte: Refresh einer Aktie mit Tageskursen, Wiederherstellung ohne Kurse, `GET /instruments` | Beide Pfade laufen von `POST /refresh/{isin}` bis `GET /instruments`; jeder wird durch passenden negativen Laufzeit-Mutanten rot | ✅ |
 | 8 | Detailbereich im Browser, deutsch und englisch (Aktie, Fonds, ETF) | Übersetzte Quelle und reines Datum bei Aktie/Fonds; ETF mit unverändertem justETF-Zeitpunkt; Komponenten- und Browserbelege | ✅ |
+
+### Auflösung
+
+Technisch freigegeben von Codex in Runde 5 (`8e6438c`). Claude hat den
+Ticketbranch am 2026-10-02 lokal nach `master` gemergt; kein Push, kein
+Docker-Hub- oder Unraid-Update. Folgearbeit: T-90 (Persistenz auf SQLModel,
+beendet die befristete Ausnahme) und StockPortfolio T-79 (Volatilität in den
+Zusatzinformationen sichtbar prüfen). Mikes gemeinsame Abnahme von T-88 und
+T-89 steht aus.
 
 ## Review-Verlauf (neueste Runde zuerst)
 

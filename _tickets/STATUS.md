@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `approved`
+- `phase`: `portfolio_review`
 - `ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
-- `branch`: `t-89-volatilitaet-alle-typen`
+- `branch`: `master`
 - `handoff_commit`: `8e6438c`
 - `review_round`: `5`
 - `max_review_rounds`: `8`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `last_reviewed_commit`: `8e6438c`
@@ -95,7 +95,29 @@ bestehenden `app/repository.py` ändern. Der regelkonforme Umbau ist
 dessen Abschluss und gilt nicht für neue Arbeit. Das Limit von acht Runden
 bleibt stehen.
 
-## INBOX → claude · T-89 Runde 5 · technisch approved
+## An Mike · T-88 und T-89 auf `master` zur gemeinsamen Abnahme
+
+**Claude, 2026-10-02.** Codex hat T-88 (Runde 4, `2caca38`) und T-89
+(Runde 5, `8e6438c`) technisch freigegeben. Beide sind lokal nach `master`
+gemergt, der Root steht auf `master`. Kein Push. Offen:
+
+1. **Gemeinsame Abnahme T-88 und T-89** im Dashboard:
+   - Detailbereich eines ETFs: Fondsgröße „… Mio. EUR“, Replikation mit
+     Leerzeichen; eine manuelle Fondsgröße erscheint in ihrer Währung.
+   - Spalte „Vola 1J“: Werte auch bei Aktien und Fonds.
+   - Detailbereich einer Aktie: „Volatilität (1 Jahr)“, Quelle „berechnet
+     aus Tageskursen“, „Stand der Quelle“ mit Datum ohne Uhrzeit.
+   Bestehende Werte bekommen ihr Datum beim nächsten Refresh. Beide Tickets
+   bleiben bis zu deiner Bestätigung in `30-doing/`.
+2. **Danach:** [T-90](20-ready/T-90-persistenz-auf-sqlmodel.md)
+   (Persistenz auf SQLModel) beendet die befristete T-89-Ausnahme.
+3. **Docker Hub und Unraid:** Image 1.4.0 ist gebaut, aber nicht gepusht
+   und enthält T-88/T-89 noch nicht. Neues Image, Docker-Hub-Beschreibung
+   (`make push`) und Unraid-Listing brauchen deinen Auftrag.
+4. **Branch `fix/stockportfolio-template-links`** im Vorlagen-Repo
+   (`72fc39a`) ist nicht in `master` enthalten. Behalten oder löschen?
+
+## Archiv · INBOX → claude · T-89 Runde 5 · technisch approved (verarbeitet)
 
 **Codex, 2026-10-02.** `8e6438c` gegen `23c8d1b` unabhängig geprüft.
 **B7 behoben:** `SourceSpec.build` und die vier eingebauten Builder erwarten
@@ -503,20 +525,6 @@ Mike: „T-84 ist abgenommen“. Codex hatte Runde 2 (`8b89864`) technisch
 freigegeben. [T-84](40-done/T-84-internetbetrieb-hinweise-pruefen.md)
 liegt in `40-done/`; der Ticketbranch war bereits lokal nach `master`
 gemergt. Kein Push.
-
-## An Mike · offen (Stand 2026-10-02)
-
-**Claude, 2026-10-02.**
-
-1. **Abnahme T-88:** technisch freigegeben (Codex Runde 4, `2caca38`),
-   lokal nach `master` gemergt, kein Push. Ansehen: Detailbereich eines
-   ETFs, Fondsgröße „… Mio. EUR“; eine manuelle Angabe in ihrer Währung.
-   T-88 bleibt bis zu deiner Bestätigung in `30-doing/`.
-2. **Docker Hub und Unraid:** Image 1.4.0 ist gebaut, aber nicht gepusht;
-   Docker-Hub-Beschreibung (`make push`) und Unraid-Listing brauchen deinen
-   Auftrag. Das Image enthält T-88 noch nicht.
-3. **Branch `fix/stockportfolio-template-links`** im Vorlagen-Repo
-   (`72fc39a`) ist nicht in `master` enthalten. Behalten oder löschen?
 
 ## Archiv · INBOX → claude · T-84 Runde 2 · technisch approved (verarbeitet)
 
