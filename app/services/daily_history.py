@@ -8,7 +8,7 @@ fehlende Tage) nach — nicht jede Anfrage landet bei yfinance.
 from datetime import date, timedelta
 
 from app.models import DailyPoint
-from app.persistence.repository import QuoteRepository
+from app.persistence.quote_store import QuoteStore
 from app.providers.base import identity_from_row
 from app.services.daily_sync import DailyCloseProvider, DailyCloseSync
 from app.services.quote_cache import CachedQuoteService
@@ -34,7 +34,7 @@ class DailyHistoryService:
 
     def __init__(
         self,
-        repository: QuoteRepository,
+        repository: QuoteStore,
         provider: DailyCloseProvider,
         quotes: CachedQuoteService,
     ) -> None:
