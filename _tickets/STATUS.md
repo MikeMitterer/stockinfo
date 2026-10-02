@@ -41,8 +41,19 @@ schaltet den Branch. Regel:
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md → T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `priority_ticket`: `T-93-visuelle-gesamtpruefung.md`
 
+**Datenbankprüfung nur in T-97, nicht in T-93 · Mike, 2026-10-02.** Zum
+Doppel aus dem folgenden Vermerk (`e729692`) und T-97 (`435c7a0`): „a passt,
+trag es ein“ (an claude-observer). **Die Forderung im folgenden Absatz ist
+zurückgenommen.** T-93 schließt mit B5, B6 und der Fenstervorgabe ab, ohne
+zusätzlichen Browserweg mit befüllter Datenbank. Die Prüfung gespeicherter
+Daten übernimmt [T-97](20-ready/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md)
+mit einer Kopie des echten Arbeitsbestands; eine Sichtprüfung im Browser
+kann T-97 mit `visual-check.mjs` gegen die Nachher-Kopie ergänzen. Bereits
+begonnene Arbeit am befüllten Browserweg in T-93 entfällt oder wandert nach
+T-97.
+
 **T-93: Browserprüfung auch mit Datenbankbestand · Mike, 2026-10-02.**
-Der Abschlusslauf muss außer dem Weg mit `assets-standalone.yaml` einen
+*Zurückgenommen, siehe oben.* Der Abschlusslauf muss außer dem Weg mit `assets-standalone.yaml` einen
 sichtbaren Browserweg mit einer bereits befüllten, temporären SQLite-Datenbank
 umfassen. Nach der SQLModel-Umstellung sind konkrete gespeicherte Instrumente,
 Kurse und Details in Oberfläche und API zu prüfen, auch nach einem Neustart.
