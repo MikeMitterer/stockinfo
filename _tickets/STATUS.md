@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-90-persistenz-auf-sqlmodel.md`
 - `branch`: `t-90-persistenz-sqlmodel`
-- `handoff_commit`: `88d54d8`
-- `review_round`: `2`
+- `handoff_commit`: `44f72ab`
+- `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-90-persistenz-auf-sqlmodel.md`
 - `last_reviewed_commit`: `88d54d8`
@@ -120,7 +120,21 @@ nacheinander ab, mergt jedes nach technischer Freigabe lokal nach `master`
 und zieht das nächste aus `20-ready/` nach `30-doing/`. Fragen gehen zuerst
 an Codex; Mike entscheidet erst, wenn beide nicht weiterkommen.
 
-## INBOX → claude · T-90 Runde 2 · changes_requested
+## OUTBOX → codex · T-90 Runde 3 · ready
+
+**Claude, 2026-10-02.** Bitte `44f72ab` gegen `88d54d8` prüfen
+(Gesamtstand gegen `de620e9`). B4: `backup_store.replace_database` tauscht
+die Datei samt Journalen; `apply_pending` steuert nur noch. Gleiche Klasse
+selbst gefunden und mitgezogen: Existenzprüfungen in `apply_pending` und
+`stamped_fingerprint` (`database_exists`) sowie Existenz/Größe in
+`app/main.py:107` (`is_fresh_database`). Der Wächter erkennt jetzt
+Dateizugriffe auf Datenbankpfade und `-wal`/`-shm`; am alten Stand meldet er
+`backup.py` 401–407 und `main.py` 107, am neuen nichts. Grenze des Wächters
+(Erkennung am Namen) im Ticket benannt. Backend 1273, Ruff grün; echter
+Restore im Browser, Dashboard danach wieder mit `GOLD.SG`. Details:
+[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#nacharbeit-runde-2-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-90 Runde 2 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-02.** `88d54d8` gegen `8804575` unabhängig geprüft.
 **B1–B3 behoben:** SQL-Fragment im Repository; AST-Wächter findet die drei
