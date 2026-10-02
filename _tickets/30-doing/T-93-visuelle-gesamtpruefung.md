@@ -120,6 +120,52 @@ Der Abschlusslauf für Mike steht mit Bildern im Ticket.
   (Inhalte statt Bildvergleich), kein CI-Einbau, keine Prüfung von
   StockPortfolio.
 
+## Scope-Checkpoint · Codex, 2026-10-02
+
+**Entscheidung: `continue`.** Prüfstand `98a148d`; Rollen, Owner,
+Priorität, Ticketpfad und Branch stimmen. Die Paket-VERSION blieb
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+Dieser Checkpoint ist kein vollständiges Review und verbraucht keine
+Reviewrunde.
+
+Das Ziel entspricht Mikes Auftrag. Die 16 Wege decken Aufnahme,
+Bestandsansichten, Aktualisierung, Löschung, Einstellungen, Sicherung,
+Wiederherstellung und Migration sowie beide Sprachen und eine schmale
+Ansicht ab. Vorgesehen sind null Produktdateien und rund fünf Dateien
+für Testwerkzeug, Make-Ziele und Anleitung. Bislang ist nur das Ticket
+geändert (`98a148d`: 104 Einfügungen, 2 Löschungen); neue
+Produktschichten oder Abhängigkeiten sind nicht vorgesehen. Ich gebe die
+einmalige Budgeterweiterung von 800 auf **900 gesamte Diff-Zeilen** frei.
+Bei weiterer Überschreitung gilt der Scope-Riegel erneut.
+
+Vor der Umsetzung drei Erwartungen im Konzept beziehungsweise in den
+Testorakeln präzisieren:
+
+1. `make test` führt derzeit auch mit `pytest.mark.integration` markierte
+   Tests gegen echte Online-Anbieter aus. Ein als offline zugesagtes
+   `make check` braucht eine ausdrückliche Trennung der netzfreien
+   Pflichtprüfung vom optionalen Online-Lauf; den bestehenden
+   Online-Nachweis nicht stillschweigend als offline ausgeben.
+2. W7 soll einen beobachtbaren erfolgreichen Refresh prüfen, etwa
+   Antwort und gespeicherten Abrufzeitpunkt. Die feste Offline-Vorlage
+   liefert denselben Kurszeitpunkt erneut; dessen Änderung ist kein
+   verlässliches Orakel.
+3. W2 und W11 erwarten Fehler für ungültige Eingaben. Die aktuellen
+   UI-Composables protokollieren solche Fehler mit `consola.error`.
+   Konsolen- und HTTP-Fehler deshalb pro Weg als erwartet oder unerwartet
+   einordnen; ein pauschales Verbot würde diese negativen Wege fälschlich
+   scheitern lassen.
+
+Die absolute `/data/assets-standalone.yaml`-Angabe der Beispielvorlage
+muss für die temporäre Instanz auf deren eigenes Datenverzeichnis zeigen.
+Das ist Teil des bereits geplanten Testaufbaus. Fehler der App gehen wie
+beschlossen in Folgetickets; kein Produktcode in T-93. DRY-Abgleich im
+Checkpoint: eine Browser-Suite und eine Quellenvorlage, keine zweite
+Fachdatensammlung; eine etwa nötige Ergänzungsdatei darf nur die fehlende
+Verlaufstiefe liefern. Doku-Abgleich: README für beide Befehle vorgesehen;
+`docker/README.md` und `unraid/README.md` beim späteren Review gegen den
+fertigen Ablauf prüfen.
+
 ## Umfang
 
 - Kommandozeile: Backend-, Plugin-API- und Dashboard-Suiten sowie Ruff und

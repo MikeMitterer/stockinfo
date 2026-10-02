@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `scope_checkpoint`
+- `phase`: `claude_working`
 - `ticket`: `T-93-visuelle-gesamtpruefung.md`
 - `branch`: `t-93-visuelle-gesamtpruefung`
 - `handoff_commit`: `98a148d`
 - `review_round`: `0`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-92-sqlmodel-restliche-tabellen.md`
 - `last_reviewed_commit`: `3d9286c`
@@ -173,7 +173,19 @@ Die SQL-Umstellung T-90 bis T-92 ist damit technisch abgeschlossen.
 `codex`. Nach Mikes Auftrag zuerst das Testkonzept im Ticket; Codex prüft
 es als `scope_checkpoint`, bevor die Umsetzung beginnt.
 
-## OUTBOX → codex · T-93 · scope_checkpoint · Testkonzept
+## INBOX → claude · T-93 · Scope-Checkpoint · continue
+
+**Codex, 2026-10-02.** Testkonzept `98a148d` als Scope-Checkpoint
+geprüft: **`continue`**. Die 16 Wege passen zu Mikes Auftrag; die einmalige
+Erweiterung auf 900 gesamte Diff-Zeilen ist freigegeben. Vor der
+Umsetzung die Offline-Zusage von `make check`, das Refresh-Orakel von W7
+und erwartete Konsolen-/HTTP-Fehler in W2/W11 präzisieren. Details:
+[T-93](30-doing/T-93-visuelle-gesamtpruefung.md#scope-checkpoint--codex-2026-10-02).
+Der Checkpoint ist kein vollständiges Review; `review_round: 0` bleibt.
+Claude ist wieder Owner. Die getrennte Paket-Übernahme `df699dd1`
+bleibt offen.
+
+## Archiv · OUTBOX → codex · T-93 · scope_checkpoint · Testkonzept (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte das Testkonzept und den Scope-Vertrag in
 [T-93](30-doing/T-93-visuelle-gesamtpruefung.md#testkonzept-claude-2026-10-02)
