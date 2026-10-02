@@ -205,16 +205,117 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
 | 1 | `make check` | grün; im macOS-Sandbox-Lauf **ohne Netz** (nur `localhost` erlaubt) ebenso grün | ✅ |
-| 2 | `make visual-check` | 16 Wege, je Zeile bestanden/nicht bestanden, Bericht und Bilder unter `.tmp/visual-check/` | ✅ |
+| 2 | `make visual-check` | 16 Wege, je Zeile bestanden/nicht bestanden, Bericht und Bilder unter `.tmp/visual-check/`; zugesagte Inhalte je Weg geprüft | ⚠️ |
 | 3 | Ergebnis | 15/16 grün; W11 rot nur am App-Fehler (T-94) | ⚠️ T-94 |
-| 4 | Gegenproben | je Weg eine falsche Erwartung → rot aus genau diesem Grund; dazu Rahmen: Konsolenfehler, unerwartete Antwort, Netzanfrage, ausbleibender erwarteter Fehler | ✅ |
-| 5 | Anleitung | README „Tests“ nennt beide Befehle samt Optionen | ✅ |
+| 4 | Gegenproben | je Weg eine falsche Erwartung → rot aus genau diesem Grund; dazu Rahmen: Konsolenfehler, unbehandelte Seitenfehler, unerwartete Antwort, Netzanfrage, ausbleibender erwarteter Fehler | ⚠️ |
+| 5 | Anleitung | README „Tests“ nennt beide Befehle samt Optionen und zutreffender Node-Anforderung | ⚠️ |
 
 ## Review-Verlauf (neueste Runde zuerst)
 
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 1 (Codex, 2026-10-02)
+
+**Prüfstand:** `f5e0619` gegen `dbe49b3`; Rollen, Owner, exakte
+Priorität, Ticketpfad und Branch stimmten. Paket-VERSION unverändert:
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+**Ergebnis: `changes_requested`**, Runde 1 von höchstens 5. Kein Merge,
+Push oder menschliche Abnahme durch Codex.
+
+**Belegt:** Mein `make check` bestand mit 1298 netzfreien Backend-Tests,
+324 Plugin-API-Tests, 50 Beispieltests, Dashboard-Lint und Vitest sowie
+Ruff und `vue-tsc`. Mein `make visual-check HEADLESS=1` gegen eine eigene
+Temp-Instanz meldete ebenfalls **15/16** und Exit 2; W11 zeigte erneut
+`quote_time` vom Abruf statt `as_of` der Quelle. Bericht:
+`.tmp/visual-check/2026-10-02T15-56-17-953Z/report.md` (ignorierter
+lokaler Testlauf). Die eingecheckten Bilder für W2, W5, W6, W11, W13,
+W14, W15 und W16 habe ich angesehen. W11 ist in [T-94](../20-ready/T-94-devisenkurs-zeitpunkt-der-quelle.md)
+konkret erfasst; Verify #1 ist ✅, #3 bleibt ⚠️.
+
+**B1 · Der Browserbefehl läuft nicht mit der dokumentierten Node-Version.**
+`README.md:111` nennt Node.js 20+; `visual-check.mjs:16` importiert
+`node:sqlite`. Laut [Node.js-Dokumentation](https://nodejs.org/download/release/v22.13.1/docs/api/sqlite.html)
+kam dieses Modul erst mit 22.5.0 hinzu und brauchte vor 22.13.0 zudem
+einen experimentellen Schalter. Auf Node 20 bricht der Test schon beim
+Import ab. Bitte den einen lesenden Kurspunkt-Zähler mit der bereits
+vorhandenen Python-`sqlite3`-Umgebung oder einem gleichwertig zu Node 20
+passenden Weg umsetzen; einen neuen Laufzeitbedarf nicht still einführen.
+Die README-Anforderung und der tatsächlich ausführbare Befehl müssen
+übereinstimmen. Verify #5 bleibt ⚠️.
+
+**B2 · W2 und W4 belegen einen Teil der zugesagten Inhalte nicht.**
+W2 (`visual-check.mjs:275–296`) prüft je Papier Zeile, Identitätsform
+und Gattung, aber keinen der fünf Preise aus der Offline-Datei. Der eine
+Fehlversuch erwartet „keine Quelle fand das Papier“; ein eigener Fall
+mit verständlicher Meldung für eine ungültige ISIN fehlt. W4
+(`visual-check.mjs:322–336`) hat für BTC und die Anleihe leere
+Erwartungslisten, für den Fonds nur ein Feldlabel; das Datumsformat wird
+nur geprüft, *falls* „Source as of“ überhaupt erscheint. Somit könnte
+für diese Formen der zugesagte Kennzahl-, Quellen- oder Datumsinhalt
+fehlen, während W4 grün bleibt. Bitte die festen Werte der Vorlage und
+je Identitätsform mindestens einen konkreten Detailinhalt sowie die
+vorhandene Datumsangabe prüfen. W3 sortiert derzeit nur „Symbol“, obwohl
+das Konzept Spalten im Plural nennt; eine zweite fachlich sinnvolle
+Spalte genügt. Verify #2 bleibt ⚠️.
+
+**B3 · Unbehandelte Browser-Ausnahmen bleiben unsichtbar.** Der Wächter
+registriert `console`, `response` und `request`, aber kein
+`weberror`/`pageerror` (`visual-check.mjs:147–160`). Meine isolierte
+Chrome-Gegenprobe mit `throw new Error("probe")` lieferte
+`['weberror:probe']` und **kein** `console`-Ereignis. Playwright führt
+[Konsolenausgaben und unbehandelte Ausnahmen](https://playwright.dev/docs/api/class-browsercontext)
+als getrennte Ereignisse. Eine abgestürzte UI-Funktion kann daher trotz
+grüner Konsolenprüfung unbemerkt bleiben. Bitte den Seitenfehler erfassen
+und mit dieser negativen Gegenprobe rot belegen. Verify #4 bleibt ⚠️.
+
+**B4 · Server-Aufräumen bei Chrome-Startfehler.** Der eigene Uvicorn-Prozess
+startet in `visual-check.mjs:253`, der Browser wird in Zeile 254 geöffnet;
+der `try/finally`-Block beginnt erst in Zeile 260. Fehlt Chrome oder
+scheitert dessen Start, wird der Server nicht beendet und kein Bericht
+geschrieben. Den Browserstart in den geschützten Bereich legen und den
+eigenen Server auch in diesem Fehlerpfad stoppen; ein ungültiger
+`CHROME`-Pfad ist die gezielte Gegenprobe.
+
+**W11 und Reihenfolge:** Das Akzeptanzkriterium „alle Wege bestehen“ ist
+noch offen. Mike hat nach dem 15/16-Befund ausdrücklich entschieden,
+**T-94 vor der endgültigen T-93-Freigabe zu bearbeiten und danach den
+vollständigen Browserlauf zu wiederholen**. Claude darf diese
+Portfolio-Entscheidung im atomaren T-94-Arbeitsbeginn umsetzen; T-93
+bleibt bis zum grünen Gesamtlauf in Doing und erhält keine technische
+Freigabe. Die T-93-Testlücken B1–B4 bleiben dabei Nacharbeit des Coders,
+kein Produktcode-Auftrag für Codex. Das Budget von 900 Zeilen war bereits
+einmal erweitert; weitere Ausbreitung nach dem Scope-Riegel behandeln.
+
+**DRY und Doku-Abgleich:** Die Browser-Suite nutzt die bestehende
+Standalone-Vorlage und das Alt-Schema aus `tests/legacy_schema.py`;
+`PAPERS` ist ein bewusst unabhängiges Testorakel. Kein Duplikat einer
+Fachregel im Implementierungsdiff gefunden. AST-Inventar der neuen
+Python-Datei und Parser-Inventar der JavaScript-Datei zeigen englische
+Bezeichner. `README.md` erklärt die Entwicklerbefehle, aber B1 macht
+die Node-Aussage falsch; `docker/README.md` und `unraid/README.md`
+betreffen nur den Containerbetrieb und benötigen für diese Befehle
+keinen neuen Abschnitt. Im README-Beispiel `ONLINE=1` steht zudem
+„one security“ statt „one online smoke test“; bei der
+Doku-Nacharbeit verständlich formulieren. Die getrennte Paket-Übernahme
+`df699dd1` bleibt offen.
+
+**Standards:** `code-standards/SKILL.md` mit `architecture.md`,
+`python.md`, `cli.md`, `frontend.md`, `quality.md`, `documentation.md`;
+`makefile-conventions`, `task-verification-workflow` und lokale
+Autor-Lessons SI-P-08, SI-P-14, SI-P-02.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ bestehende Vorlagen und Schema-Helfer wiederverwendet; Bezeichnerinventare geprüft. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ kein Bash-Diff |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ⚠️ Exit-Code korrekt, aber B4 lässt beim Chrome-Startfehler den eigenen Server stehen. |
+| TypeScript, Vue und i18n | ⚠️ kein App-Diff; B3 übersieht unbehandelte Browser-Ausnahmen. |
+| Python, FastAPI und Webhooks | ✅ Alt-Datenbank-Helfer nutzt die bestehende Python-Umgebung; Ruff grün. |
+| Datenbanken und Persistenzgrenzen | ⚠️ Temp-DBs korrekt; B1 verhindert den Lesecheck auf dokumentiertem Node 20. |
+| Fehler, Logging und Tests | ⚠️ B2–B4; unabhängiger Lauf reproduziert W11. |
+| Markdown und Inhaltsverzeichnisse | ⚠️ B1: README-Anforderung und Skript widersprechen sich. |
 
 ## Übergabe Runde 1 (Claude, 2026-10-02)
 
