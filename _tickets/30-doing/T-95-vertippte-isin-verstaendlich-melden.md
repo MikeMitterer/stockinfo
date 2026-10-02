@@ -10,7 +10,8 @@ ist. Wer sie liest, sucht den Fehler an der falschen Stelle.
 Prüfziffer). `POST /instruments/intake` antwortet mit
 `symbol_without_exchange_suffix`; die Oberfläche zeigt den Satz oben.
 
-**Stand:** Funktional in Runde 1 belegt; Doku-Nacharbeit angefordert.
+**Stand:** Technisch freigegeben in Runde 2 am 2026-10-02 für `c0dd47e`.
+Die menschliche Abnahme der Gesamtkette bleibt offen.
 Angelegt am 2026-10-02 aus T-93 als Folgeticket der visuellen
 Tests (Mike: Folgetickets aus den Tests gehören zur SQL-Umstellung und
 kommen in die `priority_chain`). Älter als die SQL-Umstellung. Aktiviert
@@ -72,6 +73,39 @@ zurück nach T-93. Für Mike steht kein Handgriff an.
   Auflösung durch die Quellen); nicht mitbehoben.
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+### Verifier-Prüfung · Runde 2 (Codex, 2026-10-02)
+
+**Ergebnis: `approved`.** `c0dd47e` gegen den letzten Reviewstand
+`60eecaf` geprüft. Die einzige neue fachliche Datei ist
+`docs/rest-core-contract.md`; Produktcode und Tests blieben unverändert.
+Rollen, Owner, Priorität und Branch stimmten. Paket-VERSION
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`
+war unverändert.
+
+B1 ist behoben: Der Vertrag und der Ticketumfang sprechen jetzt genau
+von einer ISIN-ähnlichen Eingabe **ohne gültige Form**. Der Vertrag nennt
+die abweichende Behandlung einer formgerechten ISIN mit falscher
+Prüfziffer (`DE0001102532` → `400 instrument_not_found`). Das entspricht
+dem in Runde 1 unabhängig geprüften Codepfad und der dokumentierten
+Messung. `git diff --check 60eecaf c0dd47e` ist sauber. Die grünen
+Funktions- und Gegenproben aus Runde 1 gelten unverändert; ein weiterer
+Gesamttest ohne Codeänderung würde denselben Pfad wiederholen.
+
+**Standards:** `/Users/macminipro/.codex/skills/code-standards/SKILL.md`
+mit `references/documentation.md` für den aktuellen Dokumentationsdiff
+geprüft. Dokumentation ✅, die übrigen Gruppen (Architektur, Shell, CLI,
+Frontend, Python, Persistenz, Qualität) ➖ in dieser Runde nicht berührt;
+ihre Prüfung der unveränderten Umsetzung steht in Runde 1. **DRY:** Kein
+zweiter Vertrag und keine neue Kennung; die Grenze ist an der bestehenden
+Vertragsstelle und im Ticket konsistent. **Doku-Abgleich:** `README.md`,
+`docker/README.md` und `unraid/README.md` nennen keine Fehlerkennungen der
+Aufnahme und brauchen keine Änderung. Die getrennte Board-Übernahme
+`df699dd1` bleibt offen.
+
+Claude kann T-95 nach dem lokalen Workflow in T-93 übernehmen und dort
+W4-Orakel, Hauptmonitor-Start und den vollständigen sichtbaren Lauf
+nachziehen. Diese technische Freigabe ist weder Mikes Abnahme noch Push.
 
 ### Übergabe Runde 2 (Claude, 2026-10-02)
 
