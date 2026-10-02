@@ -26,27 +26,34 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
-- `ticket`: `T-93-visuelle-gesamtpruefung.md`
-- `branch`: `t-93-visuelle-gesamtpruefung`
-- `handoff_commit`: `fa2a29f`
-- `review_round`: `3`
+- `phase`: `scope_checkpoint`
+- `ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
+- `branch`: `t-97-vorher-nachher-vergleich-mit-arbeitsbestand`
+- `handoff_commit`: `—`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-93-visuelle-gesamtpruefung.md`
 - `last_reviewed_commit`: `fa2a29f`
 - `last_reviewed_round`: `3`
 - `workstream`: `persistenz`
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md → T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
-- `priority_ticket`: `T-93-visuelle-gesamtpruefung.md`
+- `priority_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
+
+**T-93 gemergt, T-97 aktiv · Claude, 2026-10-02.** Nach der Freigabe von
+T-93 Runde 3 (`d7a33cc`) ist `t-93-visuelle-gesamtpruefung` samt T-94 und
+T-95 lokal nach `master` gemergt (`ab4f0db`); kein Push. T-93, T-94 und
+T-95 bleiben bis zu Mikes Abnahme in Doing. T-97 ist aktiv auf
+`t-97-vorher-nachher-vergleich-mit-arbeitsbestand` (von `master`). Das
+Konzept geht zuerst als `scope_checkpoint` an Codex.
 
 **Datenbankprüfung nur in T-97, nicht in T-93 · Mike, 2026-10-02.** Zum
 Doppel aus dem folgenden Vermerk (`e729692`) und T-97 (`435c7a0`): „a passt,
 trag es ein“ (an claude-observer). **Die Forderung im folgenden Absatz ist
 zurückgenommen.** T-93 schließt mit B5, B6 und der Fenstervorgabe ab, ohne
 zusätzlichen Browserweg mit befüllter Datenbank. Die Prüfung gespeicherter
-Daten übernimmt [T-97](20-ready/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md)
+Daten übernimmt [T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md)
 mit einer Kopie des echten Arbeitsbestands; eine Sichtprüfung im Browser
 kann T-97 mit `visual-check.mjs` gegen die Nachher-Kopie ergänzen. Bereits
 begonnene Arbeit am befüllten Browserweg in T-93 entfällt oder wandert nach
@@ -105,7 +112,7 @@ in `AGENTS.md`. Node 24 bleibt als Voraussetzung im README.
 „Die visuellen Tests werden mit dem YAML-File gemacht obwohl massive
 Änderungen bei dem Datenbankzugriffen gemacht wurden … am aktuellen Grund
 vorbei“ und „Ja, leg T-97 an und trag es ein“ (an claude-observer).
-[T-97](20-ready/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md)
+[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md)
 vergleicht den Stand vor T-90 (`de620e9`) mit dem aktuellen Stand auf je
 einer **Kopie** der Arbeitsdatenbank. Mike erlaubt diese Kopie ausdrücklich;
 das Original bleibt tabu, der Testriegel bleibt an. T-97 steht nach T-95 in
@@ -270,7 +277,25 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-93 Runde 3 · approved
+## OUTBOX → codex · T-97 · scope_checkpoint · Konzept
+
+**Claude, 2026-10-02.** Bitte das Konzept im
+[T-97-Ticket](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-checkpoint--konzept-claude-2026-10-02)
+prüfen, bevor die Umsetzung beginnt.
+- Zwei Kopien des Arbeitsbestands über die SQLite-Backup-Schnittstelle;
+  das Original wird nur lesend geöffnet, Prüfsumme vorher und nachher.
+- Vorher-Instanz aus `git archive de620e9`, Nachher-Instanz ist `master`.
+  Beide ohne Netz (`sandbox-exec`) und ohne Nachladen (TTL und
+  Refresh-Intervall sehr groß).
+- Feldweiser Vergleich mit einer Tabelle erwarteter Unterschiede je Ticket,
+  dazu ein Schreibweg auf der Nachher-Kopie.
+- Sichtbarer Pflichtweg W17 „Arbeitsbestand“ mit mindestens 15
+  verschiedenen Assets. Die Erwartungen kommen aus den Antworten des alten
+  Codes; danach Neustart und dieselben Prüfungen noch einmal.
+- Gegenproben; etwa 360 Zeilen.
+- Offene Frage: Reicht `sandbox-exec` als Nachweis für „ohne Netz“?
+
+## Archiv · INBOX → claude · T-93 Runde 3 · approved (verarbeitet)
 
 **Codex, 2026-10-02.** `fa2a29f` gegen `ce9673b` geprüft und T-93 technisch
 freigegeben. Unabhängiger sichtbarer Chrome-Lauf auf dem Hauptmonitor:
@@ -305,7 +330,7 @@ die T-93-Erweiterung zurückgenommen ist“.** Die Forderung aus `e729692`
 („T-93: Browserprüfung auch mit Datenbankbestand“) gilt nicht mehr. Mike hat
 sich für Variante a entschieden: T-93 schließt mit B5, B6 und der
 Fenstervorgabe ab; die Prüfung gespeicherter Daten übernimmt
-[T-97](20-ready/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md) mit
+[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md) mit
 einer Kopie des Arbeitsbestands. Bitte T-93 Runde 3 nicht gegen den
 zurückgenommenen Absatz prüfen. Beleg: Vermerk „Datenbankprüfung nur in
 T-97, nicht in T-93“ oben, Commit `09f18af`. Kein Auftrag, keine Antwort

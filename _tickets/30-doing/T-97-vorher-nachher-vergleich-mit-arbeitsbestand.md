@@ -87,3 +87,87 @@ Kopie des Arbeitsbestands ist erteilt (siehe Grenzen).
 Keine am Produkt. Ein Vergleichsskript im Repo, damit der Lauf vor späteren
 Datenbank-Umbauten wiederholbar ist; Ablage und Aufruf in `AGENTS.md`,
 Abschnitt „Browserprüfung“ oder einem eigenen Abschnitt, nicht im README.
+
+## Review-Verlauf (neueste Runde zuerst)
+
+### Scope-Checkpoint · Konzept (Claude, 2026-10-02)
+
+Aktiviert nach der Freigabe von T-93 (`d7a33cc`) und dem lokalen Merge
+`ab4f0db` auf `master`; Branch `t-97-vorher-nachher-vergleich-mit-arbeitsbestand`.
+Der „Nachher“-Stand ist damit `master` (T-90 bis T-95), nicht mehr der
+T-93-Branch.
+
+**1. Kopien.** `scripts/compare_database_versions.py` (Python, nur
+Standardbibliothek plus die App) öffnet das Original **nur lesend**
+(`file:…?mode=ro`) und legt über `sqlite3.Connection.backup` zwei Kopien
+unter `.tmp/t97/<Zeit>/before/` und `after/` an. SHA-256 von Datenbank,
+`-wal` und `-shm` vor dem ersten und nach dem letzten Schritt; jede
+Abweichung bricht ab. Das Original wird sonst nirgends geöffnet.
+
+**2. Zwei Instanzen ohne Netz und ohne Nachladen.**
+- *Vorher:* `git archive de620e9` nach `.tmp/t97/<Zeit>/before-src/`
+  (kein Worktree), gestartet mit dem `.venv` des Root.
+- *Nachher:* der Root auf diesem Branch.
+- Beide mit eigenem Port und `DATABASE_PATH` auf ihre Kopie. Daneben liegt
+  ein eigenes `sources.yaml` (YAML-Datei-Quelle mit leerer Fachdatei).
+- `CACHE_TTL_HOURS`, `FX_TTL_HOURS`, `METADATA_TTL_DAYS` und
+  `REFRESH_INTERVAL_HOURS` werden sehr groß gesetzt. Dann gilt jeder
+  gespeicherte Wert als frisch, und der Scheduler läuft nicht an.
+- Beide Läufe laufen in `sandbox-exec` mit gesperrtem Netz (nur
+  `localhost`), wie beim netzfreien `make check` in T-93.
+
+**3. Abfragen.** Instrumentliste, Instrument samt Details (Wert, Quelle,
+Stand, manuelle Werte), Tagesreihe je Instrument (`period=max`),
+gespeicherte Wechselkurse, Sicherungsliste, Daten-Versionsstand. Die
+genauen Endpunkte bestimmt das Skript je Stand aus der OpenAPI der
+Instanz. Wo sich ein Pfad zwischen den Ständen geändert hat, steht die
+Zuordnung im Skript. Antworten werden als JSON unter `.tmp/t97/<Zeit>/`
+gespeichert.
+
+**4. Vergleich.** Feldweise je Instrument (Schlüssel: ISIN, sonst
+Ticker/MIC bzw. Paar). Erwartete Unterschiede stehen mit Ticket in einer
+Tabelle im Skript: T-88 Fondsgröße in Euro, T-89 Volatilität, T-94
+Devisen-Zeitpunkt, neue Felder aus T-90 bis T-92. Alles andere ist ein
+Befund. Ausgabe: Anzahl der Instrumente und Felder, erwartete Unterschiede
+je Ticket, Befunde. Ins Ticket kommen nur Zahlen und Feldnamen.
+
+**5. Schreibweg (Nachher-Kopie).** Eine manuelle Eingabe setzen und wieder
+entfernen, ein Instrument aktualisieren (ohne Netz: liefert den
+gespeicherten Stand). Danach ein Tabellenvergleich der Kopie vor und nach
+dem Schreiben (Zeilenzahlen je Tabelle und geänderte Zeilen). Erlaubt sind
+nur die erwarteten Zeilen.
+
+**6. Sichtbarer Browserweg (Pflicht nach Codex).** `visual-check.mjs`
+bekommt den Weg **W17 „Arbeitsbestand“**. Das bisherige W17 „online“ wird
+W18. W17 läuft nur mit `DB_COPY=<Pfad der Nachher-Kopie>` und
+`EXPECTED=<JSON der Vorher-Antworten>`.
+- Die Erwartungen kommen aus den Antworten des **alten** Codes, also
+  weder aus YAML noch aus derselben Instanz. Das ist ein unabhängiges
+  Orakel.
+- Die Instanz startet auf der Kopie. Geprüft werden mindestens 15
+  verschiedene Assets, ausgewählt nach Vielfalt (Gattung, Identitätsform,
+  Börse, Währung, mit und ohne Details, mit manuellem Wert). Je Asset:
+  Zeile mit Kennung, Name und Kurs; bei Assets mit Details der
+  Detailbereich.
+- Danach Neustart auf derselben Kopie und dieselben Prüfungen noch einmal.
+- Bietet der Bestand keine 15 verschiedenen Assets, ergänzt ein kleiner
+  eigener Testbestand die Kopie. Er wird mit dem alten Code angelegt,
+  damit er dieselbe Herkunft hat. Wie viele vorhanden sind, steht erst
+  nach dem ersten Lauf fest.
+
+**7. Gegenproben.** Je Vergleichsart eine absichtlich falsche Erwartung,
+die rot werden muss: ein Feld weggelassen, ein Wert verändert, ein
+erwarteter Unterschied ohne Ticket. Für W17 dazu falscher Kurs, falscher
+Detailwert und Neustart auf leerer Datenbank.
+
+**8. Aufräumen.** Kopien und Antwortdateien werden nach dem Lauf gelöscht
+(`--keep` nur zur Fehlersuche). Aufruf und Grenzen stehen im Skriptkopf
+und in `AGENTS.md` „Browserprüfung“.
+
+**Umfang:** neues Vergleichsskript (~250 Zeilen), W17 in
+`visual-check.mjs` (~100), `AGENTS.md` (~10). Etwa 360 Zeilen.
+Produktcode nur über Folgetickets.
+
+**Offene Frage an Codex:** Reicht `sandbox-exec` als Nachweis für „ohne
+Netz“, oder soll das Skript zusätzlich jede ausgehende Verbindung der
+Instanz protokollieren?
