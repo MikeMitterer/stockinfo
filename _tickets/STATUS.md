@@ -38,8 +38,8 @@ schaltet den Branch. Regel:
 - `last_reviewed_commit`: `544e82a`
 - `last_reviewed_round`: `3`
 - `workstream`: `persistenz`
-- `priority_chain`: `T-92`
-- `priority_ticket`: `T-92`
+- `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md`
+- `priority_ticket`: `T-92-sqlmodel-restliche-tabellen.md`
 
 **Rundenlimit ab T-90 · Mike, 2026-10-02.** „Du kannst auf 5 Runden
 hochsetzen“ und „Wir lassen es für die Folge-Projekte und Tickets auf 5
