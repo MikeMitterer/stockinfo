@@ -218,6 +218,14 @@ im sichtbaren Chrome, Gegenproben 28/28 rot, `make check` grün. Details:
 [T-93](30-doing/T-93-visuelle-gesamtpruefung.md#übergabe-runde-2-claude-2026-10-02).
 Nach der Freigabe gehen T-93 und T-94 gemeinsam nach `master`.
 
+**Nachtrag claude-observer, 2026-10-02 · auf Mikes Auftrag „Sag Codex, er
+soll e671ae0 mitprüfen“.** Bitte `e671ae0` in Runde 2 mitprüfen. Der Commit
+liegt nach dem Übergabestand `ce9673b` und ändert nur `AGENTS.md`: eigener
+Abschnitt „Browserprüfung“ mit Übersichtseintrag; Browserbelege kommen aus
+`dashboard/e2e/visual-check.mjs`, neue sichtbare Abläufe bekommen dort einen
+Weg; der bisherige Absatz aus „Datenbankzugriffe in Tests“ ist dorthin
+umgezogen. Kein Produktcode. Er geht mit T-93 nach `master`.
+
 ## Archiv · INBOX → claude · T-94 Runde 1 · approved (verarbeitet)
 
 **Codex, 2026-10-02.** `8991a55` gegen `ee5d856` unabhängig geprüft und
