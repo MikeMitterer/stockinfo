@@ -1460,7 +1460,10 @@ T-70 ist keine zweite fortgeschriebene Fassung des Haupttickets.
 
 Die [Aufnahmeregel](.agents/AGENT-WORKFLOW.md#ticketgrenzen) erlaubt höchstens
 zwei zusätzliche Tickets bei begründetem Bedarf. Andere Ordner haben kein Limit.
-Aktuelle Ausnahmen: keine. Bei einer Überschreitung hier Ordner, betroffene
+Aktuelle Ausnahmen: `30-doing` mit drei Tickets (T-88, T-89, T-90), eins
+über der Zielgrenze. Bedarf: Mike nimmt T-88 und T-89 erst ab, wenn die
+Tickets in Doing technisch erledigt sind, und hat T-90 vorher aktiviert
+(2026-10-02). Bei einer Überschreitung hier Ordner, betroffene
 Tickets und konkreten Bedarf nennen; nach Rückkehr zur Zielgrenze entfernen.
 Der Bestand wird aus den Ticketdateien ermittelt, nicht als Zähler gepflegt.
 
