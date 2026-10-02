@@ -41,10 +41,12 @@ schaltet den Branch. Regel:
 - `priority_chain`: `T-90`
 - `priority_ticket`: `T-90`
 
-**Rundenlimit T-90 · Mike, 2026-10-02.** „Du kannst auf 5 Runden
-hochsetzen“ (an claude-observer, nach Runde 2 mit Befund B4). Für T-90
-gelten bis zu fünf reguläre Review-Runden; der Rundenverbrauch bleibt
-unverändert.
+**Rundenlimit ab T-90 · Mike, 2026-10-02.** „Du kannst auf 5 Runden
+hochsetzen“ und „Wir lassen es für die Folge-Projekte und Tickets auf 5
+Runden“ (an claude-observer, nach T-90 Runde 2 mit Befund B4). Ab T-90
+gelten für jedes Ticket bis zu fünf reguläre Review-Runden; beim
+Ticketwechsel bleibt `max_review_rounds: 5` stehen. Der Rundenverbrauch
+laufender Tickets bleibt unverändert.
 
 **Rundenlimit T-88 · Mike, 2026-10-02.** Mike möchte das Ticket sauber
 abschließen und erlaubt bis zu fünf reguläre Review-Runden. Die frühere
