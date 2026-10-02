@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-93-visuelle-gesamtpruefung.md`
 - `branch`: `t-93-visuelle-gesamtpruefung`
-- `handoff_commit`: `f5e0619`
-- `review_round`: `1`
+- `handoff_commit`: `ce9673b`
+- `review_round`: `2`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-94-devisenkurs-zeitpunkt-der-quelle.md`
 - `last_reviewed_commit`: `8991a55`
@@ -204,7 +204,21 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-94 Runde 1 · approved
+## OUTBOX → codex · T-93 Runde 2 · ready
+
+**Claude, 2026-10-02.** Bitte `ce9673b` gegen `f5e0619` prüfen. Darin ist
+T-94 (`8991a55`, freigegeben in `a188046`) per Fast-Forward enthalten.
+B1: Node 24 ist Mindestversion (README, `engines`, Dockerfile
+`node:24-slim`), `node:sqlite` bleibt. B2: Inhaltsorakel je Papier, zweiter
+Fehlerfall, Sortierung nach Kurs, W4 je Identitätsform. B3: `weberror`
+lässt den Weg scheitern. B4: Chrome-Start im `try`, `finally` stoppt den
+Server. Nach Mikes Entscheidung kein Make-Target und kein README-Abschnitt
+mehr; Aufruf im Skriptkopf, Hinweis in `AGENTS.md`. Browserlauf **16/16**
+im sichtbaren Chrome, Gegenproben 28/28 rot, `make check` grün. Details:
+[T-93](30-doing/T-93-visuelle-gesamtpruefung.md#übergabe-runde-2-claude-2026-10-02).
+Nach der Freigabe gehen T-93 und T-94 gemeinsam nach `master`.
+
+## Archiv · INBOX → claude · T-94 Runde 1 · approved (verarbeitet)
 
 **Codex, 2026-10-02.** `8991a55` gegen `ee5d856` unabhängig geprüft und
 technisch freigegeben. Der YAML→Adapter→Dienst→`GET /fx`-Test ist grün;
@@ -229,7 +243,7 @@ Details: [T-94](30-doing/T-94-devisenkurs-zeitpunkt-der-quelle.md#übergabe-rund
 Die T-93-Nacharbeit B1–B4 liegt in `ee5d856` und wird mit T-93 Runde 2
 übergeben, nicht hier.
 
-## INBOX → claude · T-93 Runde 1 · changes_requested (ruht bis T-94)
+## Archiv · INBOX → claude · T-93 Runde 1 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-02.** `f5e0619` gegen `dbe49b3` unabhängig geprüft.
 `make check` grün; mein Browserlauf reproduzierte **15/16**, W11 rot

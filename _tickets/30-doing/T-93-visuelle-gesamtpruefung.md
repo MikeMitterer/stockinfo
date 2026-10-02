@@ -37,7 +37,7 @@ Folgeticket in der `priority_chain` (Mike, Aussetzung der Doing-Grenze).
 | Befehl | Was er prüft |
 |---|---|
 | `make check` | **netzfrei:** Backend ohne die mit `integration` markierten Online-Tests (`-m "not integration"`), Plugin-API, Beispiel-Plugin, Dashboard-ESLint und Vitest, dazu `ruff check app tests scripts` und die Typprüfung des Dashboards (`vue-tsc -b`). Die Online-Tests laufen weiter mit `make test` und werden nicht als netzfrei ausgegeben. |
-| `make visual-check` | den Browser-Durchlauf unten; Ergebnis je Weg bestanden/nicht bestanden, Exit-Code ≠ 0 bei einem Fehler |
+| `node e2e/visual-check.mjs` (aus `dashboard/`) | den Browser-Durchlauf unten; Ergebnis je Weg bestanden/nicht bestanden, Exit-Code ≠ 0 bei einem Fehler. **Kein Make-Target und kein README-Abschnitt** (Mike, 2026-10-02: Werkzeug für die Agenten); Aufruf im Skriptkopf, Hinweis in `AGENTS.md`. |
 
 ### Aufbau des Browser-Durchlaufs
 
@@ -104,8 +104,9 @@ Der Abschlusslauf für Mike steht mit Bildern im Ticket.
 
 ## Scope-Vertrag (Claude, 2026-10-02)
 
-- **Ergebnis:** `make check` und `make visual-check` laufen grün auf dem
-  Stand nach T-92; das README nennt beide.
+- **Ergebnis:** `make check` und der Browser-Durchlauf laufen grün auf dem
+  Stand nach T-92; das README nennt `make check`, der Browser-Durchlauf
+  steht im Skriptkopf und in `AGENTS.md` (Mike, 2026-10-02).
 - **Fachliche Änderungen (3):** (1) Browser-Durchlauf
   `dashboard/e2e/visual-check.mjs` samt kleinem Python-Helfer für die
   Alt-Datenbank; (2) Make-Ziele `check` und `visual-check`; (3)
@@ -187,12 +188,11 @@ fertigen Ablauf prüfen.
 - [x] Ein dokumentierter Befehl führt die Kommandozeilen-Suiten aus.
 - [x] Ein dokumentierter Befehl führt den Browser-Durchlauf aus und meldet
       je Weg bestanden oder nicht bestanden.
-- [ ] Alle Wege bestehen auf dem Stand nach T-92. — **15 von 16;** W11 ist
-      rot an einem bestätigten App-Fehler, der älter ist als die
-      SQL-Umstellung. Er ist [T-94](../20-ready/T-94-devisenkurs-zeitpunkt-der-quelle.md);
-      nach dessen Behebung wird W11 grün (Mikes Regel: Folgetickets aus den
-      Tests gehören dazu).
-- [x] Die Anleitung (README) nennt beide Befehle.
+- [x] Alle Wege bestehen auf dem Stand nach T-92. — **16 von 16** mit
+      [T-94](T-94-devisenkurs-zeitpunkt-der-quelle.md); W11 war bis dahin
+      rot an dem älteren Devisenfehler.
+- [x] Die Anleitung nennt beide Befehle: `make check` im README, der
+      Browser-Durchlauf im Skriptkopf und in `AGENTS.md` (Mike, 2026-10-02).
 
 ### Side-Effects
 
@@ -205,16 +205,65 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
 | 1 | `make check` | grün; im macOS-Sandbox-Lauf **ohne Netz** (nur `localhost` erlaubt) ebenso grün | ✅ |
-| 2 | `make visual-check` | 16 Wege, je Zeile bestanden/nicht bestanden, Bericht und Bilder unter `.tmp/visual-check/`; zugesagte Inhalte je Weg geprüft | ⚠️ |
-| 3 | Ergebnis | 15/16 grün; W11 rot nur am App-Fehler (T-94) | ⚠️ T-94 |
+| 2 | `cd dashboard && node e2e/visual-check.mjs` | 16 Wege, je Zeile bestanden/nicht bestanden, Bericht und Bilder unter `.tmp/visual-check/`; zugesagte Inhalte je Weg geprüft | ⚠️ |
+| 3 | Ergebnis | 16/16 grün mit T-94 | ⚠️ T-94 |
 | 4 | Gegenproben | je Weg eine falsche Erwartung → rot aus genau diesem Grund; dazu Rahmen: Konsolenfehler, unbehandelte Seitenfehler, unerwartete Antwort, Netzanfrage, ausbleibender erwarteter Fehler | ⚠️ |
-| 5 | Anleitung | README „Tests“ nennt beide Befehle samt Optionen und zutreffender Node-Anforderung | ⚠️ |
+| 5 | Anleitung | README „Tests“ nennt `make check` und Node 24; Skriptkopf nennt Aufruf und Optionen; `AGENTS.md` verweist darauf; kein Make-Target | ⚠️ |
 
 ## Review-Verlauf (neueste Runde zuerst)
 
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Übergabe Runde 2 (Claude, 2026-10-02)
+
+Prüfgegenstand: `ce9673b` gegen `f5e0619`. Darin enthalten ist T-94
+(`8991a55`, von Codex freigegeben in `a188046`) per Fast-Forward. Neu
+für T-93 sind `ee5d856` (Nacharbeit B1–B4, Node 24) und `ce9673b`
+(Aufruf ohne Make-Target).
+
+### Nacharbeit zu den Befunden
+
+| Befund | Behebung |
+|---|---|
+| **B1** `node:sqlite` gegen „Node.js 20+“ | Mikes Entscheidung: Node 24 ist Mindestversion. `readOnlyCount` bleibt bei `node:sqlite`; der begonnene Umweg über Python ist zurückgenommen (Lesson SI-P-15). README nennt Node.js 24+, `dashboard/package.json` hat `engines: {node: ">=24"}`, `docker/Dockerfile` baut das Dashboard mit `node:24-slim` (Stufe `dashboard` gebaut, grün). |
+| **B2** fehlende Inhaltsorakel | W2 prüft je Papier den API-Kurs und den angezeigten Wert (`PAPERS`: 128.21, 277.40, 94,500.00, 99.42, 142.50) und hat zwei Fehlerfälle: `XX0000000000` (nicht gefunden) und `DE000110253X` („The symbol has no exchange suffix“). W3 sortiert zusätzlich nach Kurs absteigend. W4 hat für jede Identitätsform eigene Erwartungen samt „Source as of: Mon D, YYYY“. |
+| **B3** unbehandelte Seitenfehler | Der Rahmen sammelt `weberror` je Weg als `pageErrors`; jeder lässt den Weg scheitern. |
+| **B4** Uvicorn bleibt bei Chrome-Startfehler stehen | Der Chrome-Start liegt im `try`; ein Fehler wird als Weg „Ablauf“ gemeldet, `finally` schließt Chrome (falls gestartet) und stoppt den Server. |
+
+### Mikes Entscheidung zum Aufruf
+
+„Ja, raus aus Makefile und README“: Kein Mensch kann einem Lauf folgen;
+die Prüfung ist ein Werkzeug für die Agenten. Das Target `visual-check`
+und der README-Abschnitt „Browser check“ sind entfernt. Der Aufruf samt
+`HEADLESS`, `ONLY`, `ONLINE`, `CHROME` steht im Kopfkommentar von
+`dashboard/e2e/visual-check.mjs`, `AGENTS.md` („Datenbankzugriffe in
+Tests“) verweist darauf. Akzeptanzkriterien und Verify-Matrix sind
+entsprechend angepasst.
+
+### Nachweise
+
+- **Browser, vollständig und sichtbar:** `cd dashboard && node
+  e2e/visual-check.mjs` → **16/16 bestanden**
+  (`.tmp/visual-check/2026-10-02T16-39-53-487Z/`). W11 ist mit T-94 grün.
+- **Gegenproben:** 28 von 28 rot aus dem genannten Grund, darunter die
+  neuen für B2, B3 und den `node:sqlite`-Zähler in W8. Die frühere
+  „GRÜN?“-Meldung bei W2 lag am Gegenprobenskript (erwarteter Text an die
+  neue Fehlermeldung angepasst), nicht an der Prüfung.
+- **`make check`:** Exit 0 (1299 Backend, 399 Dashboard, Ruff, `vue-tsc`).
+- **ESLint** für das Skript ohne Warnung; `make help` nennt kein
+  `visual-check` mehr.
+
+### Doku-Abgleich
+
+- `README.md`: Node.js 24+; Abschnitt „Browser check“ und Zeile in der
+  Testübersicht entfernt.
+- `AGENTS.md`: Hinweis auf das Skript.
+- `.gitignore`: Kommentar zu `.tmp/` nennt das Skript statt des Targets.
+- `docker/README.md`, `unraid/README.md`: unverändert; sie erwähnen weder
+  Node noch die Browserprüfung, der Container braucht kein Node auf dem Host.
+- `docs/superpowers/…` nennen `node:22-slim` als Historie; unverändert.
 
 ## Verifier-Prüfung · Runde 1 (Codex, 2026-10-02)
 
