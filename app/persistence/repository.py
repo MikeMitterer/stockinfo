@@ -21,15 +21,16 @@ from app.models import (
     IDENTITY_COLUMNS,
     OVERRIDE_FIELDS,
     IdentityOut,
+    IsinOnlyIdentityOut,
     ListedIdentityOut,
     PairIdentityOut,
     QuoteResponse,
     identity_columns,
     identity_from_columns,
-    identity_where,
 )
 from app.persistence import detail_store
 from app.persistence.db import get_connection
+from app.persistence.quote_store import PROTECTED_META_FIELDS, SavedQuote
 
 logger = structlog.get_logger()
 
@@ -55,6 +56,33 @@ def _isin_of(identity: IdentityOut) -> str | None:
     ein Ticker, den man für ein Paar nur ausdenken könnte.
     """
     return getattr(identity, "isin", None)
+
+
+def identity_where(identity: IdentityOut) -> tuple[str, tuple]:
+    """Die `WHERE`-Bedingung, die genau diese Identität trifft.
+
+    Je Form eine andere, und je Form liegt ein eigener partieller Unique-Index
+    darauf. Eine gemeinsame Bedingung über alle sechs Spalten gäbe es zwar,
+    aber sie könnte keinen Index nutzen und träfe bei ``NULL`` ohnehin nichts —
+    SQLite hält zwei ``NULL`` nie für gleich.
+
+    Args:
+        identity: Die gesuchte Identität.
+
+    Returns:
+        Die Bedingung und ihre Parameter, für ein ``SELECT … WHERE``.
+    """
+    if isinstance(identity, PairIdentityOut):
+        return (
+            "kind = 'pair' AND base = ? AND quote_currency = ?",
+            (identity.base, identity.quote_currency),
+        )
+    if isinstance(identity, IsinOnlyIdentityOut):
+        return ("kind = 'isin_only' AND isin = ?", (identity.isin,))
+    return (
+        "kind = 'listed' AND ticker = ? AND mic = ?",
+        (identity.ticker, identity.mic),
+    )
 
 
 class IncompleteIdentityError(ValueError):
@@ -150,24 +178,6 @@ class _InstrumentFacts:
     metadata_complete: bool = False
 
 
-@dataclass(frozen=True)
-class SavedQuote:
-    """Was das Speichern eines Kurses am Instrument bewirkt hat.
-
-    `created` ist eine **Tatsache der schreibenden Transaktion**, keine
-    Vorabfrage (T-21 Teil 3, `#2j2`). Ein Existenzcheck *vor* dem Schreiben
-    wäre falsch: Ein konkurrierender Insert kann ihn überholen, und der
-    Aufnahmeweg meldete `201` für ein Papier, das jemand anders gerade angelegt
-    hat. Wahr ist `created` deshalb nur, wenn der `INSERT` selbst durchkam —
-    im abgefangenen UNIQUE-Rennen ist er falsch.
-
-    Bis T-21 Teil 3 gab `save_quote` nur die ID zurück und warf diese
-    Information weg, obwohl sie an der Stelle vorlag, an der sie entsteht.
-    """
-
-    instrument_id: int
-    created: bool
-
 # Instrument-Metadatenfelder (ohne id/isin/symbol/first_seen).
 _META_FIELDS = (
     "exchange",
@@ -185,32 +195,6 @@ _META_FIELDS = (
     # Wandert mit den Metadaten mit, nicht mit dem Kurspunkt: Er sagt, woher
     # der jüngste Metadaten-Stand kommt.
     "source",
-)
-
-# Die Felder, über die allein justETF Auskunft gibt.
-#
-# Sie dürfen nur geschrieben werden, wenn die Antwort tatsächlich von dort
-# kommt (`QuoteResponse.metadata_complete`). Sonst löscht ein einzelner
-# Ausfall den gesamten gepflegten Stand — genau das ist am 2026-08-18
-# passiert. `source` gehört dazu, weil er die stehengebliebenen Werte
-# beschreibt und nicht den Abruf, der nichts geliefert hat.
-#
-# Öffentlich, weil dieselbe Menge zweimal gebraucht wird: Hier entscheidet sie,
-# was **nicht geschrieben** wird, und in `CachedQuoteService` darüber, was in
-# der Antwort aus dem gespeicherten Stand **stehen bleibt**. Zwei Listen liefen
-# auseinander, und die Antwort widerspräche der Zeile daneben.
-PROTECTED_META_FIELDS = frozenset(
-    {
-        "provider",
-        "ter",
-        "replication",
-        "fund_size",
-        "fund_domicile",
-        "fund_currency",
-        "volatility",
-        "accumulating",
-        "source",
-    }
 )
 
 KEEP_IF_UNKNOWN = frozenset({"name", "type"})

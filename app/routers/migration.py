@@ -48,29 +48,15 @@ def get_gate() -> MigrationGate:
     return _gate
 
 
-# Die Felder eines Ablehnungseintrags — **eine** Liste, drei Verbraucher.
+# Die Felder eines Ablehnungseintrags — abgeleitet aus dem REST-Modell, nicht
+# aufgezählt.
 #
 # Vorschau, Bestätigungsantwort und gespeicherter Bericht bauen dasselbe
-# `RejectedInstrument`. Bis Runde 31 taten sie das aus **zwei** neunstelligen
-# Aufzählungen, und genau deshalb mussten Name, Börse, Gattung und Währung an
-# beiden Stellen einzeln nachgetragen werden. Zwei Serialisierungsregeln für
-# dasselbe Ding sind eine zweite Wahrheit; die nächste Eigenschaft hätte
-# wieder an einer davon gefehlt.
-#
-# Die **SQL-Auswahl** bleibt getrennt in `app/persistence/db.py` — sie hängt an
-# der Tabelle, nicht am Vertrag. Dass sie vollständig ist, sichert der
-# HTTP-Test mit nichtleeren Werten ab, nicht diese Liste.
-_REJECTION_FIELDS = (
-    "symbol",
-    "isin",
-    "name",
-    "exchange",
-    "type",
-    "currency",
-    "reason",
-    "quotes",
-    "daily_closes",
-)
+# `RejectedInstrument`. Eine eigene Aufzählung daneben wäre eine zweite
+# Wahrheit: Ein neues Feld im Modell hätte an ihr gefehlt. Der Bericht liest
+# alle Spalten (`stored_rejections`); dass sie das Modell vollständig füllen,
+# sichert der HTTP-Test mit nichtleeren Werten ab.
+_REJECTION_FIELDS = tuple(RejectedInstrument.model_fields)
 
 
 def _as_rejected(source: Rejection | Mapping[str, object]) -> RejectedInstrument:

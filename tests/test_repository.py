@@ -7,11 +7,11 @@ import pytest
 
 from app.models import ListedIdentityOut, QuoteResponse
 from app.persistence.db import init_db
+from app.persistence.quote_store import SavedQuote
 from app.persistence.repository import (
     IdentityConflictError,
     IncompleteIdentityError,
     QuoteRepository,
-    SavedQuote,
 )
 
 

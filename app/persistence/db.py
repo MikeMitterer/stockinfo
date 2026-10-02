@@ -236,20 +236,6 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-# Spalten des gespeicherten Umzugsberichts (`migration_rejections`).
-_REPORT_COLUMNS = (
-    "symbol",
-    "isin",
-    "name",
-    "exchange",
-    "type",
-    "currency",
-    "reason",
-    "quotes",
-    "daily_closes",
-)
-
-
 def preview_migration(database_path: str) -> MigrationPlan:
     """Rechnet den Umzug vor, ohne die Datenbank zu ändern (Phase 1).
 
@@ -274,7 +260,10 @@ def stored_rejections(database_path: str) -> list[dict[str, object]] | None:
 
     Returns:
         Die abgelehnten Instrumente nach Symbol sortiert, je als einfaches
-        Mapping der Berichtsspalten; ``None``, wenn noch nie ein Umzug lief.
+        Mapping aller Spalten von `migration_rejections`; ``None``, wenn noch
+        nie ein Umzug lief. Welche Felder davon nach außen gehen, entscheidet
+        das REST-Modell `RejectedInstrument` — eine zweite Feldliste hier
+        liefe neben ihm auseinander.
     """
     connection = get_connection(database_path)
     try:
@@ -285,8 +274,7 @@ def stored_rejections(database_path: str) -> list[dict[str, object]] | None:
         if exists is None:
             return None
         rows = connection.execute(
-            "SELECT " + ", ".join(_REPORT_COLUMNS) + " FROM migration_rejections "
-            "ORDER BY symbol"
+            "SELECT * FROM migration_rejections ORDER BY symbol"
         ).fetchall()
     finally:
         connection.close()
