@@ -15,6 +15,7 @@ from dataclasses import dataclass
 import structlog
 
 from app import detail_store
+from app.calculated_metrics import CALCULATED_SOURCE
 from app.db import get_connection
 from app.exchanges import canonical_identity, identity_from_symbol
 from app.models import (
@@ -632,7 +633,7 @@ class QuoteRepository:
         """Berechnete Volatilität ist ebenfalls ein generischer Quellenwert."""
         with self._connect() as connection:
             detail_store.put_provider(connection, instrument_id, 'volatility',
-                {'value': volatility, 'source': 'calculated'})
+                {'value': volatility, 'source': CALCULATED_SOURCE})
 
     def delete_by_symbol(self, symbol: str) -> bool:
         """Löscht **ein** Instrument (und seine Quotes via Cascade) per Symbol.

@@ -23,6 +23,7 @@ from types import SimpleNamespace
 import structlog
 from stockinfo_plugin.exchanges import validate_exchanges
 
+from app.calculated_metrics import CalculatedMetrics
 from app.details import definitions_for, merge_definitions
 from app.exchange_catalog import prepare_catalog, reset_catalog
 from app.plugin_adapters import (
@@ -44,9 +45,13 @@ _DETAIL_SCHEMAS: dict[str, list] = {}
 
 
 def detail_definitions(config, settings) -> list:
-    """Validiertes Profilschema, auch bei einer vorübergehend kranken Quelle."""
+    """Validiertes Profilschema, auch bei einer vorübergehend kranken Quelle.
+
+    Die selbst berechneten Kennzahlen kommen nach den Plugins, damit ein
+    Plugin-Wert bei gleichem Feld Vorrang behält.
+    """
     build_chain("etf_meta", config, settings)
-    return merge_definitions(_DETAIL_SCHEMAS.values())
+    return merge_definitions([*_DETAIL_SCHEMAS.values(), definitions_for(CalculatedMetrics())])
 
 
 logger = structlog.get_logger()

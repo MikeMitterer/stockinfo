@@ -624,6 +624,12 @@ the schema. `generation_id` is a persisted UUID from the same database.
 Cache the field catalog under `(generation_id, core_version, details_version)`;
 fetch `/fields` again to discover a change.
 
+StockInfo itself declares `volatility` under the source name `calculated`, for
+all instrument types with the identity kinds `listed` and `pair`, because it
+computes that value from the stored daily closes. Host declarations come after all plugins, so `sources`
+reads for example `["justetf", "calculated"]`: when a plugin delivers the same
+field, the plugin value wins; otherwise the computed value fills the gap.
+
 `GET /instrument-types` sends that same UUID in `StockInfo-Generation`,
 alongside `Cache-Control: no-store`. This is not a type-catalog version.
 The general generation protocol is still unavailable: there is no
