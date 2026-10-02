@@ -23,10 +23,12 @@ from stockinfo_plugin import Identity, ListedIdentity
 
 from app.exchanges import (
     EXCHANGES,
+    REASON_INVALID_ISIN,
     REASON_NO_SUFFIX,
     identity_from_input,
     input_failure,
     is_isin,
+    is_malformed_isin,
 )
 from app.models import (
     IntakeConfirmation,
@@ -201,6 +203,10 @@ class IntakeService:
             return self._quotes.store_by_isin(
                 value, check_identity=self._check_identity, **options
             )
+        # Eine vertippte ISIN ist kein Symbol: Der Symbolweg meldete sie als
+        # „ohne Börsenzusatz“ (T-95).
+        if is_malformed_isin(value):
+            raise IntakeRejected(REASON_INVALID_ISIN, isin=value)
 
         identity = identity_from_input(value)
         if identity is None:

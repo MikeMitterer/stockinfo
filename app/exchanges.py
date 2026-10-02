@@ -41,6 +41,17 @@ REJECTION_REASONS = frozenset(
     {REASON_NO_SUFFIX, REASON_UNKNOWN_SUFFIX, REASON_NON_CANONICAL_TICKER}
 )
 
+# Ein ungültiges ISIN-Format als Kennung. Derselbe Katalogeintrag bedient jeden
+# Client; der Satz entsteht dort, wo er gelesen wird. Sie steht hier und nicht
+# bei den Routern, weil auch der Aufnahmedienst sie meldet (T-95).
+REASON_INVALID_ISIN = "invalid_isin_format"
+
+# Was **wie eine ISIN aussieht**: zwei Buchstaben, dann zehn Buchstaben oder
+# Ziffern. Das ist die ISIN-Form ohne die Ziffer am Ende. Ein Börsensymbol
+# dieser Länge ohne Punkt gibt es praktisch nicht; die verlangte Ziffer nach
+# dem Länderpräfix schließt reine Buchstabenfolgen zusätzlich aus.
+_ISIN_LIKE_PATTERN = re.compile(r"[A-Z]{2}(?=[A-Z0-9]*[0-9])[A-Z0-9]{10}")
+
 # Der Suffix ist der Alias der einen und der MIC einer **anderen** Börse.
 #
 # Nur für die **Eingabe**, nicht für den Umzugsbericht: Ein gespeichertes
@@ -587,6 +598,23 @@ def is_isin(value: str) -> bool:
         ``True`` bei ISIN-Form.
     """
     return bool(value) and bool(ISIN_PATTERN.fullmatch(value))
+
+
+def is_malformed_isin(value: str) -> bool:
+    """Sieht der Wert wie eine ISIN aus, ohne eine zu sein?
+
+    Bis T-95 ging eine vertippte ISIN wie ``DE000110253X`` den Symbolweg und
+    bekam „Symbol ohne Börsenzusatz“ zu hören. Wer eine ISIN eingibt, sucht
+    den Fehler dann an der falschen Stelle.
+
+    Args:
+        value: Der bereits getrimmte und großgeschriebene Rohwert.
+
+    Returns:
+        ``True``, wenn der Wert die Länge und den Aufbau einer ISIN hat,
+        aber nicht ihre Form.
+    """
+    return bool(_ISIN_LIKE_PATTERN.fullmatch(value)) and not is_isin(value)
 
 
 def home_exchange(isin: str) -> str | None:

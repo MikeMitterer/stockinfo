@@ -86,6 +86,9 @@ instruments:
       value: 142.50
       currency: EUR
       as_of: "2026-08-27T17:30:00+02:00"
+    # Nur der Anbieter: TER und Fondssitz trägst du in der Oberfläche selbst ein.
+    metadata:
+      provider: DWS
 
 fx_rates:
   - base: CAD

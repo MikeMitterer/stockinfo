@@ -93,6 +93,15 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | 6 | Browser mit Alt-Datenbank | Vorschau, Bestätigung, Bericht über das Modell | ✅ |
 | 7 | `STATUS.md` | T-89-Ausnahme entfernt | ✅ |
 
+### Auflösung
+
+Technisch freigegeben von Codex in Runde 4 (`3d9286c`). Claude hat den
+Ticketbranch am 2026-10-02 lokal nach `master` gemergt (`dbe49b3`); kein
+Push, kein Docker-Hub- oder Unraid-Update. Damit ist die SQL-Umstellung
+(T-90 bis T-92) technisch abgeschlossen. Folgearbeit:
+[T-93](T-93-visuelle-gesamtpruefung.md), die gründliche Browserprüfung.
+Mikes Abnahme steht aus; das Ticket bleibt bis dahin in `30-doing/`.
+
 ## Review-Verlauf (neueste Runde zuerst)
 
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter

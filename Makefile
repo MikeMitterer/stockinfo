@@ -151,6 +151,15 @@ logs: ## Server-Logs folgen
 .PHONY: test
 test: test-backend test-plugin-api test-example test-dashboard ## Alle Tests — Backend + Plugin-API + Beispielpaket + Dashboard
 
+# Wie `test`, aber ohne Netz: Die mit `integration` markierten Tests fragen
+# echte Online-Anbieter und bleiben bei `test`. Dazu Ruff und die Typprüfung
+# des Dashboards, die `test` nicht enthält.
+.PHONY: check
+check: test-plugin-api test-example test-dashboard ## Alle netzfreien Prüfungen — Backend ohne Online-Tests, Plugin-API, Beispiel, Dashboard, Ruff, Typen
+	$(PYTEST) -q -m "not integration"
+	$(VENV)/bin/ruff check app tests scripts
+	cd dashboard && npx vue-tsc -b
+
 .PHONY: test-backend
 test-backend: ## Backend-Tests (pytest)  [ARGS="-k name"]
 	$(PYTEST) -q $(ARGS)

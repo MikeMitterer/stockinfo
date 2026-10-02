@@ -108,7 +108,7 @@ splits and dividends. Both behaviors differ from the REST artifact; see the
   interpreter with `PYTHON_BOOTSTRAP=python3.12 make setup`)
 - **make** (drives setup and start/stop of the services)
 - optional **Docker** (to run the container)
-- **Node.js 20+ with npm** (`make setup` installs the dashboard packages;
+- **Node.js 24+ with npm** (`make setup` installs the dashboard packages;
   the backend and prebuilt Docker image do not use Node.js on the host)
 
 The project uses shared ecosystem helpers under `.libs/` (MakeLib, BashLib,
@@ -482,10 +482,13 @@ See the [Unraid guide](unraid/README.md) for installation, configuration and ope
 make test                       # backend, plugin API, example plugin and dashboard
 make test-backend               # backend only (pytest)
 cd dashboard && npm run test    # dashboard only (Vitest)
+make check                      # everything that works offline, plus Ruff and type checks
 ```
 
 The normal backend run includes tests marked `integration` that call real
-external APIs. To exclude those tests when working offline:
+external APIs or the package index. `make check` leaves them out and adds
+`ruff` and the dashboard type check (`vue-tsc`). To exclude only the online
+tests:
 
 ```bash
 .venv/bin/pytest -m "not integration"

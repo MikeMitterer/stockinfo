@@ -328,6 +328,23 @@ class DailyCloseProvider(Protocol):
         ...
 
 
+@dataclass(frozen=True)
+class FxQuote:
+    """Ein Wechselkurs samt dem Zeitpunkt, den die Quelle dafür nennt.
+
+    Nur die Zahl weiterzugeben war der Fehler aus T-94: Der Dienst setzte
+    ``quote_time`` dann auf den Abruf, und ein Kurs aus einer alten Datei
+    erschien mit heutigem Datum.
+
+    Attributes:
+        rate: 1 base = ``rate`` quote.
+        quote_time: Wann der Kurs galt, ISO 8601 mit Zeitzone.
+    """
+
+    rate: float
+    quote_time: str
+
+
 class FxRateProvider(Protocol):
     """Liefert einen Wechselkurs (1 base = ? quote).
 
@@ -345,7 +362,7 @@ class FxRateProvider(Protocol):
     `CachedFxService._fx_source`.
     """
 
-    def fetch_fx_rate(self, base: str, quote: str) -> SourceAnswer[float]: ...
+    def fetch_fx_rate(self, base: str, quote: str) -> SourceAnswer[FxQuote]: ...
 
 
 class EtfEnricher(Protocol):

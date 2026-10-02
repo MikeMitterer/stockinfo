@@ -57,6 +57,7 @@ from app.exchanges import EXCHANGES, provider_alias
 from app.providers.base import (
     INSTRUMENT_TYPES,
     EtfDetails,
+    FxQuote,
     RawQuote,
     Resolution,
     ResolvedInstrument,
@@ -438,16 +439,19 @@ class DailyAdapter(_Adapter):
 class FxAdapter(_Adapter):
     """Ein Plugin der Devisenrolle, in der Sprache des Core."""
 
-    def fetch_fx_rate(self, base: str, quote: str) -> SourceAnswer[float]:
-        """Der Kurs — und ob sein Ausbleiben eine Störung war.
+    def fetch_fx_rate(self, base: str, quote: str) -> SourceAnswer[FxQuote]:
+        """Der Kurs samt Zeitpunkt der Quelle — und ob sein Ausbleiben eine Störung war.
 
         `NotFound` heißt „dieses Paar führe ich nicht" und ist eine Auskunft;
         `Unavailable` heißt „konnte nicht nachsehen". Der Unterschied entscheidet
         weiter oben zwischen `404` und `502`.
+
+        `as_of` wird wie beim Kurs (`QuoteAdapter`) zu `quote_time`. Bis T-94
+        ging hier nur die Zahl weiter, und der Dienst setzte den Abruf ein.
         """
         answer = self._source.fetch_rate(FxRequest(base=base, quote=quote))
         if isinstance(answer, FxRate):
-            return SourceAnswer(answer.rate)
+            return SourceAnswer(FxQuote(rate=answer.rate, quote_time=answer.as_of.isoformat()))
         return SourceAnswer(disturbed=isinstance(answer, Unavailable))
 
 

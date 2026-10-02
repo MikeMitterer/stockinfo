@@ -388,6 +388,46 @@ def test_eine_unauflösbare_eingabe_wird_mit_kennung_abgelehnt(
     assert _row(repository, identifier) == {}, "eine halbe Zeile ist entstanden"
 
 
+@pytest.mark.parametrize(
+    "identifier",
+    ["DE000110253X", "US037833100A", "IE00B4L5Y98Z"],
+    ids=["buchstabe_statt_pruefziffer", "us_isin", "irische_isin"],
+)
+def test_eine_vertippte_isin_wird_als_isin_abgelehnt(client_and_repo, identifier: str) -> None:
+    """T-95: Eine vertippte ISIN ist kein Symbol ohne Börsenzusatz.
+
+    Bis T-95 ging sie den Symbolweg und bekam
+    `symbol_without_exchange_suffix`. Wer eine ISIN eingibt, sucht dann
+    einen Börsenzusatz, den es bei einer ISIN gar nicht gibt.
+    """
+    client, repository = client_and_repo
+
+    response = _intake(client, identifier)
+
+    assert response.status_code == 400
+    assert response.json() == {"code": "invalid_isin_format", "params": {"isin": identifier}}
+    assert _row(repository, identifier) == {}, "eine halbe Zeile ist entstanden"
+
+
+@pytest.mark.parametrize(
+    "identifier",
+    ["DE00011025", "ABCDEFGHIJKL", "DE000110253XY"],
+    ids=["zu_kurz", "nur_buchstaben", "zu_lang"],
+)
+def test_was_keiner_isin_aehnelt_bleibt_beim_symbolweg(client_and_repo, identifier: str) -> None:
+    """Die Gegenseite zu T-95: Nur die ISIN-Gestalt wechselt den Weg.
+
+    Zu kurz, zu lang oder ohne eine einzige Ziffer ist das keine vertippte
+    ISIN. Solche Eingaben behalten die Meldung des Symbolwegs.
+    """
+    client, _ = client_and_repo
+
+    response = _intake(client, identifier)
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "symbol_without_exchange_suffix"
+
+
 def test_eine_aliaslose_boerse_bleibt_die_genannte(client_and_repo) -> None:
     """**Befund 1 aus Runde 39** — auf leerem Bestand.
 

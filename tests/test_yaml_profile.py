@@ -29,6 +29,7 @@ Typprüfungen.
 """
 
 from collections.abc import Iterator
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -471,6 +472,37 @@ def test_die_devisenrolle_nennt_den_wirklichen_lieferanten(
     assert body["source"] == "yaml-file", (
         f"die Herkunft nennt nicht den Lieferanten: {body}"
     )
+
+
+def test_der_devisenkurs_traegt_den_zeitpunkt_der_datei(volume: Path, client) -> None:
+    """`quote_time` ist der Stand aus der Datei, `fetched_at` der Abruf (T-94).
+
+    Bis T-94 ging auf dem Weg vom Plugin zum Dienst nur die Zahl weiter. Der
+    Kurs vom 27. August erschien dann mit heutigem Datum und galt als aktuell.
+    Der zweite Abruf kommt aus dem Cache und muss denselben Stand nennen.
+    """
+    _profile(
+        volume,
+        {
+            "resolvers": ["yaml-file"],
+            "etf_meta": [],
+            "quotes": ["yaml-file"],
+            "daily": ["yaml-file"],
+            "fx": ["yaml-file"],
+        },
+    )
+
+    fresh = client.get("/fx", params={"base": "CAD", "quote": "EUR"}).json()
+    cached = client.get("/fx", params={"base": "CAD", "quote": "EUR"}).json()
+
+    assert datetime.fromisoformat(fresh["quote_time"]) == datetime.fromisoformat(
+        "2026-08-27T17:30:00+02:00"
+    ), f"quote_time ist nicht der Stand der Datei: {fresh}"
+    assert datetime.fromisoformat(fresh["fetched_at"]) > datetime.fromisoformat(
+        fresh["quote_time"]
+    ), f"fetched_at ist nicht der Abruf: {fresh}"
+    assert cached["cached"] is True
+    assert cached["quote_time"] == fresh["quote_time"]
 
 
 # ─── T-46 · die Diagnose misst die konfigurierte Kette ────────────────────────

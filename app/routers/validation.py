@@ -12,11 +12,9 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Query
 
-from app.exchanges import ISIN_PATTERN
+from app.exchanges import ISIN_PATTERN, REASON_INVALID_ISIN
 
-# Ein ungültiges ISIN-Format als Kennung. Derselbe Katalogeintrag bedient jeden
-# Client; der Satz entsteht dort, wo er gelesen wird.
-REASON_INVALID_ISIN = "invalid_isin_format"
+__all__ = ["REASON_INVALID_ISIN"]
 
 
 class InvalidIsinError(Exception):
