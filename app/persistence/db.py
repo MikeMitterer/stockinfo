@@ -236,6 +236,63 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+# Spalten des gespeicherten Umzugsberichts (`migration_rejections`).
+_REPORT_COLUMNS = (
+    "symbol",
+    "isin",
+    "name",
+    "exchange",
+    "type",
+    "currency",
+    "reason",
+    "quotes",
+    "daily_closes",
+)
+
+
+def preview_migration(database_path: str) -> MigrationPlan:
+    """Rechnet den Umzug vor, ohne die Datenbank zu ändern (Phase 1).
+
+    Args:
+        database_path: Pfad zur SQLite-Datei.
+
+    Returns:
+        Der Plan mit umziehenden, unveränderten und abgelehnten Zeilen.
+    """
+    connection = get_connection(database_path)
+    try:
+        return plan_migration(connection)
+    finally:
+        connection.close()
+
+
+def stored_rejections(database_path: str) -> list[dict[str, object]] | None:
+    """Liest den gespeicherten Umzugsbericht.
+
+    Args:
+        database_path: Pfad zur SQLite-Datei.
+
+    Returns:
+        Die abgelehnten Instrumente nach Symbol sortiert, je als einfaches
+        Mapping der Berichtsspalten; ``None``, wenn noch nie ein Umzug lief.
+    """
+    connection = get_connection(database_path)
+    try:
+        exists = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' "
+            "AND name = 'migration_rejections'"
+        ).fetchone()
+        if exists is None:
+            return None
+        rows = connection.execute(
+            "SELECT " + ", ".join(_REPORT_COLUMNS) + " FROM migration_rejections "
+            "ORDER BY symbol"
+        ).fetchall()
+    finally:
+        connection.close()
+    return [dict(row) for row in rows]
+
+
 def run_migration(database_path: str, rejected_at: str) -> MigrationPlan:
     """Führt den bestätigten Umzug aus — Phase 2, **alles oder nichts**.
 

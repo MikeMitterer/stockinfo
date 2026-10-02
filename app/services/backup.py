@@ -6,7 +6,8 @@ Paketpins und Rollenketten bleiben Herkunftsinformation, keine Sperre.
 **`VACUUM INTO` statt einer Dateikopie:** Im WAL-Modus liegen die jüngsten
 Schreibvorgänge in der `-wal`-Datei; eine Kopie der `.db` allein ergibt einen
 Stand, den es nie gab. `VACUUM INTO` erzeugt eine in sich stimmige Datei und
-trägt `PRAGMA user_version` mit.
+trägt `PRAGMA user_version` mit. Die Datenbankzugriffe dafür stehen in
+`app/persistence/backup_store.py`.
 """
 
 import hashlib
@@ -14,7 +15,6 @@ import json
 import os
 import re
 import shutil
-import sqlite3
 import tempfile
 import threading
 from dataclasses import dataclass
@@ -24,12 +24,18 @@ from pathlib import Path
 import structlog
 
 from app.models import BackupReason, SourceDifference
+from app.persistence.backup_store import (
+    UnreadableDatabaseError,
+    copy_database,
+    read_stamp,
+    write_stamp_if_missing,
+)
 from app.persistence.data_versions import (
     declared_versions,
     stamp_versions,
     stored_versions,
 )
-from app.persistence.db import SCHEMA_VERSION, get_connection
+from app.persistence.db import SCHEMA_VERSION
 from app.sources_config import ROLES, SourcesConfig
 
 logger = structlog.get_logger()
@@ -113,33 +119,13 @@ def stamp_fingerprint(database_path: str | Path, fingerprint: str) -> None:
     fremder Bestand sähe aus, als wäre er hier entstanden. Eine Abweichung wird
     **gemeldet, nicht geheilt**.
     """
-    connection = get_connection(str(database_path))
-    try:
-        connection.execute(
-            "INSERT INTO meta (key, value) VALUES (?, ?) "
-            "ON CONFLICT(key) DO NOTHING",
-            (FINGERPRINT_KEY, fingerprint),
-        )
-        connection.commit()
-    finally:
-        connection.close()
+    write_stamp_if_missing(database_path, FINGERPRINT_KEY, fingerprint)
 
 
 def _read_stamp(database_file: Path) -> tuple[str | None, int]:
     """Kennung und Schemaversion **aus der Datei selbst**, nicht aus ihrem
     Manifest — das ist der Punkt der Übung."""
-    connection = sqlite3.connect(f"file:{database_file}?mode=ro", uri=True)
-    try:
-        version = int(connection.execute("PRAGMA user_version").fetchone()[0])
-        try:
-            row = connection.execute(
-                "SELECT value FROM meta WHERE key = ?", (FINGERPRINT_KEY,)
-            ).fetchone()
-        except sqlite3.DatabaseError:
-            return None, version  # älter als die `meta`-Tabelle, nicht kaputt
-        return (row[0] if row else None), version
-    finally:
-        connection.close()
+    return read_stamp(database_file, FINGERPRINT_KEY)
 
 
 class BackupService:
@@ -203,11 +189,7 @@ class BackupService:
         fingerprint = self.fingerprint
         created_at, target = self._free_name(datetime.now(timezone.utc), fingerprint)
 
-        connection = get_connection(str(self._database))
-        try:
-            connection.execute("VACUUM INTO ?", (str(target),))
-        finally:
-            connection.close()
+        copy_database(self._database, target)
 
         stamp_versions(target, self._config)
         _write_atomic(
@@ -464,7 +446,7 @@ def stamped_fingerprint(database_path: str | Path) -> str | None:
         return None
     try:
         return _read_stamp(path)[0]
-    except sqlite3.DatabaseError:
+    except UnreadableDatabaseError:
         return None
 
 

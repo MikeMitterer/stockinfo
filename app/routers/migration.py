@@ -10,7 +10,7 @@ Router enthalten nur HTTP-Belange. Was der Umzug tut, steht in
 `app.persistence.migration` und `app.persistence.db`.
 """
 
-import sqlite3
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from typing import Annotated
 
@@ -20,8 +20,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.config import Settings, get_settings
 from app.migration_guard import REASON_STARTUP_FAILED, MigrationGate
 from app.models import MigrationPreview, MigrationReport, RejectedInstrument
-from app.persistence.db import get_connection, run_migration
-from app.persistence.migration import MigrationPlan, Rejection, plan_migration
+from app.persistence.db import preview_migration, run_migration, stored_rejections
+from app.persistence.migration import MigrationPlan, Rejection
 
 logger = structlog.get_logger()
 
@@ -57,9 +57,9 @@ def get_gate() -> MigrationGate:
 # dasselbe Ding sind eine zweite Wahrheit; die nächste Eigenschaft hätte
 # wieder an einer davon gefehlt.
 #
-# Die **SQL-Auswahl** bleibt getrennt — sie hängt an der Tabelle, nicht am
-# Vertrag. Dass sie vollständig ist, sichert der HTTP-Test mit nichtleeren
-# Werten ab, nicht diese Liste.
+# Die **SQL-Auswahl** bleibt getrennt in `app/persistence/db.py` — sie hängt an
+# der Tabelle, nicht am Vertrag. Dass sie vollständig ist, sichert der
+# HTTP-Test mit nichtleeren Werten ab, nicht diese Liste.
 _REJECTION_FIELDS = (
     "symbol",
     "isin",
@@ -73,7 +73,7 @@ _REJECTION_FIELDS = (
 )
 
 
-def _as_rejected(source: Rejection | sqlite3.Row) -> RejectedInstrument:
+def _as_rejected(source: Rejection | Mapping[str, object]) -> RejectedInstrument:
     """Übersetzt einen Planeintrag **oder** eine Berichtszeile in die REST-Form.
 
     Beide tragen dieselben Feldnamen — der Plan als Attribute, die Zeile als
@@ -115,11 +115,7 @@ def migration_preview(settings: SettingsDep) -> MigrationPreview:
     angelegt, hätte Phase 1 die Datenbank angefasst, bevor der Benutzer die
     Liste gesehen hat.
     """
-    connection = get_connection(settings.database_path)
-    try:
-        return _preview(plan_migration(connection))
-    finally:
-        connection.close()
+    return _preview(preview_migration(settings.database_path))
 
 
 @router.post("/migration/confirm", response_model=MigrationReport)
@@ -214,22 +210,9 @@ def _stored_report(database_path: str) -> MigrationReport:
         Der Bericht; ``completed=False`` mit leerer Liste, wenn noch nie ein
         Umzug gelaufen ist — kein Fehler, nur nichts zu berichten.
     """
-    connection = get_connection(database_path)
-    try:
-        exists = connection.execute(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' "
-            "AND name = 'migration_rejections'"
-        ).fetchone()
-        if exists is None:
-            return MigrationReport(completed=False, rejected=[])
-
-        rows = connection.execute(
-            "SELECT " + ", ".join(_REJECTION_FIELDS) + " FROM migration_rejections "
-            "ORDER BY symbol"
-        ).fetchall()
-    finally:
-        connection.close()
-
+    rows = stored_rejections(database_path)
+    if rows is None:
+        return MigrationReport(completed=False, rejected=[])
     return MigrationReport(
         completed=True, rejected=[_as_rejected(row) for row in rows]
     )
