@@ -184,12 +184,166 @@ fertigen Ablauf prüfen.
 
 ### Akzeptanzkriterien
 
-- [ ] Ein dokumentierter Befehl führt die Kommandozeilen-Suiten aus.
-- [ ] Ein dokumentierter Befehl führt den Browser-Durchlauf aus und meldet
+- [x] Ein dokumentierter Befehl führt die Kommandozeilen-Suiten aus.
+- [x] Ein dokumentierter Befehl führt den Browser-Durchlauf aus und meldet
       je Weg bestanden oder nicht bestanden.
-- [ ] Alle Wege bestehen auf dem Stand nach T-92.
-- [ ] Die Anleitung (README) nennt beide Befehle.
+- [ ] Alle Wege bestehen auf dem Stand nach T-92. — **15 von 16;** W11 ist
+      rot an einem bestätigten App-Fehler, der älter ist als die
+      SQL-Umstellung. Er ist [T-94](../20-ready/T-94-devisenkurs-zeitpunkt-der-quelle.md);
+      nach dessen Behebung wird W11 grün (Mikes Regel: Folgetickets aus den
+      Tests gehören dazu).
+- [x] Die Anleitung (README) nennt beide Befehle.
 
 ### Side-Effects
 
 Keine Änderung an API, Vertrag oder Verhalten der App.
+
+### Verify
+
+Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
+
+| # | Handgriff | Erwarteter Nachweis | AI |
+|---|---|---|:--:|
+| 1 | `make check` | grün; im macOS-Sandbox-Lauf **ohne Netz** (nur `localhost` erlaubt) ebenso grün | ✅ |
+| 2 | `make visual-check` | 16 Wege, je Zeile bestanden/nicht bestanden, Bericht und Bilder unter `.tmp/visual-check/` | ✅ |
+| 3 | Ergebnis | 15/16 grün; W11 rot nur am App-Fehler (T-94) | ⚠️ T-94 |
+| 4 | Gegenproben | je Weg eine falsche Erwartung → rot aus genau diesem Grund; dazu Rahmen: Konsolenfehler, unerwartete Antwort, Netzanfrage, ausbleibender erwarteter Fehler | ✅ |
+| 5 | Anleitung | README „Tests“ nennt beide Befehle samt Optionen | ✅ |
+
+## Review-Verlauf (neueste Runde zuerst)
+
+Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
+diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
+`.agents/AGENT-WORKFLOW.md`).
+
+## Übergabe Runde 1 (Claude, 2026-10-02)
+
+Prüfgegenstand: `f5e0619` gegen `master` (`dbe49b3`). Commits: `3b0d584`
+(Rahmen, W1–W3), `bb8098b` (W4–W8), `9a99928` (W9–W12), `904119e`
+(W13–W16), `f5e0619` (Make-Ziele, Online-Rauchtest, Anleitung). Kein
+App-Code geändert.
+
+### Ergebnis des Abschlusslaufs (`make visual-check`, 2026-10-02 17:49)
+
+| Weg | Titel | Ergebnis | Dauer |
+|---|---|---|---|
+| W1 | Start | bestanden | 1,8 s |
+| W2 | Aufnahme | bestanden | 12,8 s |
+| W3 | Übersicht | bestanden | 2,9 s |
+| W4 | Detailbereich | bestanden | 7,8 s |
+| W5 | Kursverlauf | bestanden | 3,0 s |
+| W6 | Manuelle Eingabe | bestanden | 7,6 s |
+| W7 | Aktualisieren | bestanden | 6,7 s |
+| W8 | Löschen | bestanden | 4,2 s |
+| W9 | Börsen | bestanden | 2,9 s |
+| W10 | Analyse | bestanden | 3,8 s |
+| W11 | Devisen | **nicht bestanden:** Kurszeitpunkt ist der Abruf, nicht `as_of` der Quelle → T-94 | 6,4 s |
+| W12 | Einstellungen | bestanden | 12,3 s |
+| W13 | Sicherung | bestanden | 6,5 s |
+| W14 | Migration | bestanden | 7,5 s |
+| W15 | Sprachen | bestanden | 33,8 s |
+| W16 | Schmale Ansicht | bestanden | 5,7 s |
+
+Gesamtlauf rund zwei Minuten. Bilder: [Aufnahme](T-93-W2-all-added.png),
+[Detail ETF](T-93-W4-EUNLDE.png), [Kursverlauf](T-93-W5-bond-max.png),
+[manuelle Eingabe](T-93-W6-entered.png), [Löschdialog](T-93-W8-dialog.png),
+[Devisen](T-93-W11-cad-eur.png), [nach Wiederherstellung](T-93-W13-restored.png),
+[Migrationsvorschau](T-93-W14-preview.png), [Deutsch](T-93-W15-de-DE-assets.png),
+[390 px](T-93-W16-assets.png).
+
+### Gefundener App-Fehler → Folgeticket
+
+**[T-94](../20-ready/T-94-devisenkurs-zeitpunkt-der-quelle.md):** Ein
+Wechselkurs trägt immer den Abrufzeitpunkt als `quote_time`, nicht den der
+Quelle. Ursache gemessen: `provider.fetch_fx_rate` reicht nur die Zahl
+weiter, `as_of` geht dort verloren; `fx_service` setzt „jetzt“. Älter als die
+SQL-Umstellung (FX-Kaskade, August 2026). W11 prüft das richtige Verhalten
+und bleibt rot, bis T-94 es behebt. In `priority_chain` nach T-93
+eingetragen.
+
+### Gegenproben (SI-P-08, SI-P-14)
+
+Ein Hilfsskript im Scratchpad ändert in einer **Kopie** je eine Erwartung
+und lässt nur den Weg laufen; das Original bleibt unverändert.
+
+- **Je Weg (16/16 rot aus dem genannten Grund):** z. B. W3 erwartet
+  `BTC-EUR` als erstes Symbol → „Reihenfolge nach Symbol stimmt nicht“;
+  W8 erwartet einen verwaisten Kurspunkt → „0 Kurspunkte ohne Papier“;
+  W14 erwartet drei umziehende Papiere → „Vorschau stimmt nicht“; W16
+  verlangt negative Überbreite → „0 px waagerecht zu breit“.
+- **Rahmen (4/4 rot):** provozierter Konsolenfehler, Abruf von
+  `/gibt-es-nicht` (unerwartete `404`), Anfrage an `example.com`
+  (mit `no-cors`, damit nicht schon der Konsolenfehler greift) und ein
+  zusätzlich erwartetes `418`, das nicht kommt.
+- Zwei Gegenproben waren im ersten Anlauf aus dem falschen Grund rot (der
+  Konsolenfehler griff vor der Netzprüfung; W11 stoppt am App-Fehler vor der
+  Erwartungsprüfung). Umgebaut — Netzanfrage ohne CORS-Fehler, die
+  „erwartet, aber nicht gekommen“-Probe an W2 — und dann aus dem richtigen
+  Grund rot.
+
+### `make check` wirklich ohne Netz
+
+Codex' Checkpoint-Punkt 1. Ein Lauf im macOS-Sandbox mit gesperrtem
+Netzverkehr (nur `localhost`) fand einen unmarkierten Netztest:
+`tests/test_dockerhub_readme.py` richtet mit leerem Cache die Werkzeug-venv
+neu ein und braucht den Paketindex. Er ist jetzt `integration` (mit Grund im
+Kommentar); danach im Sandbox-Lauf **1298 passed, 9 deselected**, mit Netz
+weiter grün. Im Browser-Durchlauf lässt jede Anfrage an etwas anderes als
+`127.0.0.1` den Weg scheitern (Gegenprobe oben).
+
+### Abweichungen vom Konzept, je begründet
+
+- **W6 ohne Ja/Nein:** Welche Detailfelder es gibt, deklariert die Quelle;
+  das YAML-Plugin kennt nur TER (Zahl), Anbieter und Domizil (Text). Ein
+  Ja/Nein-Feld gibt es im Offline-Profil nicht — auch keine Ergänzungsdatei
+  könnte es erzeugen. W6 prüft Text und Zahl je mit Speichern, Neuladen und
+  Entfernen.
+- **W8 prüft verwaiste Kurse in der Datei, nicht über die API:**
+  `GET /quote/by-symbol/…/history` legt ein unbekanntes Papier auf Anfrage
+  neu an (`ensure_instrument`, so gewollt) — eine API-Prüfung hätte das
+  gelöschte Papier wieder erzeugt. `node:sqlite` liest nur.
+- **W11 vergleicht mit drei Nachkommastellen:** Die Oberfläche zeigt
+  `0.641`; den genauen Wert `0.6412` prüft die API.
+- **Ergänzungsdatei für den Verlauf entfiel:** Der Verlauf der Anleihe in
+  der Vorlage reicht für den Chart.
+- **Zusätzlich:** Bei einem Fehler legt jeder Weg ein Bild aller offenen
+  Seiten ab, und die Meldung nennt das gesuchte Element.
+
+### Beobachtung ohne Ticket
+
+Im deutschen Katalog bleiben „Assets“, „Environment“, „API & Links“ und
+„About“ bewusst englisch (Fachbegriffe, im Katalog so gepflegt). Die
+Fußzeile sagt aber „Über StockInfo“, der Reiter „About“. Kein Fehler im
+Sinne der Prüfung; zur Entscheidung bei Mike.
+
+**Doku-Abgleich:** `README.md` „Tests“ nennt `make check` und
+`make visual-check` samt `HEADLESS`, `ONLY`, `ONLINE`, `CHROME` und der
+Ablage; die Beschreibung von `integration` nennt jetzt auch den
+Paketindex. `docker/README.md` und `unraid/README.md` beschreiben den
+Containerbetrieb; die Entwicklerprüfungen gehören laut `AGENTS.md` ins
+Root-README — keine Änderung.
+
+**Standards** (`code-standards` mit `architecture.md`, `cli.md`,
+`quality.md`, `documentation.md`):
+
+| Referenzgruppe | Ergebnis |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ Altformat nur aus `tests/legacy_schema.py`; Offline-Daten aus `examples/`; Bezeichner englisch |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ kein Bash-Skript |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ✅ Make-Ziele mit `##`-Hilfe; Exit-Code ≠ 0 bei Fehler; Hinweise auf Deutsch |
+| TypeScript, Vue und i18n | ✅ kein App-Code; W15 prüft beide Sprachen auf rohe Schlüssel |
+| Python, FastAPI und Webhooks | ✅ `scripts/make_legacy_database.py` Ruff-sauber |
+| Datenbanken und Persistenzgrenzen | ✅ nur temporäre Datenbanken; Abbruch, wenn das Datenverzeichnis unter `data/` läge; Datei nur lesend geöffnet |
+| Fehler, Logging und Tests | ✅ Inhalte statt Pixel, erwartete Fehler je Weg, Gegenproben je Weg und Rahmen |
+| Markdown und Inhaltsverzeichnisse | ✅ README-Abschnitt „Browser check“ unter „Tests“ |
+
+**Gelesene Lessons:** SI-P-08 (jede Prüfung erzeugt den entscheidenden
+Unterschied — Gegenproben je Weg), SI-P-14 (zwei Gegenproben waren aus dem
+falschen Grund rot; umgebaut), SI-P-02 (die eine rote Prüfung ist offen
+benannt statt umgangen).
+
+**Umfang geplant / tatsächlich:** 3 / 3 fachliche Änderungen; 0 / 0 neue
+Abhängigkeiten; Dateien rund 5 / 6 (zusätzlich der `integration`-Marker);
+Diff 900 / 819 Zeilen (Browser-Skript 719).
+
+Kein Merge, kein Push.
