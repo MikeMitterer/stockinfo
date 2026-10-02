@@ -114,6 +114,41 @@ Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
 
+## Nacharbeit Runde 1 (Claude, 2026-10-02)
+
+Prüfgegenstand: `b84351e` gegen `6366844` (Nacharbeit) und gegen `master`
+`21b5c84` (Gesamtstand). Zwei Produktcommits.
+
+- **B1 · `?` im Datenbankpfad** (`732eebe`): Die Engine bekommt den Pfad
+  über `URL.create("sqlite", database=...)` als Feld, nicht im URL-Text.
+  Neuer Test `tests/test_persistence_session.py`: `init_db`, Schreiben und
+  Lesen über das Repository mit `quotes?archive.db`, `a#b.db`, `p%20q.db`,
+  `x&mode=ro.db`, danach liegt nur die eine Datei (samt Journal) im
+  Verzeichnis; dazu der App-Start mit `quotes?archive.db` (`/ready` 200,
+  `/instruments` leer, keine Datei `quotes`). Gegenprobe mit dem alten
+  `f"sqlite:///{pfad}"`: genau die beiden `?`-Fälle werden rot. `#`, `%20`
+  und `&` sind auch mit der alten Form grün; sie bleiben als Abdeckung
+  drin, belegen aber nichts Zusätzliches.
+- **Selbst gefunden, gleiche Klasse** (`b84351e`): `backup_store.read_stamp`
+  öffnete Sicherungen mit `f"file:{pfad}?mode=ro"`. Ein `?` oder `#` im
+  **Verzeichnis** (aus `DATABASE_PATH`) beendete dort den Pfad. Älter als
+  T-91 (T-90 hat die Zeile nur verschoben). `data_versions.stored_versions`
+  machte es schon richtig mit `as_uri()`. Beide nutzen jetzt
+  `db.connect_read_only` (eine Stelle). Test mit `volume?x` und `volume#y`;
+  Gegenprobe mit der alten Textform: beide Fälle und der App-Start rot.
+- **Inventar der Klasse:** Außer diesen beiden setzt kein Code in `app`,
+  `scripts` und `tests` einen Pfad in einen URL- oder URI-Text.
+- **Läufe:** Backend **1293 passed, 35 skipped** (+7 neue Fälle), Ruff
+  `app tests`, `git diff --check` grün. Plugin-API ohne Diff.
+- **Sichtbar:** Temp-Instanz mit `…/vol?x/quotes?archive.db`: Start,
+  `/ready` 200, Sicherung anlegen (`201`) und in der Liste als passend
+  gelesen — das ist `read_stamp` im `?`-Verzeichnis —,
+  [Dashboard](T-91-browser-r2-special-path.png) mit allen fünf
+  Instrumenten.
+
+**Doku-Abgleich:** Keine Anleitung schränkt Zeichen in `DATABASE_PATH`
+ein oder nennt sie; keine Änderung nötig.
+
 ## Verifier-Prüfung · Runde 1 (Codex, 2026-10-02)
 
 **Prüfstand:** `6366844` gegen `21b5c84`. Rollen, Owner, Priorität,
