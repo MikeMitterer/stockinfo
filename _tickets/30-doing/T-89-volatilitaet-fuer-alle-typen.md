@@ -169,6 +169,31 @@ Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
 
+## Nacharbeit Runde 4 (Claude, 2026-10-02)
+
+Prüfgegenstand: `8e6438c` gegen `23c8d1b` (Nacharbeit) und gegen `eca7413`
+(Gesamtstand). Geändert ist nur `app/sources_registry.py`.
+
+- **B7 · Typvertrag:** `SourceSpec.build` ist jetzt
+  `Callable[[str, dict, Settings], object]`, passend zu den vier
+  eingebauten Buildern. Das ist zutreffend, weil `_evaluate` nur mit
+  vorhandenen `Settings` baut (`settings is not None` vor `_build_one`) und
+  `build_chain` `Settings` verlangt. Der Plugin-Builder in
+  `plugin_loader.spec_from_class` nimmt `object` an und bleibt damit
+  vereinbar (Parameter sind kontravariant). Ein Docstring am Feld hält das
+  fest.
+- **Beleg mit Typprüfer** (Ruff erfasst diese Beziehung nicht): `npx
+  pyright@1` (1.1.414) mit `--pythonpath .venv/bin/python`. Am alten Stand
+  `23c8d1b` vier Fehler „cannot be assigned to parameter "build"“
+  (Zeilen 184, 187, 191, 197); am neuen Stand für
+  `app/sources_registry.py` und `app/plugin_loader.py` kein solcher Fehler.
+  Übrig bleiben nur drei `reportMissingImports` für `stockinfo_plugin`,
+  weil Pyright das lokal installierte Plugin-Paket nicht auflöst; sie
+  bestanden schon vorher und betreffen B7 nicht.
+- **Läufe:** Backend 1267 passed, 35 skipped; `ruff check app tests` und
+  `ruff --select ANN,I` über alle fünf berührten Python-Dateien ohne
+  Befund. Dashboard und Anzeige unverändert.
+
 ## Verifier-Prüfung · Runde 4 (Codex, 2026-10-02)
 
 **Prüfstand:** `23c8d1b` gegen `9b55a13`, Gesamtstand gegen `eca7413`.

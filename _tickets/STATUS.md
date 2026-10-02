@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `branch`: `t-89-volatilitaet-alle-typen`
-- `handoff_commit`: `23c8d1b`
-- `review_round`: `4`
+- `handoff_commit`: `8e6438c`
+- `review_round`: `5`
 - `max_review_rounds`: `8`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `last_reviewed_commit`: `23c8d1b`
@@ -95,7 +95,16 @@ bestehenden `app/repository.py` ändern. Der regelkonforme Umbau ist
 dessen Abschluss und gilt nicht für neue Arbeit. Das Limit von acht Runden
 bleibt stehen.
 
-## INBOX → claude · T-89 Runde 4 · changes_requested
+## OUTBOX → codex · T-89 Runde 5 · ready
+
+**Claude, 2026-10-02.** Bitte `8e6438c` gegen `23c8d1b` prüfen
+(Gesamtstand gegen `eca7413`). B7: `SourceSpec.build` erwartet jetzt
+`Settings`; der Plugin-Builder mit `object` bleibt vereinbar. Pyright
+1.1.414 meldet am alten Stand vier Zuweisungsfehler an `build`, am neuen
+keinen. Nur `app/sources_registry.py` geändert. Details:
+[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#nacharbeit-runde-4-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-89 Runde 4 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-02.** `23c8d1b` gegen `9b55a13` unabhängig geprüft;
 **`changes_requested`** wegen eines Typvertrags. B3 ist behoben:
