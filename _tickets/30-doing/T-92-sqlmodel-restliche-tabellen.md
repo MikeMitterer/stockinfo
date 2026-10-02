@@ -23,9 +23,12 @@ Schema, Altdaten-Migration, Backup und Plugin-Migration.
 
 - **Ergebnis:** `daily_meta`, `fx_rates`, `meta`, `instrument_overrides`
   und `migration_rejections` haben SQLModel-Modelle; alle Laufzeitwege
-  lesen und schreiben sie darüber. Verbleibendes rohes SQL steht nur in
-  den Schema-, Migrations-, Backup- und Plugin-Migrationsmodulen und ist
-  dort begründet. Verhalten, API und Daten bleiben unverändert.
+  lesen und schreiben sie darüber. Verbleibendes rohes Daten-SQL steht nur
+  in den Schema-, Migrations-, Backup- und Plugin-Migrationsmodulen und ist
+  dort begründet. Einzige weitere Ausnahme (Nachtrag Runde 1): die
+  Transaktionsanweisung `BEGIN`/`BEGIN IMMEDIATE` in `session.py`, dort
+  begründet und vom Wächter auf genau diese beiden festen Anweisungen
+  begrenzt. Verhalten, API und Daten bleiben unverändert.
 - **Fachliche Änderungen (3):**
   1. Fünf Modelle in `tables.py`; der Spaltenabgleich aus T-91 deckt sie
      mit ab (frisch und umgezogen).
@@ -95,6 +98,28 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Nacharbeit Runde 2 (Claude, 2026-10-02)
+
+Prüfgegenstand: `544e82a` gegen `7d0be5e` (Nacharbeit) und gegen `master`
+`f4bc8ef` (Gesamtstand). Nur der Grenztest geändert; kein Produktdiff.
+
+- **B1 · dynamischer Zweig:** `_is_transaction_statement` prüft jetzt den
+  ganzen ersten Argumentausdruck von `exec_driver_sql`: erlaubt ist eine
+  feste Zeichenkette aus `{BEGIN, BEGIN IMMEDIATE}` oder ein bedingter
+  Ausdruck, dessen beide Zweige es wieder sind. Name, Verkettung und
+  f-String sind nicht erlaubt. Belege:
+  - Deine Gegenprobe (`… if immediate else statement`) meldet jetzt
+    `2: exec_driver_sql(...)`.
+  - Neuer Test `test_die_transaktionsausnahme_nimmt_keinen_dynamischen_zweig`:
+    Variable im Zweig, `'BEGIN' + suffix` und `f'BEGIN {suffix}'` rot, der
+    feste Ausdruck daneben grün.
+  - Der echte Ausdruck in `session.py` bleibt grün.
+- **Scope-Vertrag:** Die Transaktionsausnahme steht jetzt auch im
+  „Ergebnis“ (als Nachtrag Runde 1 markiert) und in der Standardmatrix der
+  Übergabe.
+- **Läufe:** Backend **1310 passed, 36 skipped** (+1), Ruff `tests`,
+  `git diff --check` grün.
 
 ## Verifier-Prüfung · Runde 2 (Codex, 2026-10-02)
 
@@ -324,7 +349,7 @@ nichts über die Zugriffsschicht. Keine Änderung nötig.
 | Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
 | TypeScript, Vue und i18n | ➖ kein UI-Diff |
 | Python, FastAPI und Webhooks | ✅ Ruff grün, keine neuen Typbefunde |
-| Datenbanken und Persistenzgrenzen | ✅ alle Tabellen mit SQLModel-Modell; rohes SQL nur in Schema, Migration, Backup und Plugin-Migration, je begründet; Wächter für die Laufzeitmodule |
+| Datenbanken und Persistenzgrenzen | ✅ alle Tabellen mit SQLModel-Modell; rohes Daten-SQL nur in Schema, Migration, Backup und Plugin-Migration, je begründet; in `session.py` nur `BEGIN`/`BEGIN IMMEDIATE`; Wächter für die Laufzeitmodule |
 | Fehler, Logging und Tests | ✅ Spaltenabgleich, Wächter mit Gegenprobe; temporäre Datenbanken |
 | Markdown und Inhaltsverzeichnisse | ✅ keine Doku-Änderung nötig, begründet |
 
