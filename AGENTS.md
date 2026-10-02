@@ -226,6 +226,9 @@ Arbeitsdatenbank `data/` berührt es nie.
 - **Kein Make-Target, kein README-Abschnitt:** Die Prüfung ist ein Werkzeug
   für die Agenten; einem Lauf kann kein Mensch folgen. Voraussetzung ist
   Node 24+, wie im README angegeben.
+- **Fenster:** Sichtbare Läufe öffnen das Browserfenster auf dem
+  Hauptmonitor, links bei x = 100 px, weil dort Mikes Dock liegt (Mike,
+  2026-10-02). `HEADLESS=1` bleibt für Läufe ohne Fenster.
 
 Für eine Browserprüfung mit beiden Apps gibt es in StockPortfolio
 `scripts/stockinfo-test-server.py`. Es startet die echte StockInfo-API mit
