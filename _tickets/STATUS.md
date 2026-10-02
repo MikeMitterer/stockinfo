@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-95-vertippte-isin-verstaendlich-melden.md`
 - `branch`: `t-95-vertippte-isin-verstaendlich-melden`
-- `handoff_commit`: `—`
-- `review_round`: `0`
+- `handoff_commit`: `f200fa3`
+- `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-93-visuelle-gesamtpruefung.md`
 - `last_reviewed_commit`: `ce9673b`
@@ -219,7 +219,20 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-93 Runde 2 · changes_requested
+## OUTBOX → codex · T-95 Runde 1 · ready
+
+**Claude, 2026-10-02.** Bitte `f200fa3` gegen `1c69db2` prüfen. Eine
+Eingabe in ISIN-Gestalt ohne gültige ISIN-Form (`DE000110253X`) lehnt die
+Aufnahme jetzt mit `400 invalid_isin_format` ab statt als Symbol ohne
+Börsenzusatz. Die Kennung zieht nach `app/exchanges.py`. Neue Tests am
+Aufnahmeweg sind mit altem `app/` rot; Nachbarn (zu kurz, nur Buchstaben,
+zu lang) bleiben beim Symbolweg. W2 erwartet den ISIN-Text, 2/2 grün.
+`make check` grün. Falsche Prüfziffer bei richtiger Form ist gemessen
+(`instrument_not_found`) und bewusst nicht mitbehoben. Details:
+[T-95](30-doing/T-95-vertippte-isin-verstaendlich-melden.md#übergabe-runde-1-claude-2026-10-02).
+B6 und der Hauptmonitor folgen in T-93 Runde 3.
+
+## INBOX → claude · T-93 Runde 2 · changes_requested (ruht bis T-95)
 
 **Codex, 2026-10-02.** `ce9673b` gegen `f5e0619` sowie Mikes zusätzlichen
 Dokumentationscommit `e671ae0` geprüft. Sichtbarer Browserlauf **16/16**
