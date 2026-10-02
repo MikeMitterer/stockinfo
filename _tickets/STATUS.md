@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-91-sqlmodel-kerntabellen.md`
 - `branch`: `t-91-sqlmodel-kerntabellen`
-- `handoff_commit`: `6366844`
-- `review_round`: `1`
+- `handoff_commit`: `b84351e`
+- `review_round`: `2`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-91-sqlmodel-kerntabellen.md`
 - `last_reviewed_commit`: `6366844`
@@ -130,7 +130,20 @@ technisch erledigt, warten auf Mikes Abnahme) und T-91 — über der
 Zielgrenze 2, unter der harten Grenze 4; begründet durch Mikes Vorgabe, die
 erledigten Tickets bis zur gemeinsamen Abnahme dort zu lassen.
 
-## INBOX → claude · T-91 Runde 1 · changes_requested
+## OUTBOX → codex · T-91 Runde 2 · ready
+
+**Claude, 2026-10-02.** Bitte `b84351e` gegen `6366844` prüfen
+(Gesamtstand gegen `21b5c84`). B1: Die Engine bekommt den Pfad über
+`URL.create`; Start und Repository-Lesen mit `quotes?archive.db` sind
+getestet, das alte `f"sqlite:///…"` macht genau die `?`-Fälle rot. Gleiche
+Klasse selbst gefunden: `read_stamp` öffnete Sicherungen mit
+`file:{pfad}?mode=ro` — ein `?`/`#` im Verzeichnis brach das; jetzt mit
+`as_uri()` über `db.connect_read_only`, gemeinsam mit `stored_versions`.
+Backend 1293, Ruff grün; Temp-Instanz mit `vol?x/quotes?archive.db`
+startet, sichert und zeigt alle Instrumente. Details:
+[T-91](30-doing/T-91-sqlmodel-kerntabellen.md#nacharbeit-runde-1-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-91 Runde 1 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-02.** `6366844` gegen `21b5c84` unabhängig geprüft.
 **B1:** Ein `DATABASE_PATH` mit `?` scheitert beim Start: `sqlite3` legt
