@@ -26,20 +26,20 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `T-88-fondsgroesse-in-euro.md`
-- `branch`: `master`
-- `handoff_commit`: `2caca38`
-- `review_round`: `4`
-- `max_review_rounds`: `5`
+- `phase`: `claude_working`
+- `ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
+- `branch`: `t-89-volatilitaet-alle-typen`
+- `handoff_commit`: `—`
+- `review_round`: `0`
+- `max_review_rounds`: `3`
 - `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-88-fondsgroesse-in-euro.md`
 - `last_reviewed_commit`: `2caca38`
 - `last_reviewed_round`: `4`
-- `workstream`: `fondsgroesse`
-- `priority_chain`: `T-88`
-- `priority_ticket`: `T-88`
+- `workstream`: `volatilitaet`
+- `priority_chain`: `T-89`
+- `priority_ticket`: `T-89`
 
 **Rundenlimit T-88 · Mike, 2026-10-02.** Mike möchte das Ticket sauber
 abschließen und erlaubt bis zu fünf reguläre Review-Runden. Die frühere
@@ -53,11 +53,12 @@ ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
 `codex`. Dashboard- und Swagger-Screenshots sind schon auf `master`
 (`f268ced`); das Detailbild folgt nach T-88.
 
-**Planung T-89 · Mike, 2026-10-01.** „Ja, leg T-89 mit Lösung 1 an“ und
-„Starte nach dem OK von Codex auch gleich mit T-89“.
-[T-89](20-ready/T-89-volatilitaet-fuer-alle-typen.md) liegt in `20-ready/`.
-Nach Codex' Freigabe von T-88 mergt Claude T-88 nach `master` und aktiviert
-T-89 auf einem neuen Branch von `master`; Coder `claude`, Verifier `codex`.
+**Aktivierung T-89 · Mike, 2026-10-01/02.** „Ja, leg T-89 mit Lösung 1
+an“ und „Starte nach dem OK von Codex auch gleich mit T-89“. Codex hat T-88
+am 2026-10-02 freigegeben; T-88 ist nach `master` gemergt (`eca7413`).
+[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md) ist aktiv auf
+`t-89-volatilitaet-alle-typen` (von `master`), Coder `claude`, Verifier
+`codex`. T-88 bleibt bis zu Mikes Abnahme in `30-doing/`.
 
 ## Archiv · INBOX → claude · T-88 Runde 4 · technisch approved (verarbeitet)
 

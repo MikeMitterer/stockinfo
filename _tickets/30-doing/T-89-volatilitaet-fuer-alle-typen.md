@@ -10,8 +10,47 @@ Ebenso bei `BRYN.DE` (15,53 %) und `GOLD.SG` (EUWAX Gold, Typ `fund`, 27,0 %).
 
 **Stand:** Gefunden am 2026-10-01 beim Erneuern der Screenshots. Mike: „Ja,
 leg T-89 mit Lösung 1 an“ und „Starte nach dem OK von Codex auch gleich mit
-T-89“. Noch nicht aktiviert: Claude aktiviert T-89 als Coder, sobald Codex
-T-88 technisch freigegeben hat und T-88 nach `master` gemergt ist.
+T-89“. Aktiv seit 2026-10-02 nach Codex' Freigabe und Merge von T-88
+(`eca7413`); Coder `claude`, Verifier `codex`, maßgeblich ist `STATUS.md`.
+Für Mike steht kein Handgriff an.
+
+## Scope-Vertrag (Claude, 2026-10-02)
+
+**Befund aus dem Code:** Die berechnete Volatilität wird schon als
+Detailwert gespeichert (`repository.set_volatility`, Quelle `calculated`).
+`detail_store.read` zeigt einen Detailwert aber nur, wenn eine Deklaration
+ihn für Gattung und Identitätsart freigibt. Bei mehreren Quellenwerten
+gewinnt die Quelle, die in `definition.sources` zuerst steht; `calculated`
+steht heute in keiner Deklaration.
+
+- **Ergebnis:** `details.volatility` ist für alle Gattungen deklariert. Aktien,
+  Fonds und andere Instrumente mit Tageskursen zeigen die berechnete
+  Volatilität in Tabelle und Detailbereich. Bei ETFs mit justETF-Wert
+  gilt weiter justETF; ohne justETF-Wert der berechnete. Das entspricht der
+  bestehenden README-Aussage („from justETF for ETFs, otherwise computed“).
+- **Fachliche Änderungen (2):**
+  1. Neue Core-Deklaration (`app/calculated_metrics.py`): Quelle
+     `calculated`, Feld `volatility` (Prozent, überschreibbar wie bei
+     justETF), alle Gattungen aus `INSTRUMENT_TYPES`, Identitätsarten
+     `listed` und `pair`. `sources_registry.detail_definitions` hängt sie
+     **nach** den Plugins an; dadurch steht `calculated` in
+     `sources` hinter `justetf`. Der Quellname kommt als Konstante aus dem
+     neuen Modul; `repository.set_volatility` nutzt sie statt des Literals.
+  2. Neues Dashboard-Bild `unraid/screenshots/dashboard.png`, auf dem die
+     Aktien ihre Volatilität zeigen.
+- **Tests:** Katalog deklariert `volatility` für `stock` und `fund` mit
+  Quellenfolge `justetf`, `calculated`; Service mit temporärer Datenbank:
+  Aktie zeigt den berechneten Wert in `details`, ETF mit beiden Werten zeigt
+  justETF.
+- **Sichtbare Prüfung:** Temp-Instanz mit Aktie, ETF und Fonds, Tabelle und
+  Detailbereich auf Deutsch und Englisch, Screenshots als Beleg.
+  StockPortfolios `projectDetailFields` erneut mit den echten Antworten.
+- **Doku:** README („`volatility` … from justETF for ETFs, otherwise
+  computed“) stimmt schon; Abgleich mit `docker/README.md` und
+  `docs/plugin-authors.md` (Detailfelder).
+- **Budget:** 3 Produktdateien, 3 Test-/Doku-/Bilddateien, 200 Diff-Zeilen.
+- **Nicht-Ziele:** keine neue Berechnung, keine Änderung der Rangfolge
+  zwischen justETF und Berechnung, keine Änderung an StockPortfolio.
 
 ## Ursache
 
