@@ -13,6 +13,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 
 import { chromium } from 'playwright-core'
@@ -107,6 +108,16 @@ function stopServer(server) {
   })
 }
 
+/** Zählt in der Datenbank der Instanz — nur lesend. */
+function readOnlyCount(dataDir, sql) {
+  const database = new DatabaseSync(join(dataDir, 'stockinfo.db'), { readOnly: true })
+  try {
+    return Number(database.prepare(sql).get().n)
+  } finally {
+    database.close()
+  }
+}
+
 async function api(server, path, options = {}) {
   const response = await fetch(server.base + path, options)
   const body = response.headers.get('content-type')?.includes('json') ? await response.json() : await response.text()
@@ -175,7 +186,11 @@ async function way(id, title, expect, body) {
       && !/Failed to load resource: the server responded with a status of/.test(text))
     check(unexpectedConsole.length === 0, `unerwartete Konsolenfehler: ${JSON.stringify(unexpectedConsole)}`)
   } catch (error) {
-    failure = error instanceof CheckFailed ? error.message : `${error.name}: ${error.message.split('\n')[0]}`
+    // Bei Playwright-Fehlern die Zeile mit dem gesuchten Element mitnehmen —
+    // die erste Zeile sagt nur „Timeout“.
+    const lines = String(error.message).split('\n')
+    const target = lines.find((line) => line.includes('waiting for'))?.trim()
+    failure = error instanceof CheckFailed ? error.message : `${error.name}: ${lines[0]}${target ? ` (${target})` : ''}`
   } finally {
     await context.close()
   }
@@ -191,6 +206,12 @@ async function settle(page) {
 
 function row(page, text) {
   return page.locator('tbody tr', { hasText: text }).first()
+}
+
+/** Das Papier aus `GET /instruments` — per Symbol oder ISIN (steht in `identity`). */
+async function paper(key) {
+  const list = (await api(state.server, '/instruments')).body
+  return list.find((item) => item.symbol === key || item.identity?.isin === key)
 }
 
 // Die fünf Papiere der Offline-Vorlage, mit der Eingabe, über die sie
@@ -274,6 +295,134 @@ try {
     check(ascending === 'APC.DE' && descending === 'EUNL.DE',
       `Reihenfolge nach Symbol stimmt nicht (auf ${ascending}, ab ${descending})`)
     await ctx.shot(page, 'sorted')
+  })
+
+  await way('W4', 'Detailbereich', {}, async (ctx) => {
+    const page = await ctx.page('/')
+    const expectations = {
+      'EUNL.DE': ['iShares', 'Ireland', '0.2 %', 'yaml-file'],
+      'BTC-EUR': [],
+      DE0001102531: [],
+      DE0009848119: ['Fund provider'],
+    }
+    for (const [key, texts] of Object.entries(expectations)) {
+      await row(page, key).locator('td.caret-col button').click()
+      await settle(page)
+      const detail = page.locator('.drilldown').first()
+      check(await detail.isVisible(), `${key}: Detailbereich öffnet nicht`)
+      const text = await detail.innerText()
+      for (const expected of texts) check(text.includes(expected), `${key}: „${expected}“ fehlt im Detailbereich`)
+      if (text.includes('Source as of')) {
+        check(/[A-Z][a-z]{2} \d{1,2}, \d{4}/.test(text), `${key}: Datum nicht im englischen Format`)
+      }
+      await ctx.shot(page, key.replace(/[^A-Za-z0-9]/g, ''))
+      await row(page, key).locator('td.caret-col button').click()
+      await settle(page)
+    }
+  })
+
+  await way('W5', 'Kursverlauf', {}, async (ctx) => {
+    const page = await ctx.page('/')
+    await row(page, 'DE0001102531').locator('td.name button').first().click()
+    await settle(page)
+    const dock = page.locator('.chart-dock')
+    check(await dock.isVisible(), 'Kursverlauf öffnet nicht')
+    // Der Verlauf der Vorlage endet am 2026-08-27; „Max“ zeigt ihn sicher.
+    await dock.getByText('Max', { exact: true }).first().click()
+    await settle(page)
+    check(await dock.locator('canvas').count() > 0, 'kein Chart gezeichnet')
+    const daily = (await api(state.server, '/quote/DE0001102531/daily?period=max')).body
+    check(Array.isArray(daily) && daily.length === 3 && daily.at(-1).close === 99.42,
+      `Tagesreihe der Anleihe stimmt nicht: ${JSON.stringify(daily).slice(0, 120)}`)
+    await ctx.shot(page, 'bond-max')
+  })
+
+  await way('W6', 'Manuelle Eingabe', {}, async (ctx) => {
+    const fund = 'DE0009848119'
+    const open = async () => {
+      const page = await ctx.page('/')
+      await row(page, fund).locator('td.caret-col button').click()
+      await settle(page)
+      return page
+    }
+    const field = (page, label) => page.locator('.drilldown dl > div', { hasText: label })
+    let page = await open()
+    await field(page, 'Fund provider').locator('.detail-editor__text').click()
+    await page.keyboard.type('Sichtpruefung KVG')
+    await page.keyboard.press('Enter')
+    await settle(page)
+    await page.close()
+    page = await open()
+    check((await field(page, 'Fund provider').innerText()).includes('Sichtpruefung KVG'),
+      'manueller Anbieter übersteht das Neuladen nicht')
+    const stored = await paper(fund)
+    check(stored?.details?.provider?.origin === 'manual', 'API meldet den Anbieter nicht als manuell')
+    await ctx.shot(page, 'entered')
+    await field(page, 'Fund provider').getByTitle('Remove your entry').click()
+    await settle(page)
+    const cleared = await paper(fund)
+    check(cleared?.details?.provider?.manual_value === null, 'Eingabe lässt sich nicht entfernen')
+    await ctx.shot(page, 'removed')
+
+    // Zahl: die TER des Fonds, die die Datei nicht liefert.
+    // Die Zahl ist selbst der Knopf; „Edit …“ steht in seinem `title`.
+    await field(page, 'Total expense ratio').getByTitle(/^Edit/).click()
+    await page.keyboard.type('0.65')
+    await page.keyboard.press('Enter')
+    await settle(page)
+    check((await paper(fund))?.details?.ter?.manual_value === 0.65, 'manuelle TER nicht gespeichert')
+    await ctx.shot(page, 'number')
+    await field(page, 'Total expense ratio').getByTitle('Remove your entry').click()
+    await settle(page)
+    check((await paper(fund))?.details?.ter?.manual_value === null, 'manuelle TER lässt sich nicht entfernen')
+    // Ein Ja/Nein-Feld gibt es im Offline-Profil nicht: Welche Felder es gibt,
+    // deklariert die Quelle, und das YAML-Plugin kennt keines.
+  })
+
+  await way('W7', 'Aktualisieren', {}, async (ctx) => {
+    const fetchedAt = async (key) => (await paper(key))?.latest_fetched_at
+    const page = await ctx.page('/')
+    const before = await fetchedAt('EUNL.DE')
+    await page.waitForTimeout(1100)
+    await row(page, 'EUNL.DE').getByTitle('Refresh').click()
+    await settle(page)
+    const afterOne = await fetchedAt('EUNL.DE')
+    check(afterOne > before, `Zeilen-Refresh: Abrufzeitpunkt rückt nicht vor (${before} → ${afterOne})`)
+    const othersBefore = await fetchedAt('APC.DE')
+    await page.waitForTimeout(1100)
+    await page.getByRole('button', { name: 'Refresh all' }).click()
+    await page.waitForTimeout(1500)
+    await settle(page)
+    const othersAfter = await fetchedAt('APC.DE')
+    check(othersAfter > othersBefore, `„Alle aktualisieren“: Abrufzeitpunkt rückt nicht vor (${othersBefore} → ${othersAfter})`)
+    await ctx.shot(page, 'refreshed')
+  })
+
+  await way('W8', 'Löschen', {}, async (ctx) => {
+    const page = await ctx.page('/')
+    const target = 'APC.DE'
+    await row(page, target).getByTitle('Delete').click()
+    await page.waitForTimeout(400)
+    const dialog = page.getByRole('dialog')
+    check((await dialog.innerText()).includes('price point'), 'Löschdialog nennt die Kurspunkte nicht')
+    await ctx.shot(page, 'dialog')
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await settle(page)
+    check(await row(page, target).count() === 1, 'Abbrechen hat gelöscht')
+    await row(page, target).getByTitle('Delete').click()
+    await page.waitForTimeout(400)
+    await page.getByRole('dialog').getByRole('button', { name: 'Delete' }).click()
+    await settle(page)
+    check(await row(page, target).count() === 0, 'Bestätigen hat nicht gelöscht')
+    const left = (await api(state.server, '/instruments')).body
+    check(left.length === PAPERS.length - 1 && !left.some((item) => item.symbol === target),
+      'API zeigt das gelöschte Papier noch')
+    // Nur lesend in die Datei sehen: Ein Abruf über die API legte das
+    // gelöschte Papier auf Anfrage neu an (`ensure_instrument`).
+    const orphans = readOnlyCount(state.dataDir,
+      'SELECT COUNT(*) AS n FROM quotes WHERE instrument_id NOT IN (SELECT id FROM instruments)')
+    check(orphans === 0, `${orphans} Kurspunkte ohne Papier übrig`)
+    await ctx.shot(page, 'deleted')
   })
 } finally {
   await browser.close()
