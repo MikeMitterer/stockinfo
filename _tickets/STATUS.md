@@ -26,11 +26,11 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
-- `ticket`: `T-92-sqlmodel-restliche-tabellen.md`
-- `branch`: `t-92-sqlmodel-restliche-tabellen`
-- `handoff_commit`: `3d9286c`
-- `review_round`: `4`
+- `phase`: `claude_working`
+- `ticket`: `T-93-visuelle-gesamtpruefung.md`
+- `branch`: `t-93-visuelle-gesamtpruefung`
+- `handoff_commit`: `—`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
 - `owner`: `claude`
 - `updated_at`: `2026-10-02`
@@ -39,7 +39,7 @@ schaltet den Branch. Regel:
 - `last_reviewed_round`: `4`
 - `workstream`: `persistenz`
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md`
-- `priority_ticket`: `T-92-sqlmodel-restliche-tabellen.md`
+- `priority_ticket`: `T-93-visuelle-gesamtpruefung.md`
 
 **Rundenlimit ab T-90 · Mike, 2026-10-02.** „Du kannst auf 5 Runden
 hochsetzen“ und „Wir lassen es für die Folge-Projekte und Tickets auf 5
@@ -153,8 +153,8 @@ Message von vorhin in das Board ein“).
   fertig ist und danach die visuellen Tests von StockInfo auf der
   Kommandozeile und im Browser bestanden sind.
 - **Visuelle Tests (geklärt):** Mike: „Eigenes Ticket T-93“.
-  [T-93](20-ready/T-93-visuelle-gesamtpruefung.md) liegt in `20-ready/`
-  und folgt nach T-92; erst danach nimmt Mike T-88 bis T-93 ab. Mike,
+  [T-93](30-doing/T-93-visuelle-gesamtpruefung.md) ist seit der
+  T-92-Freigabe aktiv; erst danach nimmt Mike T-88 bis T-93 ab. Mike,
   2026-10-02: „Die Applikation muss nach der massiven Umstellung gründlich
   im Browser getestet werden … Überleg dir ein sauberes Testkonzept, lass es
   von Codex verifizieren und startet dann durch.“ Ablauf für T-93: zuerst
@@ -165,7 +165,15 @@ Message von vorhin in das Board ein“).
   einem Commit). Der Observer hat nur diese Entscheidung eingetragen und
   keine Zustandsfelder geändert.
 
-## INBOX → claude · T-92 Runde 4 · approved
+**Aktivierung T-93 · Claude, 2026-10-02.** Codex hat T-92 in Runde 4
+freigegeben (`3d9286c`); T-92 ist lokal nach `master` gemergt (`dbe49b3`).
+Die SQL-Umstellung T-90 bis T-92 ist damit technisch abgeschlossen.
+[T-93](30-doing/T-93-visuelle-gesamtpruefung.md) ist aktiv auf
+`t-93-visuelle-gesamtpruefung` (von `master`), Coder `claude`, Verifier
+`codex`. Nach Mikes Auftrag zuerst das Testkonzept im Ticket; Codex prüft
+es als `scope_checkpoint`, bevor die Umsetzung beginnt.
+
+## Archiv · INBOX → claude · T-92 Runde 4 · approved (verarbeitet)
 
 **Codex, 2026-10-02.** `3d9286c` gegen `544e82a` unabhängig geprüft.
 **B2 behoben:** Der Wächter inventarisiert alle Python-Module unter
@@ -515,16 +523,13 @@ gemergt, der Root steht auf `master`. Kein Push. Offen:
      aus Tageskursen“, „Stand der Quelle“ mit Datum ohne Uhrzeit.
    Bestehende Werte bekommen ihr Datum beim nächsten Refresh. Beide Tickets
    bleiben bis zu deiner Bestätigung in `30-doing/`.
-2. **Persistenz:** [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md)
-   (Runde 4, `21b5c84`) und [T-91](30-doing/T-91-sqlmodel-kerntabellen.md)
-   (Runde 2, `f4bc8ef`) sind technisch freigegeben und lokal nach `master`
-   gemergt. Prüfbar ohne Handgriff: Verhalten unverändert; Dashboard,
-   Detailbereich, Aufnahme, Löschen, Backup und Wiederherstellen laufen wie
-   bisher. [T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md) (übrige
-   Tabellen) läuft auf deine Freigabe als fünftes Ticket; danach folgt
-   [T-93](20-ready/T-93-visuelle-gesamtpruefung.md), die gründliche
-   Browserprüfung nach der Umstellung. Abnahme von T-88 bis T-93 erst
-   danach.
+2. **Persistenz:** Die SQL-Umstellung ist technisch abgeschlossen und
+   lokal auf `master`: [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md)
+   (`21b5c84`), [T-91](30-doing/T-91-sqlmodel-kerntabellen.md) (`f4bc8ef`)
+   und [T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md) (`dbe49b3`).
+   Jetzt läuft [T-93](30-doing/T-93-visuelle-gesamtpruefung.md), die
+   gründliche Browserprüfung; das Testkonzept geht zuerst an Codex.
+   Abnahme von T-88 bis T-93 erst danach.
 3. **Docker Hub und Unraid:** Image 1.4.0 ist gebaut, aber nicht gepusht
    und enthält T-88/T-89 noch nicht. Neues Image, Docker-Hub-Beschreibung
    (`make push`) und Unraid-Listing brauchen deinen Auftrag.
