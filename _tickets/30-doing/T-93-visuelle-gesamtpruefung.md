@@ -12,10 +12,11 @@ eines Instruments, manuelle Eingabe, Wechselkurse, Sicherung und
 Wiederherstellung, Migrationsvorschau und Einstellungen in Deutsch und
 Englisch durch und legt Screenshots ab.
 
-**Stand:** Runde 2 am 2026-10-02 mit `changes_requested`: Der sichtbare
-Browserlauf meldet 16/16, aber W2 akzeptiert bei einer vertippten ISIN
-eine unpassende Symbol-Meldung; W4 hat für mehrere Formen noch kein
-konkretes Inhaltsorakel. Angelegt am 2026-10-02. Mike: „Eigenes Ticket T-93“ für die
+**Stand:** Runde 3 am 2026-10-02 technisch freigegeben. Der unabhängige
+sichtbare Browserlauf meldet 16/16; `make check` ist grün. Die Prüfung mit
+einer Kopie des vorhandenen Datenbankbestands ist gesondert in T-97 beauftragt
+und gehört vor Mikes Abnahme der SQL-Umstellung dazu. Angelegt am 2026-10-02.
+Mike: „Eigenes Ticket T-93“ für die
 visuellen Tests, die vor seiner Abnahme laufen müssen („Erst wenn die Tests
 auf der cmdline und im Browser durch sind, alles funktioniert, dann nehme
 ich den Teil ab“). Aktiv seit 2026-10-02 nach T-92s Freigabe; Coder
@@ -217,6 +218,53 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | 5 | Anleitung | README „Tests“ nennt `make check` und Node 24; Skriptkopf nennt Aufruf und Optionen; `AGENTS.md` verweist darauf; kein Make-Target | ✅ |
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+## Verifier-Prüfung · Runde 3 (Codex, 2026-10-02)
+
+**Ergebnis: `approved` — technische Freigabe von T-93.** Geprüft wurde
+`fa2a29f` gegen `ce9673b`; der darin enthaltene T-95-Produktstand war
+bereits separat freigegeben. Die Übergabe war committed, der Arbeitsbaum
+sauber, und Rollen, Owner, Priorität und Branch stimmten. Die gemeinsame
+Paket-VERSION blieb
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+Keine menschliche Abnahme und kein Push.
+
+**Unabhängige Nachweise:** `node e2e/visual-check.mjs` aus `dashboard/`
+lief mit sichtbarem Chrome auf dem Hauptmonitor **16/16** grün (Exit 0);
+Bericht und Bilder liegen unter
+`.tmp/visual-check/2026-10-02T17-43-21-684Z/`. W2-Fehlermeldung sowie
+W4-Fonds und Bitcoin zusätzlich im Bild geprüft. Das Skript fordert beim
+Start x = 100 px an und kontrolliert für jede Seite den Hauptmonitor sowie
+den Abstand zum Dock. `make check` ergab Exit 0: 1305 Backend-Tests
+bestanden, 399 Dashboard-Tests, 324 Plugin-API-Tests, 50 Beispieltests,
+ESLint, Ruff und `vue-tsc`. `git diff --check ce9673b..fa2a29f` war sauber.
+
+**B5 und B6:** W2 erwartet jetzt den konkreten ISIN-Fehler und verwirft
+die Symbolmeldung. W4 vergleicht bei Bitcoin, Anleihe und Fonds den ganzen
+Feldteil wörtlich; der Fonds zeigt `DWS` als gelieferten Anbieter und leere
+Felder für TER und Sitz. W6 prüft, dass der gelieferte Anbieter nicht
+editierbar ist, und speichert die beiden leeren Felder manuell. Die
+dokumentierten Gegenproben liefen bei Claude 15/15 rot; der unabhängige
+Sichtlauf bestätigt die grünen Erwartungen.
+
+**Standards und DRY:** `code-standards` mit Architektur, Skript-CLI,
+Frontend, Python, Persistenz, Qualität und Dokumentation sowie
+`makefile-conventions` abgeglichen. Der T-93-Produktdiff enthält nur das
+bestehende Browser-Skript und die YAML-Beispieldatei; keine neue Schicht,
+Abhängigkeit oder App-Produktlogik. Neue Bezeichner sind englisch. Die
+zusätzlichen Erwartungen verwenden die vorhandenen `way`-, `row`- und
+`check`-Helfer; kein zweiter Browserweg oder duplizierte Fachlogik. Bash und
+Python sind in dieser Runde nicht geändert. Die Offline-Quelle ist für T-93
+absichtlich die YAML-Vorlage. Mikes verpflichtende Sichtprüfung mit
+gespeicherten Daten bleibt in T-97; die technische Gesamtprüfung der
+SQL-Umstellung ist bis dahin offen.
+
+**Doku-Abgleich:** Der Kommentar zur Fonds-Vorlage erklärt gelieferte und
+manuell eintragbare Felder. `AGENTS.md` nennt den sichtbaren Start auf dem
+Hauptmonitor bei x = 100. `README.md`, `docker/README.md` und
+`unraid/README.md` enthalten weder die konkreten Fonds-Testwerte noch eine
+Anleitung zu diesem Agenten-Browserlauf; keine Anpassung nötig. Die
+getrennte Board-Übernahme der Paketfassung bleibt offen.
 
 ## Übergabe Runde 3 (Claude, 2026-10-02)
 

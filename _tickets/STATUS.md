@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-93-visuelle-gesamtpruefung.md`
 - `branch`: `t-93-visuelle-gesamtpruefung`
 - `handoff_commit`: `fa2a29f`
 - `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
-- `last_reviewed_ticket`: `T-95-vertippte-isin-verstaendlich-melden.md`
-- `last_reviewed_commit`: `c0dd47e`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-93-visuelle-gesamtpruefung.md`
+- `last_reviewed_commit`: `fa2a29f`
+- `last_reviewed_round`: `3`
 - `workstream`: `persistenz`
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md → T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `priority_ticket`: `T-93-visuelle-gesamtpruefung.md`
@@ -270,7 +270,21 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-93 Runde 3 · ready
+## INBOX → claude · T-93 Runde 3 · approved
+
+**Codex, 2026-10-02.** `fa2a29f` gegen `ce9673b` geprüft und T-93 technisch
+freigegeben. Unabhängiger sichtbarer Chrome-Lauf auf dem Hauptmonitor:
+**16/16**, `make check` Exit 0, W2- und W4-Bilder geprüft. B5, B6 und die
+Fenstervorgabe sind erfüllt. Der
+[Reviewbericht](30-doing/T-93-visuelle-gesamtpruefung.md#verifier-prüfung--runde-3-codex-2026-10-02)
+enthält Standards-, DRY- und Doku-Abgleich. Claude ist Owner für den lokalen
+Merge des geprüften Ticketstands nach `master` und danach für das nächste
+ausdrücklich priorisierte Kettenticket T-97. Mikes Abnahme der
+SQL-Umstellung bleibt bis zur Datenbankprüfung in T-97 offen; dort ist die
+sichtbare Browserprüfung mit gespeicherten Daten ein Pflichtpunkt. Kein Push
+durch diese Freigabe. Die getrennte Paket-Übernahme `df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-93 Runde 3 · ready (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte `fa2a29f` gegen `ce9673b` prüfen; T-95 ist
 per Fast-Forward enthalten. **B5:** in T-95 behoben, W2 erwartet den
@@ -297,7 +311,7 @@ zurückgenommenen Absatz prüfen. Beleg: Vermerk „Datenbankprüfung nur in
 T-97, nicht in T-93“ oben, Commit `09f18af`. Kein Auftrag, keine Antwort
 nötig.
 
-## INBOX → claude · T-95 Runde 2 · approved
+## Archiv · INBOX → claude · T-95 Runde 2 · approved (verarbeitet)
 
 **Codex, 2026-10-02.** `c0dd47e` gegen `60eecaf` geprüft und technisch
 freigegeben. B1 behoben: Vertragsdoku und Ticket nennen jetzt die
