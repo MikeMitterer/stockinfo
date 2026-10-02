@@ -92,16 +92,33 @@ const skipReason = computed<'notEtf' | 'noIsin' | 'nothing' | null>(() => {
   return sourceEmpty.value ? 'nothing' : null
 })
 
-const fetchedAt = computed(() =>
-  props.item.meta_fetched_at ? formatDateTime(props.item.meta_fetched_at, locale.value) : null,
-)
+/** StockInfos eigene Berechnung (`app/calculated_metrics.py`), kein Plugin aus `sources.yaml`. */
+const calculatedSource = 'calculated'
+
+/** Die sichtbaren Quellenwerte, aus denen die Fußzeile Herkunft und Stand bildet. */
+const providerValues = computed(() => Object.values(props.item.details ?? {})
+  .filter((value) => value.origin === 'provider' && value.source))
+
+/**
+ * Stand: der letzte Metadatenabruf, sonst der jüngste Stand der angezeigten
+ * Quellenwerte. Bei einer Aktie gibt es keinen Metadatenabruf; ihre berechnete
+ * Volatilität trägt das Datum des letzten Schlusskurses.
+ */
+const fetchedAt = computed(() => {
+  const latest = props.item.meta_fetched_at ?? providerValues.value
+    .map((value) => value.as_of)
+    .filter((asOf): asOf is string => Boolean(asOf))
+    .sort()
+    .at(-1)
+  return latest ? formatDateTime(latest, locale.value) : null
+})
 
 /** Die Fußzeile fasst die Herkunft der sichtbaren Quellenwerte zusammen. */
 const detailSources = computed(() => props.item.details === undefined
   ? props.item.source
-  : [...new Set(Object.values(props.item.details)
-    .filter((value) => value.origin === 'provider' && value.source)
-    .map((value) => value.source))].sort().join(' + '))
+  : [...new Set(providerValues.value.map((value) => value.source === calculatedSource
+    ? t('drilldown.sourceCalculated')
+    : value.source))].sort().join(' + '))
 </script>
 
 <template>
@@ -138,7 +155,9 @@ const detailSources = computed(() => props.item.details === undefined
         Aussage. Der Name kommt aus der Antwort und nennt die Quelle, die
         tatsächlich geliefert hat — im Online-Profil etwa `justetf`, im
         CSV-Profil `metadata-file`. Er wird hier **nicht** gedeutet: Welche
-        Namen es gibt, entscheidet `sources.yaml`.
+        Namen es gibt, entscheidet `sources.yaml`. Einzige Ausnahme ist
+        StockInfos eigene Berechnung `calculated`; sie ist kein Plugin und
+        erscheint deshalb übersetzt.
       -->
       <p v-if="detailSources" class="drilldown__fetched">
         {{ t('drilldown.source') }}: <span class="mono">{{ detailSources }}</span>

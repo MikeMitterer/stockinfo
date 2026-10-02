@@ -15,7 +15,9 @@ from dataclasses import dataclass
 import structlog
 
 from app import detail_store
+from app.calculated_metrics import CALCULATED_SOURCE
 from app.db import get_connection
+from app.detail_models import DetailDefinition
 from app.exchanges import canonical_identity, identity_from_symbol
 from app.models import (
     IDENTITY_COLUMNS,
@@ -612,7 +614,9 @@ class QuoteRepository:
         with self._connect() as connection:
             return connection.execute("SELECT 1 FROM meta WHERE key='details_schema'").fetchone() is not None
 
-    def detail_catalog(self, definitions=None) -> tuple[list, int]:
+    def detail_catalog(
+        self, definitions: list[DetailDefinition] | None = None
+    ) -> tuple[list[DetailDefinition], int]:
         """Liest das Profilschema oder schreibt eine neue Version atomar."""
         with self._connect() as connection:
             if definitions is not None:
@@ -628,11 +632,20 @@ class QuoteRepository:
             row = connection.execute('SELECT * FROM instruments WHERE listing_id=?', (listing_id,)).fetchone()
             return detail_store.read(connection, dict(row)) if row else None
 
-    def set_volatility(self, instrument_id: int, volatility: float) -> None:
-        """Berechnete Volatilität ist ebenfalls ein generischer Quellenwert."""
+    def set_volatility(
+        self, instrument_id: int, volatility: float, as_of: str | None = None
+    ) -> None:
+        """Berechnete Volatilität ist ebenfalls ein generischer Quellenwert.
+
+        Args:
+            instrument_id: ID des Instruments.
+            volatility: Annualisierte Volatilität in Prozent.
+            as_of: Datum des letzten Tagesschlusskurses, aus dem sie stammt;
+                ``None``, wenn es unbekannt ist.
+        """
         with self._connect() as connection:
             detail_store.put_provider(connection, instrument_id, 'volatility',
-                {'value': volatility, 'source': 'calculated'})
+                {'value': volatility, 'source': CALCULATED_SOURCE, 'as_of': as_of})
 
     def delete_by_symbol(self, symbol: str) -> bool:
         """Löscht **ein** Instrument (und seine Quotes via Cascade) per Symbol.

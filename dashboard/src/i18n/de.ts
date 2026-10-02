@@ -512,6 +512,7 @@ export const de = {
   drilldown: {
     fetchedAt: 'Stand der Quelle',
     source: 'Quelle',
+    sourceCalculated: 'berechnet aus Tageskursen',
     /*
      * **Kein Text nennt eine Quelle beim Namen** — dieselbe Regel wie bei den
      * Fehlermeldungen unter `errors.reason`, nur eine Textgruppe weiter.

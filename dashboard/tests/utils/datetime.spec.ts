@@ -9,6 +9,13 @@ describe('formatDateTime', () => {
     expect(out).toMatch(/2026/)          // Jahr enthalten
   })
 
+  it.each([
+    ['de', '01.10.2026'],
+    ['en', 'Oct 1, 2026'],
+  ])('zeigt ein reines Datum ohne Uhrzeit und ohne Zeitzonenversatz (%s)', (locale, expected) => {
+    expect(formatDateTime('2026-10-01', locale)).toBe(expected)
+  })
+
   it('gibt bei ungültigem Input den Rohwert zurück', () => {
     expect(formatDateTime('nope', 'de')).toBe('nope')
   })
