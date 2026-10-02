@@ -31,8 +31,6 @@ import ast
 import re
 from pathlib import Path
 
-import pytest
-
 APP_DIR = Path(__file__).resolve().parent.parent / "app"
 PERSISTENCE_DIR = APP_DIR / "persistence"
 SQL_CALLS = frozenset({"execute", "executemany", "executescript"})
@@ -293,11 +291,76 @@ def raw_sql(source: str, *, transactions_allowed: bool = False) -> list[str]:
     return sorted(found)
 
 
-@pytest.mark.parametrize("module", ORM_ONLY_MODULES)
-def test_die_laufzeitmodule_enthalten_kein_rohes_sql(module: str) -> None:
-    source = (PERSISTENCE_DIR / module).read_text(encoding="utf-8")
+# Die Module, in denen rohes Daten-SQL begründet bleibt. Jedes trägt den
+# Abschnitt „Warum hier rohes SQL bleibt“; jedes andere Modul unter
+# `app/persistence/` ist frei davon — auch eines, das erst später dazukommt.
+RAW_SQL_MODULES = frozenset(
+    {"db.py", "migration.py", "backup_store.py", "data_versions.py", "plugin_migration.py"}
+)
+RAW_SQL_REASON = "Warum hier rohes SQL bleibt"
+TRANSACTION_MODULE = "session.py"
 
-    assert raw_sql(source, transactions_allowed=module == "session.py") == []
+
+def raw_sql_violations(directory: Path) -> dict[str, list[str]]:
+    """Prüft **jede** Python-Datei unter `directory` gegen die Ausnahmeliste.
+
+    Das Inventar kommt aus dem Ordner, nicht aus einer Liste: Eine neue Datei
+    ist automatisch dabei. Ein Rohmodul muss seine Begründung tragen; jedes
+    andere darf kein rohes SQL enthalten, `session.py` nur `BEGIN`.
+    """
+    violations: dict[str, list[str]] = {}
+    for path in sorted(directory.rglob("*.py")):
+        name = str(path.relative_to(directory))
+        source = path.read_text(encoding="utf-8")
+        if name in RAW_SQL_MODULES:
+            if RAW_SQL_REASON not in source:
+                violations[name] = [f"Begründung „{RAW_SQL_REASON}“ fehlt"]
+            continue
+        found = raw_sql(source, transactions_allowed=name == TRANSACTION_MODULE)
+        if found:
+            violations[name] = found
+    return violations
+
+
+def test_rohes_sql_steht_nur_in_den_begruendeten_modulen() -> None:
+    inventory = {str(path.relative_to(PERSISTENCE_DIR)) for path in PERSISTENCE_DIR.rglob("*.py")}
+
+    assert RAW_SQL_MODULES <= inventory, "eine Ausnahme nennt eine Datei, die es nicht gibt"
+    assert {TRANSACTION_MODULE, *ORM_ONLY_MODULES} <= inventory
+    assert raw_sql_violations(PERSISTENCE_DIR) == {}
+
+
+def test_gegenprobe_ein_neues_modul_mit_rohem_sql_faellt_auf(tmp_path: Path) -> None:
+    """Gegenprobe aus dem Review und Nachbarvarianten (SI-P-14).
+
+    Ein zusätzliches Modul, eines in einem Unterordner, eines mit verstecktem
+    `text()` und ein Rohmodul ohne Begründung werden gefunden; ein sauberes
+    neues Modul und das echte `session.py`-Muster nicht.
+    """
+    (tmp_path / "runtime_extra.py").write_text(
+        "def read(connection):\n"
+        "    return connection.exec_driver_sql('SELECT * FROM meta')\n"
+    )
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "sub" / "nested.py").write_text(
+        "from sqlalchemy import text\n"
+        "def wipe(session):\n"
+        "    def inner():\n"
+        "        session.execute(text('DELETE FROM fx_rates'))\n"
+        "    inner()\n"
+    )
+    (tmp_path / "migration.py").write_text("def plan(connection):\n    connection.execute('SELECT 1')\n")
+    (tmp_path / "clean.py").write_text("def add(a, b):\n    return a + b\n")
+    (tmp_path / "session.py").write_text(
+        "def begin(connection, immediate):\n"
+        "    connection.exec_driver_sql('BEGIN IMMEDIATE' if immediate else 'BEGIN')\n"
+    )
+
+    assert raw_sql_violations(tmp_path) == {
+        "migration.py": [f"Begründung „{RAW_SQL_REASON}“ fehlt"],
+        "runtime_extra.py": ["2: SQL im String", "2: exec_driver_sql(...)"],
+        "sub/nested.py": ["4: SQL im String", "4: text(...)"],
+    }
 
 
 def test_die_transaktionsausnahme_nimmt_keinen_dynamischen_zweig() -> None:
