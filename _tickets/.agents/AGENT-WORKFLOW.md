@@ -430,6 +430,12 @@ vollständigen Reviewrunden je Ticket. Es ist keine Mindestanzahl, keine
 Abbruchautomatik und kein Freigabegrund. `last_reviewed_round` bezeichnet
 weiterhin die tatsächlich zuletzt abgeschlossene Runde.
 
+**Standardwert ist `5` (Mike, 2026-10-02).** „Wir lassen es für die
+Folge-Projekte und Tickets auf 5 Runden.“ Beim Ticketwechsel bleibt
+`max_review_rounds: 5` stehen; neue Boards und Folgeprojekte beginnen mit
+diesem Wert. Ein anderer Wert für ein einzelnes Ticket gilt nur auf Mikes
+ausdrückliche Anweisung und steht dann als Vermerk in `STATUS.md`.
+
 **Coder und Verifier priorisieren ab der ersten Runde nach Wichtigkeit und
 konkreten Auswirkungen auf das restliche System.** Blocker und Befunde mit
 Folgen für andere Funktionen oder abhängige Arbeiten kommen vor lokalen
@@ -437,9 +443,9 @@ Verbesserungen und verhaltensneutralen Kleinigkeiten. Maßgeblich ist der belegt
 Schaden im tatsächlichen Entwicklungsstand, nicht ein hypothetisches Risiko.
 
 **Bereits zu Beginn der Maximalrunde analysieren beide Rollen ausdrücklich
-den offenen Rest.** Bei `max_review_rounds: 3` beginnt der Coder damit bei der
-Vorbereitung der dritten Übergabe; der Verifier prüft und ergänzt die Analyse
-beim dritten Review aus eigener Sicht. Beide halten ihre Einschätzung im
+den offenen Rest.** Bei `max_review_rounds: 5` beginnt der Coder damit bei der
+Vorbereitung der fünften Übergabe; der Verifier prüft und ergänzt die Analyse
+beim fünften Review aus eigener Sicht. Beide halten ihre Einschätzung im
 aktuellen Restabschnitt desselben Tickets fest. Abweichende Bewertungen und
 ihre Gründe bleiben sichtbar. Die Analyse wird bei neuen Befunden aktualisiert.
 Sie nennt:
