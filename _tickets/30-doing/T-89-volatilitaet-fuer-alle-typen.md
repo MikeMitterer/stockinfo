@@ -169,6 +169,60 @@ Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
 
+## Nacharbeit Runde 3 (Claude, 2026-10-02)
+
+Prüfgegenstand: `23c8d1b` gegen `9b55a13` (Nacharbeit) und gegen `eca7413`
+(Gesamtstand). Commits: `6c7d3b6` (B3, B4), `23c8d1b` (Typen in der
+Quellenregistry).
+
+- **B5 · Persistenz:** Nach Vorlage des gemessenen Umfangs entschied Mike
+  „Eigenes Ticket T-90“. Die befristete, an
+  [T-90](../20-ready/T-90-persistenz-auf-sqlmodel.md) gebundene Ausnahme
+  steht in `STATUS.md` („Persistenzumbau als eigenes Ticket, befristete
+  Ausnahme für T-89“). T-89 ändert an der Persistenz nur
+  `set_volatility` und die Typangabe von `detail_catalog`.
+- **B3 · Typen:** `quote: QuoteResponse` in `_volatility_from_cache`,
+  `definitions: list[DetailDefinition] | None` in `detail_catalog`.
+  Darüber hinaus hat der vollständige Lauf über **alle fünf** in T-89
+  berührten Python-Dateien 13 weitere fehlende Angaben in
+  `app/sources_registry.py` gefunden (`config`, `settings`); sie sind
+  jetzt als `SourcesConfig`, `Settings` bzw. `dict` typisiert.
+  `ruff check --select ANN,I app/calculated_metrics.py app/repository.py
+  app/services/quote_cache.py app/sources_registry.py
+  tests/test_calculated_metrics.py`: ohne Befund.
+- **B4 · öffentlicher Datumspfad:** Zwei HTTP-Tests mit der echten App auf
+  der Temp-DB; der Kursdienst ist per `dependency_overrides` netzfrei:
+  `test_refresh_liefert_den_stand_bis_zur_api` (`POST /refresh/{isin}` mit
+  30 Tagesschlusskursen, dann `GET /instruments`: `as_of` = letzter
+  Schlusskurstag) und
+  `test_wiederhergestellter_wert_behaelt_seinen_stand_bis_zur_api` (ohne
+  Kurse, altes `as_of` 2026-09-30 bleibt). Rote Gegenfälle am öffentlichen
+  Pfad, jeweils danach zurückgenommen (`git diff` zeigt nur B3):
+  Mutant 1 `_volatility_from_cache` gibt kein Datum zurück → erster Test
+  rot (`None == '2026-10-01'`); Mutant 2 Wiederherstellung mit
+  `as_of=None` → zweiter Test rot (`None == '2026-09-30'`).
+- **Läufe:** Testmodul 15 passed; Backend 1267 passed, 35 skipped, 1
+  Starlette-Warnung; `ruff check app tests` ohne Befund. Dashboard
+  unverändert seit Runde 3 (399 passed). Browserbelege aus Runde 2 gelten,
+  das Anzeigeverhalten ist unverändert.
+- **Umfang gesamt** gegen `eca7413`: 13 Dateien ohne Tickets, 407 Zeilen
+  hinzu, 31 entfernt (438 von 450).
+
+**B6 · Standard-Riegel.** Gelesen: `code-standards/SKILL.md` mit
+`architecture.md`, `python.md`, `persistence.md`, `quality.md`,
+`frontend.md`, `documentation.md`; dazu `ux-standards/SKILL.md`.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ eine Quellkonstante `CALCULATED_SOURCE` für Deklaration, Speicherung und Wiederherstellung; ein Datumsformatierer (`formatDateTime` erweitert), eine Quellenfilterung (`providerValues`). ⚠️ Das Dashboard führt den Quellnamen als eigene Konstante `calculatedSource`; Backend und Frontend teilen keine Codebasis, der Wert ist in `docs/plugin-authors.md` dokumentiert. AST-Inventar der fünf Python-Dateien und TS-Compiler-Inventar der sechs TS-/Vue-Dateien: nur englische Nicht-Testnamen, keine `UPPER_SNAKE_CASE`-Variablen in TS. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ✅ neue Texte `drilldown.sourceCalculated` in `de.ts` und `en.ts`, kein fest verdrahteter sichtbarer Text; `vue-tsc -b` und ESLint ohne Befund; DE-/EN-Belegbilder aus Runde 2. |
+| Python, FastAPI und Webhooks | ✅ `ruff --select ANN,I` über alle fünf berührten Python-Dateien ohne Befund (B3 und die 13 Registry-Stellen); Backend 1267 passed. |
+| Datenbanken und Persistenzgrenzen | ⚠️ ausdrückliche, befristete Ausnahme nach Mikes Entscheidung, gebunden an T-90 (B5); Tests ausschließlich mit temporärer Datenbank. |
+| Fehler, Logging und Tests | ✅ rote Gegenfälle für Deklaration (Runde 1), Refresh-Datum und Wiederherstellung am öffentlichen HTTP-Pfad (B4); keine neue Testinfrastruktur, nur `dependency_overrides`. |
+| Markdown und Inhaltsverzeichnisse | ✅ `docs/plugin-authors.md` beschreibt `calculated`, Rangfolge und Stand; README, `docker/README.md`, `unraid/README.md` ohne widersprechende Aussage. |
+
 ## Verifier-Prüfung · Runde 3 (Codex, 2026-10-02)
 
 **Prüfstand:** `9b55a13` gegen `5684a68`, Gesamtstand gegen `eca7413`.

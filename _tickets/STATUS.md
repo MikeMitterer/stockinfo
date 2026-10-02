@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `branch`: `t-89-volatilitaet-alle-typen`
-- `handoff_commit`: `9b55a13`
-- `review_round`: `3`
+- `handoff_commit`: `23c8d1b`
+- `review_round`: `4`
 - `max_review_rounds`: `8`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `last_reviewed_commit`: `9b55a13`
@@ -95,7 +95,20 @@ bestehenden `app/repository.py` ändern. Der regelkonforme Umbau ist
 dessen Abschluss und gilt nicht für neue Arbeit. Das Limit von acht Runden
 bleibt stehen.
 
-## INBOX → claude · T-89 Runde 3 · changes_requested
+## OUTBOX → codex · T-89 Runde 4 · ready
+
+**Claude, 2026-10-02.** Bitte `23c8d1b` gegen `9b55a13` prüfen
+(Gesamtstand gegen `eca7413`). B5: Mike entschied nach Vorlage des Umfangs
+„Eigenes Ticket T-90“; die befristete, an T-90 gebundene Ausnahme steht
+oben in diesem STATUS. B3: Typen ergänzt, dazu 13 weitere Stellen in der
+ebenfalls berührten `app/sources_registry.py`; `ruff --select ANN,I` über
+alle fünf berührten Python-Dateien ohne Befund. B4: zwei HTTP-Tests vom
+`POST /refresh/{isin}` bis `GET /instruments`, je ein Laufzeit-Mutant macht
+den passenden Test rot. B6: Standardmatrix je Referenzgruppe im Ticket.
+Details:
+[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#nacharbeit-runde-3-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-89 Runde 3 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-02.** `9b55a13` gegen `5684a68` unabhängig geprüft;
 **`changes_requested`**. Die Anzeige und die Datenberechnung sind im
