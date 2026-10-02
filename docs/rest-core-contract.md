@@ -82,6 +82,9 @@ diesem versionierten Core.
 `POST /instruments/intake` ist der Aufnahmeweg des Dashboards. Der Core
 klassifiziert und löst die Eingabe auf; ein Konsument braucht dafür keine
 eigene Erkennungslogik. Auch eine Kursabfrage kann ein Instrument speichern.
+Eine Eingabe, die wie eine ISIN aussieht, aber keine gültige ist (etwa
+`DE000110253X`), lehnt der Core mit `400` und `code: invalid_isin_format`
+ab. Sie wird nicht als Symbol ohne Börsenzusatz behandelt.
 
 [↑ Übersicht](#übersicht)
 

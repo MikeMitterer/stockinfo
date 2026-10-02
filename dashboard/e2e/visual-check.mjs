@@ -307,16 +307,19 @@ try {
     }
     await ctx.shot(page, 'all-added')
     // Zwei Fehlversuche: ein unbekanntes Papier und eine verschriebene ISIN.
-    // Die Aufnahme hält Letztere für ein Symbol ohne Börsenendung.
+    // Letztere muss als ISIN-Fehler erscheinen, nicht als Symbol ohne
+    // Börsenzusatz (T-95). Die Symbolmeldung darf nirgends stehen.
     const failures = [
       ['XX0000000000', 'None of the configured sources found a security for XX0000000000', 'unknown'],
-      ['DE000110253X', 'The symbol has no exchange suffix', 'malformed'],
+      ['DE000110253X', 'DE000110253X is not shaped like an ISIN.', 'malformed'],
     ]
     for (const [value, expected, name] of failures) {
       await input.fill(value)
       await page.getByRole('button', { name: 'Add', exact: true }).click()
       await page.waitForTimeout(1500)
-      check((await page.locator('body').innerText()).includes(expected), `${value}: keine verständliche Meldung („${expected}“)`)
+      const shown = await page.locator('body').innerText()
+      check(shown.includes(expected), `${value}: keine verständliche Meldung („${expected}“)`)
+      check(!shown.includes('exchange suffix'), `${value}: Meldung spricht von einem Börsenzusatz`)
       await ctx.shot(page, name)
       for (const close of await page.getByRole('button', { name: /close/i }).all()) await close.click().catch(() => {})
     }
