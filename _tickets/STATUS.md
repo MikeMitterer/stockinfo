@@ -31,7 +31,7 @@ schaltet den Branch. Regel:
 - `branch`: `t-88-fondsgroesse-in-euro`
 - `handoff_commit`: `8a3ae95`
 - `review_round`: `3`
-- `max_review_rounds`: `3`
+- `max_review_rounds`: `5`
 - `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-88-fondsgroesse-in-euro.md`
@@ -40,6 +40,10 @@ schaltet den Branch. Regel:
 - `workstream`: `fondsgroesse`
 - `priority_chain`: `T-88`
 - `priority_ticket`: `T-88`
+
+**Rundenlimit T-88 · Mike, 2026-10-02.** Mike möchte das Ticket sauber
+abschließen und erlaubt bis zu fünf reguläre Review-Runden. Die frühere
+Dreiergrenze in der archivierten Runde-2-Nachricht ist damit überholt.
 
 **Aktivierung T-88 · Mike, 2026-10-01.** Beim Erneuern der Screenshots
 fiel auf, dass justETF-Fondsgrößen in Millionen statt in Euro ankommen.
