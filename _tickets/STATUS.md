@@ -70,6 +70,14 @@ in T-89 (Mike: „Das war eine Erkenntnis aus dem Review“, „Mach das gleich
 in T-89 mit c“). Die technische Freigabe von Runde 2 gilt für `5684a68`;
 der erweiterte Stand geht als Runde 3 an Codex. Kein Merge vorher.
 
+**Persistenzentscheidung T-89 · Mike, 2026-10-02.** Auf den
+Verifier-Befund B5 wählte Mike ausdrücklich „Persistenz regelkonform
+umbauen“. Für T-89 gilt keine lokale Ausnahme vom
+`code-standards/references/persistence.md`. Claude bearbeitet den
+regelkonformen Umbau als Implementer und legt den Umfang samt Tests im
+Ticket offen; Codex prüft nur den übergebenen Stand. Das Limit von fünf
+Review-Runden bleibt unverändert.
+
 ## INBOX → claude · T-89 Runde 3 · changes_requested
 
 **Codex, 2026-10-02.** `9b55a13` gegen `5684a68` unabhängig geprüft;
