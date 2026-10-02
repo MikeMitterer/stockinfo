@@ -95,6 +95,59 @@ Abschnitt „Browserprüfung“ oder einem eigenen Abschnitt, nicht im README.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Scope-Checkpoint · Nacharbeit Runde 1 (Claude, 2026-10-02)
+
+Codex verlangt nach Runde 1 einen neuen Checkpoint, weil vier statt drei
+Flächen entstanden sind. Für die Nacharbeit kommen weitere hinzu. Der
+tatsächliche und der geplante Umfang:
+
+| Fläche | Stand `780abf3` | Nacharbeit |
+|---|---|---|
+| `scripts/compare_database_versions.py` | 411 | B1, B2, B3, B5; DB-Zugriffe raus (B4) — etwa ±60 |
+| `scripts/supplement_assets.yaml` | 71 | unverändert |
+| `dashboard/e2e/visual-check.mjs` | +101 | B5: W17 verweigert `HEADLESS` — etwa +3 |
+| `AGENTS.md` | +8 | unverändert |
+| `app/persistence/backup_store.py` | — | **neu berührt (B4):** `snapshot_read_only`, `clone_database`, `table_contents` — etwa +60 |
+| `app/persistence/repository.py` | — | **neu berührt (B4):** `list_fx_pairs` über das ORM — etwa +10 |
+| `tests/test_backup.py` | — | **neu berührt:** Tests der drei Funktionen — etwa +60 |
+| `tests/test_repository.py` | — | **neu berührt:** Test für `list_fx_pairs` — etwa +15 |
+
+Zusammen rund **800 Zeilen** auf acht Flächen, davon vier neu. Das liegt
+an der Grenze des Standardriegels. Bitte freigeben oder einen anderen
+Zuschnitt nennen.
+
+**Vorgehen je Befund:**
+
+- **B1:** `main()` endet mit Exit 1 bei mindestens einem Befund, bei einer
+  unerwarteten Tabellenänderung des Schreibwegs (erwartet: Setzen =
+  `detail_overrides`, Zurücksetzen und Aktualisieren = nichts) und bei
+  rotem W17. Die Gegenproben bis zum Prozess-Exit laufen über
+  Mutationsläufe, wie bei `visual-check.mjs`: Eine unversionierte Kopie
+  des Skripts mit je einem eingebauten Fehler muss mit Exit 1 enden.
+  Die drei Fehler: ein veränderter Wert in den Nachher-Antworten, ein
+  nicht zurückgesetzter Schreibweg und eine falsche W17-Erwartung.
+- **B2:** Der Start einer Instanz räumt bei jedem Fehlschlag selbst auf
+  (`terminate` und `wait`, Log schließen), bevor er den Fehler meldet.
+  Gegenprobe: eine Mutante mit falschem Gesundheitspfad; danach darf kein
+  `uvicorn` des Laufs übrig sein (`pgrep`).
+- **B3:** Ein erwarteter Unterschied gilt nur mit **geprüftem Wert**.
+  T-88: Fondsgröße nachher = vorher × 1 000 000 (Millionen → Euro).
+  T-89 (Volatilität) und T-94 (Devisen-Zeitpunkt) lassen sich ohne Quelle
+  nicht nachrechnen; sie werden zu Befunden, bis eine Regel geprüft ist
+  (heute tritt keiner auf). W17 bekommt als Erwartung die Vorher-Antworten
+  mit genau diesen geprüften Umrechnungen, aus derselben Funktion.
+- **B4:** Rohe SQLite-Zugriffe wandern nach `app/persistence/backup_store.py`.
+  Das Modul kopiert die Datenbankdatei bereits und ist als Ausnahme
+  begründet; die Begründung wird um Snapshot und Tabellenvergleich
+  ergänzt. Die Paare der Wechselkurse liest das Repository über das ORM
+  (`list_fx_pairs`), die Anzahl über das vorhandene `count_instruments`.
+  Das Skript nutzt nur noch diese Schnittstellen.
+- **B5:** Das Skript entfernt `HEADLESS` aus der Umgebung des W17-Aufrufs,
+  und W17 selbst scheitert unter `HEADLESS=1` mit klarer Meldung.
+  Gegenprobe: W17 direkt mit `HEADLESS=1` ist rot; das Skript mit
+  gesetztem `HEADLESS=1` startet W17 trotzdem sichtbar (Hauptmonitorprüfung
+  läuft). Als Abnahmenachweis zählt nur ein sichtbarer Lauf.
+
 ### Verifier-Prüfung · Runde 1 (Codex, 2026-10-02)
 
 **Ergebnis: `changes_requested`.** `780abf3` gegen `ab4f0db` geprüft.
