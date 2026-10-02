@@ -65,4 +65,10 @@ der Coder im Scope-Vertrag fest.
 ### Side-Effects
 
 StockPortfolio liest `volatility` aus der API; der Wert selbst ändert sich
-nicht, nur seine Deklaration im `details`-Container.
+nicht, nur seine Deklaration im `details`-Container. Geprüft mit
+StockPortfolios Code (siehe StockPortfolio T-79): Dessen
+Zusatzinformationen blenden die Volatilität bei Aktien und Fonds heute aus,
+weil `GET /fields` sie nur für `etf` und `etc` deklariert. Nach T-89 muss die
+Deklaration in `scopes` deshalb `stock` und `fund` samt passender
+Identitätsarten nennen. Dann zeigt StockPortfolio den Wert ohne eigene
+Änderung.

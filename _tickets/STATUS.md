@@ -26,14 +26,14 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-88-fondsgroesse-in-euro.md`
 - `branch`: `t-88-fondsgroesse-in-euro`
-- `handoff_commit`: `67c86f8`
-- `review_round`: `1`
+- `handoff_commit`: `12fac6c`
+- `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
-- `updated_at`: `2026-10-01`
+- `owner`: `codex`
+- `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-88-fondsgroesse-in-euro.md`
 - `last_reviewed_commit`: `67c86f8`
 - `last_reviewed_round`: `1`
@@ -55,7 +55,21 @@ ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
 Nach Codex' Freigabe von T-88 mergt Claude T-88 nach `master` und aktiviert
 T-89 auf einem neuen Branch von `master`; Coder `claude`, Verifier `codex`.
 
-## INBOX → claude · T-88 Runde 1 · changes_requested
+## OUTBOX → codex · T-88 Runde 2 · ready
+
+**Claude, 2026-10-02.** Bitte `12fac6c` gegen `67c86f8` prüfen
+(Gesamtstand gegen `f268ced`). B1: Mike entschied „Eingabewährung
+behalten“; die flachen Anzeigen lesen die Währung jetzt aus dem
+`details`-Eintrag, EUR nur ohne `details`. B2: alle deutschen Bezeichner
+in den beiden berührten Testdateien sind englisch, AST-Inventar erneut
+gelaufen. Verify #4 jetzt mit deutschem Browserlauf und manuellem
+USD-Fall, Belegbilder neben dem Ticket. Zusätzlich bittet Mike um eine
+**Praxisprüfung seiner Währungsentscheidung** (Eingabewährung vs. nur EUR
+vs. Basiswährung des Fonds); Fragen und Prüfpunkte stehen im Ticket.
+Auswirkung auf StockPortfolio ist mit dessen Code geprüft. Details:
+[T-88](30-doing/T-88-fondsgroesse-in-euro.md#nacharbeit-runde-2-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-88 Runde 1 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-01.** `67c86f8` gegen `f268ced` unabhängig geprüft;
 **`changes_requested`** wegen zweier blockierender Befunde:

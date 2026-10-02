@@ -194,3 +194,73 @@ und `documentation.md`.
 Activity-/Observer-/Lessons-Übernahme aus Paketfassung `df699dd1`
 bleibt ein getrennter Board-Schritt für die zuständige schreibberechtigte
 Instanz. Sie ändert dieses Reviewurteil nicht.
+
+## Nacharbeit Runde 2 (Claude, 2026-10-02)
+
+Prüfgegenstand: `12fac6c` gegen `67c86f8` (Nacharbeit) und gegen `f268ced`
+(Gesamtstand).
+
+- **B1 · Währung:** Mike entschied auf Rückfrage „Eingabewährung
+  behalten“: Die Fondsgröße steht immer in Millionen, die Währung folgt der
+  Quelle (justETF: EUR) oder der manuellen Eingabe. `utils/fundSize.ts`
+  liest sie über `fundSizeCurrency(item, 'effective' | 'manual')` aus dem
+  `details`-Eintrag; EUR gilt nur ohne `details`. `MetricValue.vue` nutzt die
+  wirksame Währung für den Wert und die manuelle für den Hinweistext,
+  `MetricEditor.vue` die manuelle. Neue Tests: manuelle Fondsgröße in USD
+  in beiden Komponenten. Der Vertragstext („a manual value uses the
+  currency entered with it“) galt schon und bleibt.
+- **B2 · Bezeichner:** In `tests/test_providers.py` und
+  `plugin_api/tests/test_contract_mutants.py` sind alle deutschen Klassen,
+  Variablen, Parameter und Attribute englisch: `_SilentSource`,
+  `_ChattySource`, `_HalfheartedZone`, `_ContextDependentEnricher`,
+  `invocations`, `spy_overview`, `policy`, `cases`,
+  `expected_accumulating`, `broken`, `european`, `overseas`, `failed`,
+  `fallback`, Attribute `asked` und `fetch_context`. Erneutes
+  `ast`-Inventar beider Dateien einschließlich `self`-Attributen und
+  Keyword-Argumenten: nur englische Namen. Verbliebene Treffer für
+  „gefragt“ sind Prosa (Kommentar, Meldungstext).
+- **Verify #4, deutscher Browserlauf:** Temp-Instanz mit dem Stand
+  `12fac6c`, Dashboard aus dem Branch gebaut, Chrome sichtbar mit
+  `de-DE`. Belege neben dem Ticket:
+  [EUNL.DE](T-88-browser-de-eunl.png) zeigt „129.791 Mio. EUR“ und
+  „Physical (Optimized sampling)“;
+  [VTI](T-88-browser-de-vti-usd.png) (US-ETF ohne justETF, Fondsgröße von
+  Hand per `PATCH …/details` mit 30 USD) zeigt „30 Mio.“ mit Währungsauswahl
+  USD. API dazu: flach `fund_size` 30, Detail `unit` `millions`,
+  `currency` USD, `origin` manual.
+- **Läufe:** Backend 1252 passed, 35 skipped; Plugin-Vertrag 324 passed,
+  1 skipped; Ruff ohne Befund; Dashboard 52 Dateien, 395 Tests;
+  `vue-tsc -b` und ESLint ohne Befund.
+- **Umfang:** Gesamtstand gegen `f268ced` 27 Dateien, 304 Zeilen hinzu,
+  88 entfernt (ohne `_tickets/`). Mehr als in Runde 1, weil B2 vorhandene
+  deutsche Bezeichner in zwei berührten Testdateien umbenennt.
+
+### Bitte an Codex: Praxisprüfung der Währungsentscheidung
+
+Mike: „Die Frage bezüglich Eintragung der Fondsgröße in Euro oder USD oder
+der Basiswährung – lass meine Entscheidung auch nochmal von Codex
+verifizieren, ob das in der Praxis standhalten kann.“ Bitte bewerten, ob
+„Millionen, Währung = Eingabewährung“ im Alltag trägt, verglichen mit
+„nur EUR“ und „Basiswährung des Fonds (`fund_currency`)“. Prüfpunkte etwa:
+Vergleichbarkeit zwischen Instrumenten, Sortierung und Filter in
+StockInfo und StockPortfolio, was Factsheets typischerweise angeben,
+Verhalten, wenn justETF später einen EUR-Wert über einen manuellen
+USD-Wert legt (Schatten-Hinweis), Aufwand für den Nutzer. Das Ergebnis
+geht als Empfehlung an Mike; es ist kein Blocker dieser Runde, außer
+Codex findet einen konkreten Fehler im umgesetzten Verhalten.
+
+### Auswirkung auf StockPortfolio (geprüft mit dessen Code)
+
+StockPortfolios `projectDetailFields` mit StockInfos echten Antworten
+aufgerufen (`vite-node`, Skript im Scratchpad, StockPortfolio unverändert):
+
+| | vor T-88 (`absolute`) | nach T-88 (`millions`) |
+|---|---|---|
+| EUNL.DE Fondsgröße | 129.791,00 € (falsch) | 129.791,00 € million |
+| VTI manuell 30 USD | 30,00 $ | 30,00 $ million |
+
+Der Fehler schlug also auf StockPortfolio durch; T-88 behebt ihn dort ohne
+Codeänderung, weil StockPortfolio die Einheit `millions` schon kennt.
+Nachzuziehen in StockPortfolio: Fixture-Kopie (T-78), kurzzeitiges „—“ für
+in IndexedDB gespeicherte Kurse mit alter Einheit bis zum nächsten Abruf,
+Formatierung „129.791,00 € Mio.“. Erfasst in StockPortfolio T-79.
