@@ -133,6 +133,9 @@ der Coder im Scope-Vertrag fest.
       Screenshots als Beleg im Ticket.
 - [x] `unraid/screenshots/dashboard.png` wird danach neu aufgenommen.
 - [x] Doku-Abgleich für `README.md` und `docker/README.md`.
+- [ ] Scope-Erweiterung: Der Detailbereich zeigt die Quelle `calculated`
+      übersetzt („berechnet aus Tageskursen“ / „calculated from daily
+      closes“) und als Stand das Datum des letzten Schlusskurses.
 
 ### Side-Effects
 
@@ -157,12 +160,58 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | 4 | Sichtbare Prüfung im Browser (Temp-Datenbank), deutsch und englisch | Tabelle zeigt „Vola 1Y“ bei Aktie und Fonds; Detailbereich zeigt „Volatilität (1 Jahr)“ | ✅ |
 | 5 | StockPortfolios `projectDetailFields` mit den echten Antworten | Zusatzinformationen zeigen die Volatilität bei Aktie und Fonds; Coder-Lauf belegt die Ausgaben, API-Scopes wurden unabhängig geprüft | ✅ |
 | 6 | Standard und Doku | Doku und Namensinventar passen; vollständige und richtige Typangaben im Testmodul, Ruff `ANN,I` grün | ✅ |
+| 7 | Stand berechneter Werte: Refresh einer Aktie mit Tageskursen, Wiederherstellung ohne Kurse, `GET /instruments` | `details.volatility.as_of` = Datum des letzten Schlusskurses; bei Wiederherstellung bleibt das alte Datum | ➖ |
+| 8 | Detailbereich im Browser, deutsch und englisch (Aktie, Fonds, ETF) | Quelle „berechnet aus Tageskursen“ / „calculated from daily closes“ mit Datum ohne Uhrzeit; ETF unverändert mit justETF-Zeitpunkt | ➖ |
 
 ## Review-Verlauf (neueste Runde zuerst)
 
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Nacharbeit Runde 2 · Scope-Erweiterung (Claude, 2026-10-02)
+
+Prüfgegenstand: `9b55a13` gegen `5684a68` (Erweiterung) und gegen `eca7413`
+(Gesamtstand). Auslöser: Review-Befund „rohe Quellkennung und Info-Symbol
+ohne Datum“; Mike: „Mach das gleich in T-89 mit c“. Die Freigabe von
+Runde 2 galt für `5684a68`.
+
+- **Korrektur meiner Analyse aus Runde 1:** Das Datum fehlte nicht nur
+  wegen `as_of`. „Stand der Quelle“ kam ausschließlich aus
+  `meta_fetched_at`, und das gibt es bei Aktien und Fonds nicht.
+- **Backend (#7):** `_volatility_from_cache` liefert Wert und Datum des
+  letzten verwendeten Schlusskurses; `set_volatility(…, as_of=…)` speichert
+  es. Fällt die Neuberechnung aus, stellt der Dienst den alten Wert **mit**
+  seinem alten Datum wieder her. Das alte Datum liest er vor `save_quote`,
+  weil `save_quote` bei Antworten ohne `detail_readings` die gespeicherten
+  Kennzahlen ersetzt (das zeigte der erste, rote Testlauf). Die API trägt
+  `as_of` schon; kein Vertragswechsel.
+- **Dashboard (#8):** `InstrumentDrilldown.vue` übersetzt nur die eigene
+  Quelle `calculated` (`drilldown.sourceCalculated`); Plugin-Namen bleiben
+  roh, der Kommentar dazu ist angepasst. „Stand der Quelle“ nimmt ohne
+  `meta_fetched_at` das jüngste `as_of` der angezeigten Quellenwerte.
+  `formatDateTime` zeigt ein reines Datum ohne Uhrzeit; vorher wurde
+  `2026-10-01` als „01.10.2026, 02:00“ mit Zeitzonenversatz angezeigt.
+- **Tests, zuerst rot:** Backend `test_berechnete_volatilitaet_traegt_das_datum_des_letzten_schlusskurses`,
+  `test_wiederhergestellte_volatilitaet_behaelt_ihr_datum`, API-Test um
+  `as_of` ergänzt; Dashboard `datetime.spec.ts` (reines Datum de/en) und
+  `InstrumentDrilldown.spec.ts` (Quellname und Stand de/en). Danach grün:
+  Testmodul 13 passed, Backend 1265 passed, 35 skipped; Dashboard 52 Dateien,
+  399 Tests; `vue-tsc -b`, ESLint, Ruff und `ruff --select ANN,I` ohne Befund.
+- **Sichtbare Prüfung (#8):** Temp-Instanz mit `9b55a13`, Aktien und Fonds
+  einzeln aktualisiert, Chrome sichtbar. Belege:
+  [APC.DE deutsch](T-89-browser-r3-de-apc.png) „Quelle: berechnet aus
+  Tageskursen“, „Stand der Quelle: 02.10.2026“;
+  [GOLD.SG englisch](T-89-browser-r3-en-gold.png) „Source: calculated from
+  daily closes“, „Source as of: Sep 29, 2026“;
+  [EUNL.DE deutsch](T-89-browser-r3-de-eunl.png) unverändert „justetf“,
+  „01.10.2026, 23:06“.
+- **Doku:** `docs/plugin-authors.md` nennt den Stand berechneter Werte
+  (Datum des letzten Schlusskurses). README, `docker/README.md`,
+  `unraid/README.md` beschreiben die Fußzeile nicht und bleiben.
+- **Umfang gesamt** gegen `eca7413`: 13 Dateien ohne Tickets, 337 Zeilen
+  hinzu, 21 entfernt; Produktdateien 8 von 9, Test-/Doku-/Bilddateien 5 von
+  8, Zeilen 358 von 450.
 
 ## Verifier-Prüfung · Runde 2 (Codex, 2026-10-02)
 

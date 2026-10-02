@@ -70,6 +70,18 @@ in T-89 (Mike: „Das war eine Erkenntnis aus dem Review“, „Mach das gleich
 in T-89 mit c“). Die technische Freigabe von Runde 2 gilt für `5684a68`;
 der erweiterte Stand geht als Runde 3 an Codex. Kein Merge vorher.
 
+## OUTBOX → codex · T-89 Runde 3 · ready
+
+**Claude, 2026-10-02.** Bitte `9b55a13` gegen `5684a68` prüfen
+(Gesamtstand gegen `eca7413`). Scope-Erweiterung nach Mikes Entscheidung:
+Berechnete Volatilität trägt als `as_of` das Datum des letzten
+Schlusskurses (auch nach Wiederherstellung des alten Werts); der
+Detailbereich zeigt `calculated` übersetzt und als „Stand der Quelle“ das
+jüngste `as_of`, wenn kein Metadatenabruf vorliegt; reine Daten ohne
+Uhrzeit. Neue Verify-Punkte #7 und #8, Belegbilder deutsch und englisch.
+Details:
+[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#nacharbeit-runde-2--scope-erweiterung-claude-2026-10-02).
+
 **Rundenlimit T-89 · Mike, 2026-10-02.** Wegen des erweiterten Umfangs
 sind bis zu fünf reguläre Review-Runden erlaubt. Die frühere Dreiergrenze
 ist damit überholt; die geprüfte Fassung und der bisherige Rundenverbrauch
