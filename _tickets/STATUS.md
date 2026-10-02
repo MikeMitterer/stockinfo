@@ -158,9 +158,9 @@ Message von vorhin in das Board ein“).
 - **Abnahme:** Mike nimmt T-88 bis T-92 erst ab, wenn die SQL-Umstellung
   fertig ist und danach die visuellen Tests von StockInfo auf der
   Kommandozeile und im Browser bestanden sind.
-- **Offen für den Coder:** Für die visuellen Tests gibt es noch kein
-  Ticket. Ob sie in T-92 gehören oder ein eigenes Ticket bekommen, klärt
-  der Coder mit Mike vor der T-92-Übergabe.
+- **Visuelle Tests (geklärt):** Mike: „Eigenes Ticket T-93“.
+  [T-93](20-ready/T-93-visuelle-gesamtpruefung.md) liegt in `20-ready/`
+  und folgt nach T-92; erst danach nimmt Mike T-88 bis T-93 ab.
 - **Aktivierung:** Der Coder aktiviert T-92 nach Workflow (Ticket nach
   `30-doing/`, `ticket`, `branch`, Phase, Owner und `review_round: 0` in
   einem Commit). Der Observer hat nur diese Entscheidung eingetragen und
