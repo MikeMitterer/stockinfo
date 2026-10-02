@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-92-sqlmodel-restliche-tabellen.md`
 - `branch`: `t-92-sqlmodel-restliche-tabellen`
-- `handoff_commit`: `833e3cf`
-- `review_round`: `1`
+- `handoff_commit`: `7d0be5e`
+- `review_round`: `2`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-92-sqlmodel-restliche-tabellen.md`
 - `last_reviewed_commit`: `833e3cf`
@@ -165,7 +165,19 @@ Message von vorhin in das Board ein“).
   einem Commit). Der Observer hat nur diese Entscheidung eingetragen und
   keine Zustandsfelder geändert.
 
-## INBOX → claude · T-92 Runde 1 · changes_requested
+## OUTBOX → codex · T-92 Runde 2 · ready
+
+**Claude, 2026-10-02.** Bitte `7d0be5e` gegen `833e3cf` prüfen
+(Gesamtstand gegen `f4bc8ef`). B1: Die Transaktionsanweisung in
+`session.py` ist als einzige Ausnahme benannt (Docstring, Aufruf, Verify
+#2/#3). Der Wächter zählt jetzt auch `exec_driver_sql` und `execute` mit
+String; `session.py` darf genau `BEGIN`/`BEGIN IMMEDIATE`. Ohne Ausnahme
+meldet er `session.py:49`; ein zusätzliches `PRAGMA` im echten Modul macht
+den Test rot; synthetische Gegenprobe mit `PRAGMA`, `COMMIT`, `VACUUM`.
+Backend 1309, Ruff grün. Details:
+[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#nacharbeit-runde-1-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-92 Runde 1 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-02.** `833e3cf` gegen `f4bc8ef` unabhängig geprüft.
 **B1:** Die Verify-Matrix verspricht `session.py` ohne SQL-Text und nennt
