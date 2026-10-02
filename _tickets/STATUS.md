@@ -68,6 +68,15 @@ dort steht, obwohl kein Mensch ihr folgen kann. Sie ist ein Werkzeug für
 die Agenten: Aufruf im Kopf von `dashboard/e2e/visual-check.mjs`, Hinweis
 in `AGENTS.md`. Node 24 bleibt als Voraussetzung im README.
 
+**Fonds-Beispiel in der Offline-Vorlage · Mike, 2026-10-02.** Zu T-93 B6:
+Die Testwerte für den Fonds (`metadata` mit `ter_bps`, `provider`,
+`fund_domicile`) dürfen in `examples/assets-standalone.yaml` stehen statt
+in einer eigenen Ergänzungsdatei unter `dashboard/e2e/`. Mike: „B passt,
+trag es ein“ (an claude-observer). Grund: Ein Fonds-Beispiel mit TER und
+Anbieter zeigt Betreibern besser, was eintragbar ist. Das Testkonzept von
+T-93 („die Vorlage bleibt unverändert“) ist damit an dieser Stelle bewusst
+geändert; Konzepttext und Doku-Abgleich der Vorlage ziehen in T-93 mit.
+
 **Node 24 als Mindestversion · Mike, 2026-10-02.** Zu T-93 B1 (`node:sqlite`
 gegen „Node.js 20+“): „Selbst Node 24 ist kein Problem. Das wäre die aktuell
 LTS-Version. Was soll das mit Python???“ und „Trag es ein, Node 24 als
