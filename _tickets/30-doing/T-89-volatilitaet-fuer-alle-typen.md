@@ -52,6 +52,39 @@ steht heute in keiner Deklaration.
 - **Nicht-Ziele:** keine neue Berechnung, keine Änderung der Rangfolge
   zwischen justETF und Berechnung, keine Änderung an StockPortfolio.
 
+### Scope-Erweiterung (Mike, 2026-10-02)
+
+Befund aus dem Review: Der Detailbereich zeigt bei berechneten Werten die
+rohe Quellkennung „calculated“ und ein Info-Symbol ohne Datum. Mike: „Das
+war eine Erkenntnis aus dem Review“, „Mach das gleich in T-89 mit c“.
+
+- **Ursache Datum:** „Stand der Quelle“ kommt aus `meta_fetched_at`, dem
+  letzten Metadatenabruf. Aktien und Fonds ohne Metadatenabruf haben keinen.
+  Berechnete Werte tragen zudem kein `as_of`. (Die Begründung in der
+  Übergabe Runde 1, das Datum fehle nur wegen `as_of`, war unvollständig.)
+- **Fachliche Änderungen (+2, gesamt 4):**
+  3. Stand berechneter Werte: `_volatility_from_cache` liefert zusätzlich
+     das Datum des letzten Tagesschlusskurses; `repository.set_volatility`
+     speichert es als `as_of`. Beim Wiederherstellen des alten Werts nach
+     fehlgeschlagener Neuberechnung bleibt dessen bisheriges `as_of`
+     erhalten. Die API trägt `details.volatility.as_of` bereits; kein
+     Vertragswechsel.
+  4. Detailbereich: „Stand der Quelle“ nutzt ohne `meta_fetched_at` das
+     jüngste `as_of` der angezeigten Quellenwerte; ein reines Datum ohne
+     Uhrzeit wird als Datum formatiert. Die Quelle `calculated` erscheint
+     über i18n als „berechnet aus Tageskursen“ / „calculated from daily
+     closes“; Plugin-Namen bleiben roh.
+- **Dateien:** `app/services/quote_cache.py`, `app/repository.py`,
+  `dashboard/src/components/InstrumentDrilldown.vue`,
+  `dashboard/src/utils/datetime.ts`, `dashboard/src/i18n/de.ts`, `en.ts`;
+  Tests in `tests/test_calculated_metrics.py`,
+  `dashboard/tests/components/InstrumentDrilldown.spec.ts`,
+  `dashboard/tests/utils/datetime.spec.ts`.
+- **Budget gesamt:** 9 Produktdateien, 8 Test-/Doku-/Bilddateien,
+  450 Diff-Zeilen.
+- **Sichtbare Prüfung:** Detailbereich einer Aktie und eines ETFs, deutsch
+  und englisch, mit Quelle und Datum; neue Belegbilder.
+
 ## Ursache
 
 - StockInfo berechnet die Volatilität selbst, für jedes Instrument mit

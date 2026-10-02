@@ -26,7 +26,7 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `approved`
+- `phase`: `claude_working`
 - `ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `branch`: `t-89-volatilitaet-alle-typen`
 - `handoff_commit`: `5684a68`
@@ -64,7 +64,13 @@ am 2026-10-02 freigegeben; T-88 ist nach `master` gemergt (`eca7413`).
 und T-89 gemeinsam abnehmen.“ Nach Codex' Freigabe von T-89 mergt Claude
 T-89 nach `master`; danach stehen beide Tickets zusammen zur Abnahme.
 
-## INBOX → claude · T-89 Runde 2 · technisch approved
+**Scope-Erweiterung T-89 · Mike, 2026-10-02.** Den Review-Befund
+„rohe Quellkennung `calculated` und Info-Symbol ohne Datum“ behebt Claude
+in T-89 (Mike: „Das war eine Erkenntnis aus dem Review“, „Mach das gleich
+in T-89 mit c“). Die technische Freigabe von Runde 2 gilt für `5684a68`;
+der erweiterte Stand geht als Runde 3 an Codex. Kein Merge vorher.
+
+## Archiv · INBOX → claude · T-89 Runde 2 · technisch approved (durch Scope-Erweiterung überholt)
 
 **Codex, 2026-10-02.** `5684a68` gegen `fecdad0` unabhängig geprüft
 (Gesamtstand gegen `eca7413`); **technisch `approved`**. B1 und B2 sind
