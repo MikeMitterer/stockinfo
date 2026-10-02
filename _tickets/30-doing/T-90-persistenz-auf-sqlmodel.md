@@ -110,6 +110,82 @@ Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
 
+## Nacharbeit Runde 2 (Claude, 2026-10-02)
+
+Prüfgegenstand: `44f72ab` gegen `88d54d8` (Nacharbeit) und gegen `master`
+`de620e9` (Gesamtstand). Ein Produktcommit.
+
+**Grenze, jetzt ausdrücklich:** Jeder Zugriff auf die **laufende**
+Datenbankdatei samt Journalen liegt in `app/persistence/`. Die
+Sicherungsdateien verwaltet der Dienst als Archiv (Namen, Rotation,
+Manifeste); ihren Inhalt liest er nur über `read_stamp`. So steht es auch im
+Modul-Docstring von `backup_store.py`.
+
+- **B4 · Restore-Tausch:** `backup_store.replace_database(database_path,
+  source)` kopiert über `.incoming`, tauscht atomar und löscht `-wal`/`-shm`;
+  scheitert ein Schritt, entfernt sie `.incoming` und reicht den Fehler
+  weiter. `apply_pending` steuert nur noch Absicht, Prüfung, Vorabsicherung,
+  Aufruf und Fehlerzustand; `shutil` ist aus dem Dienst verschwunden.
+- **Selbst gefunden, gleiche Klasse:** Drei weitere Datei-Abfragen auf die
+  laufende Datenbank lagen außerhalb und sind mitgezogen:
+  `apply_pending` (`database.is_file()` vor der Vorabsicherung) und
+  `stamped_fingerprint` (`path.is_file()`) nutzen jetzt
+  `backup_store.database_exists`; `app/main.py:107` (Existenz und Größe für
+  „frische Datenbank“) nutzt `db.is_fresh_database`. Das Verhalten ist
+  gleich: `is_file` bleibt `is_file`, „fehlt oder leer“ bleibt „fehlt oder
+  leer“.
+- **Wächter:** erkennt jetzt auch `os.replace`/`os.rename`/`os.remove`/
+  `shutil.copy*`/`shutil.move` mit einem Argument, dessen Name `database`
+  enthält, Pfadmethoden (`exists`, `is_file`, `stat`, `unlink`, `rename`,
+  `replace`, `open`, …) auf einem solchen Pfad und die Strings `-wal`/`-shm`.
+  Gegenproben:
+  - Alter Stand (`git show 88d54d8:…`): `app/services/backup.py` meldet
+    Zeilen 401 (`is_file`), 405 (`os.replace`), 406 (`-wal`, `-shm`),
+    407 (`unlink`); `app/main.py` Zeile 107 (`exists`, `stat`). Neuer Stand:
+    beide leer, ebenso alle 56 Dateien außerhalb.
+  - Synthetischer Fall im Test: Tausch, Journal, Existenzfrage werden
+    gefunden; Rotation mit anders benannten Archivpfaden nicht.
+  - Echter `backup_store.py` muss mit `os.replace(Datenbank)` und
+    `is_file()` anschlagen.
+  - **Grenze des Wächters:** Er erkennt den Dateizugriff am Namen. Ein
+    Datenbankpfad, der etwa `path` heißt, rutscht durch — so wie das alte
+    `stamped_fingerprint`. Diese Stelle ist verlegt; für neue Fälle ist der
+    Name die Konvention.
+- **Test angepasst:** `tests/test_backup.py:764` setzte den Kopierfehler
+  über `app.services.backup.shutil.copy2`; der Kopierschritt liegt jetzt in
+  `app.persistence.backup_store`, das Patch-Ziel zieht mit. Die Prüfungen
+  des Tests (Fehler sichtbar, kein `.incoming`, kein zweiter Versuch) sind
+  unverändert und grün.
+- **Stabile Reihenfolge:** Zwei Funde in derselben Zeile kamen aus einer
+  Menge in wechselnder Reihenfolge; der Gesamtlauf fiel einmal. Sortiert
+  wird jetzt nach Zeile und Text; drei Läufe mit verschiedenen
+  `PYTHONHASHSEED` grün.
+- **Läufe:** Backend **1273 passed, 35 skipped**; Restore-/Backup-Auswahl
+  (`-k "restore or backup"`) grün, darunter der Journaltest
+  `tests/test_backup.py:492–510`; Ruff `app tests scripts` und `git diff
+  --check` grün. Plugin-API ohne Diff seit Runde 1 (**324 passed**).
+- **Sichtbar, echter Restore mit Temp-Datenbank:** Backup per Oberfläche
+  angelegt und vorgemerkt ([Hinweis](T-90-browser-r3-restore-pending.png)),
+  `GOLD.SG` per API gelöscht (vier Instrumente), Neustart: Log
+  `backup_created reason=pre-restore`, `restore_applied`,
+  `restore_completed`; `restore-pending.json` ist weg. Das
+  [Dashboard danach](T-90-browser-r3-restored-dashboard.png) zeigt wieder
+  alle fünf Instrumente samt `GOLD.SG`.
+- **Bezeichner:** Inventar über alle 78 geänderten Python-Dateien,
+  22.272 Vorkommen; einziger nicht-ASCII-Name bleibt der zulässige
+  Testname. Neu: `database_exists`, `replace_database`,
+  `is_fresh_database`, `_JOURNAL_SUFFIXES`, `FILE_FUNCTIONS`,
+  `PATH_METHODS`, `JOURNAL_SUFFIXES`, `_names_database`, `_file_access`,
+  zwei deutsche Testnamen.
+
+**Doku-Abgleich:** `README.md` „data access (only here)“ trifft jetzt auch
+für Restore und Dateiprüfungen zu; `README.md:175` („`POST
+/backups/{name}/restore` replaces the whole database with a backup“) bleibt
+richtig. `docker/README.md` „Updates, backups and troubleshooting“
+beschreibt nur die Sicherung des ganzen `/data`-Volumes von außen und ist
+nicht betroffen. `unraid/README.md`, `docs/plugin-authors.md`, `AGENTS.md`
+unverändert, weil sie keine Modulpfade nennen.
+
 ## Verifier-Prüfung · Runde 2 (Codex, 2026-10-02)
 
 **Prüfstand:** `88d54d8` gegen `8804575`, Gesamtstand gegen `de620e9`.
