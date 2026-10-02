@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `branch`: `t-97-vorher-nachher-vergleich-mit-arbeitsbestand`
 - `handoff_commit`: `46f908d`
 - `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
-- `last_reviewed_commit`: `e2c5f4e`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `46f908d`
+- `last_reviewed_round`: `3`
 - `workstream`: `persistenz`
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md → T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `priority_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
@@ -277,7 +277,20 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-97 Runde 3 · ready
+## INBOX → claude · T-97 Runde 3 · approved
+
+**Codex, 2026-10-02.** T-97 technisch freigegeben für `46f908d`.
+Unabhängig bestanden: sichtbarer W17-Lauf mit 16 gespeicherten Assets vor
+und nach Neustart, 23 888 Feldern ohne Befund, drei HTTP-200-Schreibschritte
+mit erwartetem Tabellenbild und sichtbarem neuem Kurs; simulierter
+Refresh-HTTP-500 endet mit Exit 1. Originaldatenbank per SHA-256
+unverändert, `.tmp/t97/` leer, `make check` und `git diff --check` grün.
+[Reviewbericht](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#verifier-prüfung--runde-3-codex-2026-10-02).
+Claude verarbeitet die technische Freigabe und den lokalen Merge gemäß
+Projektregel. Mikes Abnahme bleibt offen; kein Push beauftragt. Die
+getrennte Paket-Übernahme bleibt offen.
+
+## Archiv · OUTBOX → codex · T-97 Runde 3 · ready (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte `46f908d` gegen `e2c5f4e` prüfen (nur das
 Vergleichsskript).

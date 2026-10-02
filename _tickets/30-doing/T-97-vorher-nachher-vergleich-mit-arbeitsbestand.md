@@ -14,10 +14,9 @@ vor T-90 `fund_size` = 1.234.000.000 EUR mit Quelle `manual`. Nach der
 Umstellung muss dieselbe Abfrage auf derselben Datenbank denselben Wert und
 dieselbe Quelle liefern.
 
-**Stand:** Runde 2 am 2026-10-02 mit `changes_requested`. Der unabhängige
-Positivlauf bestätigt 16 gespeicherte Assets und einen unveränderten
-Arbeitsbestand; ein fehlgeschlagener Aktualisierungsaufruf kann noch als
-erfolgreicher Schreibweg gelten. Angelegt am 2026-10-02 auf Mikes Auftrag. Mike: „die visuellen
+**Stand:** Technisch freigegeben in Runde 3 am 2026-10-02; Mikes Abnahme
+bleibt offen. Der sichtbare Datenbanklauf bestätigt 16 gespeicherte Assets
+und einen unveränderten Arbeitsbestand. Angelegt am 2026-10-02 auf Mikes Auftrag. Mike: „die visuellen
 Tests werden mit dem YAML-File gemacht obwohl massive Änderungen bei dem
 Datenbankzugriffen gemacht wurden … am aktuellen Grund vorbei“ und „Ja, leg
 T-97 an und trag es ein“. Folgeticket der SQL-Umstellung in der
@@ -83,9 +82,9 @@ Kopie des Arbeitsbestands ist erteilt (siehe Grenzen).
 - [x] Jeder Unterschied ist als erwartet (mit Ticket) oder als Befund
       eingeordnet; Befunde stehen als Folgetickets in der Kette. Im
       Positivlauf keine Unterschiede; der Fehlerausstieg wurde gegengeprüft.
-- [ ] Der Schreibweg auf der Nachher-Kopie ändert nur die erwarteten Zeilen.
-      Die Tabellenänderung wird geprüft; der HTTP-Status der Aktualisierung
-      wird noch ignoriert (Runde 2, B6).
+- [x] Der Schreibweg auf einer Nachher-Kopie ändert nur die erwarteten
+      Tabellen; alle drei Aufrufe liefern HTTP 200 und der neue Kurs ist in
+      `/instruments` sichtbar.
 - [x] Kopien und Antwortdateien sind nach dem Vergleich gelöscht.
 
 ### Side-Effects
@@ -101,6 +100,38 @@ Vergleichsskript greift nur darüber auf Datenbanken zu. Die App ruft keine
 der drei Funktionen auf; ihr Laufzeitverhalten ändert sich nicht.
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+### Verifier-Prüfung · Runde 3 (Codex, 2026-10-02)
+
+**Ergebnis: `approved` für den technischen Stand `46f908d`.** Die
+Prüffassung wurde gegen `e2c5f4e` und den bestätigten Gesamtrahmen
+(acht Dateien, 754 Zeilen gegen `master`) geprüft. Rollen, Owner,
+Priorität, Branch und Commit stimmten, der Arbeitsbaum war sauber. Die
+Paket-VERSION blieb
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+Diese Freigabe ist keine menschliche Abnahme und beauftragt keinen Push.
+
+**Unabhängige Prüfung:** Der sichtbare W17-Lauf auf dem Hauptmonitor mit
+Fenster x = 100 bestand vor und nach Neustart mit 16 gespeicherten Assets
+(9 aus dem Arbeitsbestand, 7 ergänzt). Die API-Antworten verglichen
+23 888 Felder und vier Wechselkurspaare ohne Befund. Alle drei
+Schreibaufrufe lieferten HTTP 200. Der Refresh änderte ausschließlich
+`detail_values`, `instruments`, `quotes` und `sqlite_sequence`; der neue
+Kurs war in `/instruments` sichtbar. Exit 0. Eine unabhängige Gegenprobe
+ersetzte nur den Refresh-Aufruf durch HTTP 500: Das Werkzeug meldete den
+fehlgeschlagenen Aufruf und endete mit Exit 1. Die SHA-256 des Originals
+blieb vor und nach beiden Läufen
+`3627a9871d536ec943edab8d8a758719f74410367cbc9add8fb9ba18a01f986a`;
+`.tmp/t97/` war danach leer.
+
+`make check` endete mit Exit 0 (1310 Backendtests, 399 Dashboardtests,
+324 Plugin-API-Tests, 50 Beispieltests, Ruff, ESLint und `vue-tsc`).
+`git diff --check` war sauber. B6 ist geschlossen; die Gegenprobe
+zeigt den Fehlerausstieg bis zum Prozessende. Die Dokumentation in
+`AGENTS.md` und dem Modul-Docstring stimmt mit dem Aufruf und Verhalten
+überein. `README.md`, `docker/README.md` und `unraid/README.md` betreffen
+dieses agentenseitige Vergleichswerkzeug nicht. Produktcode wurde im
+Review nicht geändert.
 
 ### Übergabe Runde 3 (Claude, 2026-10-02)
 
