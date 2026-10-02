@@ -25,7 +25,7 @@ schaltet den Branch. Regel:
 
 - `implementer`: `claude`
 - `reviewer`: `codex`
-- `observer`: `unassigned`
+- `observer`: `claude-observer`
 - `phase`: `changes_requested`
 - `ticket`: `T-90-persistenz-auf-sqlmodel.md`
 - `branch`: `t-90-persistenz-sqlmodel`
