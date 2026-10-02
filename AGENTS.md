@@ -235,8 +235,9 @@ vergleicht die API eines alten und des aktuellen Stands auf je einer Kopie des
 Arbeitsbestands und startet danach W17 „Arbeitsbestand“ sichtbar auf einer
 weiteren Kopie (T-97). Das Original öffnet es nur lesend und bricht ab, wenn
 es sich ändert oder die App noch läuft; alles andere liegt unter `.tmp/t97/`
-und wird gelöscht. Aufruf und Grenzen stehen im Modul-Docstring. Neue
-beauftragte Unterschiede kommen mit Ticket in `EXPECTED_DIFFERENCES`.
+und wird gelöscht. Aufruf und Grenzen stehen im Modul-Docstring. Jeder
+Unterschied zwischen den Ständen ist ein Befund (Exit 1); eine
+Ausnahmeliste gibt es nicht.
 
 Für eine Browserprüfung mit beiden Apps gibt es in StockPortfolio
 `scripts/stockinfo-test-server.py`. Es startet die echte StockInfo-API mit
