@@ -346,13 +346,11 @@ def stored_rejections(database_path: str) -> list[dict[str, object]] | None:
     from app.persistence.session import fetch_all, open_session
     from app.persistence.tables import MigrationRejectionRecord, table_of
 
+    report = table_of(MigrationRejectionRecord)
     with open_session(database_path) as session:
-        if not inspect(session.connection()).has_table(MigrationRejectionRecord.__tablename__):
+        if not inspect(session.connection()).has_table(report.name):
             return None
-        return fetch_all(
-            session,
-            select(table_of(MigrationRejectionRecord)).order_by(col(MigrationRejectionRecord.symbol)),
-        )
+        return fetch_all(session, select(report).order_by(col(MigrationRejectionRecord.symbol)))
 
 
 def run_migration(database_path: str, rejected_at: str) -> MigrationPlan:
