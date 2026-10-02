@@ -1,48 +1,26 @@
-"""Generische Detailpersistenz; alle Aufrufer teilen die Repository-Session."""
+"""Generische Detailpersistenz; alle Aufrufer teilen die Repository-Session.
+
+Reiner ORM-Code: Das Schema der Detailtabellen steht beim übrigen DDL in
+`db.py`.
+"""
 
 import json
-import sqlite3
-import uuid
 
-from sqlalchemy import delete, select, text, update
+from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.sqlite import insert
 from sqlmodel import Session, col
 
 from app.detail_models import DetailDefinition
 from app.details import CANONICAL, merge_value
+from app.persistence.meta_store import get_meta, put_meta
 from app.persistence.session import fetch_all
 from app.persistence.tables import (
     DetailOverrideRecord,
     DetailValueRecord,
+    InstrumentOverrideRecord,
     InstrumentRecord,
     table_of,
 )
-
-SCHEMA = '''
-CREATE TABLE IF NOT EXISTS detail_values (
-    instrument_id INTEGER NOT NULL REFERENCES instruments(id) ON DELETE CASCADE,
-    field TEXT NOT NULL,
-    source TEXT NOT NULL,
-    value TEXT NOT NULL,
-    currency TEXT,
-    as_of TEXT,
-    PRIMARY KEY (instrument_id, field, source)
-);
-CREATE TABLE IF NOT EXISTS detail_overrides (
-    instrument_id INTEGER NOT NULL REFERENCES instruments(id) ON DELETE CASCADE,
-    field TEXT NOT NULL,
-    value TEXT NOT NULL,
-    currency TEXT,
-    as_of TEXT,
-    PRIMARY KEY (instrument_id, field)
-);
-'''
-
-
-def create_schema(connection: sqlite3.Connection) -> None:
-    """Legt die Detailtabellen und die Generationskennung an — Teil von `init_db`."""
-    connection.executescript(SCHEMA)
-    connection.execute("INSERT OR IGNORE INTO meta(key,value) VALUES ('details_generation_id',?)", (str(uuid.uuid4()),))
 
 
 def migrate_legacy_values(session: Session) -> None:
@@ -50,7 +28,7 @@ def migrate_legacy_values(session: Session) -> None:
 
     Schreibt über dieselben `put_provider` und `put_manual` wie das Repository.
     """
-    if session.execute(text("SELECT 1 FROM meta WHERE key='details_migrated'")).first():
+    if get_meta(session, 'details_migrated') is not None:
         return
     fund_currencies = {}
     columns = [col(InstrumentRecord.id), col(InstrumentRecord.source), col(InstrumentRecord.meta_fetched_at),
@@ -67,7 +45,7 @@ def migrate_legacy_values(session: Session) -> None:
                     'currency': row.get('fund_currency') if field == 'fund_size' else None,
                     'as_of': row.get('meta_fetched_at'),
                 })
-    for row in fetch_all(session, text('SELECT * FROM instrument_overrides')):
+    for row in fetch_all(session, select(table_of(InstrumentOverrideRecord))):
         for field in CANONICAL:
             value = row.get(field)
             if field == 'accumulating' and value is not None:
@@ -76,8 +54,8 @@ def migrate_legacy_values(session: Session) -> None:
             put_manual(session, row['instrument_id'], field, value, currency, row['updated_at'])
     # Nach erfolgreicher Übernahme existiert nur eine schreibbare Wahrheit.
     session.execute(update(InstrumentRecord).values({field: None for field in CANONICAL}))
-    session.execute(text('DELETE FROM instrument_overrides'))
-    session.execute(text("INSERT INTO meta(key,value) VALUES ('details_migrated','1')"))
+    session.execute(delete(InstrumentOverrideRecord))
+    put_meta(session, 'details_migrated', '1')
 
 
 def sync_catalog(session: Session, definitions: list[DetailDefinition]) -> int:
@@ -87,19 +65,18 @@ def sync_catalog(session: Session, definitions: list[DetailDefinition]) -> int:
     sonst denselben alten Stand und zählten beide von ihm aus weiter.
     """
     serialized = json.dumps([entry.model_dump() for entry in definitions], sort_keys=True)
-    values = dict(session.execute(text("SELECT key,value FROM meta WHERE key IN ('details_schema','details_version')")).tuples().all())
-    version = int(values.get('details_version', '0'))
-    if serialized != values.get('details_schema'):
+    version = int(get_meta(session, 'details_version') or 0)
+    if serialized != get_meta(session, 'details_schema'):
         version += 1
-        session.execute(text('INSERT INTO meta(key,value) VALUES (:key,:value) ON CONFLICT(key) DO UPDATE SET value=excluded.value'),
-            [{'key': 'details_schema', 'value': serialized}, {'key': 'details_version', 'value': str(version)}])
+        put_meta(session, 'details_schema', serialized)
+        put_meta(session, 'details_version', str(version))
     return version
 
 
 def catalog(session: Session) -> list[DetailDefinition]:
     """Das validierte Profilschema der laufenden Instanz."""
-    row = session.execute(text("SELECT value FROM meta WHERE key='details_schema'")).first()
-    return [DetailDefinition.model_validate(value) for value in json.loads(row[0])] if row else []
+    stored = get_meta(session, 'details_schema')
+    return [DetailDefinition.model_validate(value) for value in json.loads(stored)] if stored else []
 
 
 def put_provider(session: Session, instrument_id: int, field: str, entry: dict) -> None:

@@ -1,4 +1,10 @@
-"""Plugin-Daten und Versionsstempel gemeinsam migrieren."""
+"""Plugin-Daten und Versionsstempel gemeinsam migrieren.
+
+**Warum hier rohes SQL bleibt:** Plugins migrieren ihre Daten über den
+öffentlichen `MigrationContext` mit eigenem SQL; diese Verbindung reicht das
+Modul durch. Sie nimmt die Schreibsperre mit `BEGIN IMMEDIATE`, und Plugin-
+und Versionsänderung committen nur gemeinsam.
+"""
 
 import json
 import sqlite3

@@ -1,7 +1,7 @@
-"""SQLModel-Abbild der Kerntabellen — nur innerhalb von `app/persistence/`.
+"""SQLModel-Abbild aller Tabellen — nur innerhalb von `app/persistence/`.
 
 Die Modelle beschreiben das bestehende Schema; angelegt und migriert wird es
-weiterhin vom DDL in `db.py` und `detail_store.py`. Darum kein `create_all`:
+weiterhin vom DDL in `db.py` und `migration.py`. Darum kein `create_all`:
 Zwei Schemaquellen liefen beim ersten neuen Feld auseinander. Dass jedes
 Modell genau die Spalten seiner Tabelle trägt, prüft
 `tests/test_persistence_tables.py`.
@@ -103,3 +103,77 @@ class DetailOverrideRecord(SQLModel, table=True):
     value: str
     currency: str | None = None
     as_of: str | None = None
+
+
+class DailyMetaRecord(SQLModel, table=True):
+    """Die Abruf-Wasserzeichen der Tagesschlusskurse aus `daily_meta`."""
+
+    __tablename__ = "daily_meta"  # type: ignore[assignment]
+
+    instrument_id: int = Field(primary_key=True)
+    fetched_from: str | None = None
+    fetched_to: str | None = None
+
+
+class FxRateRecord(SQLModel, table=True):
+    """Ein gespeicherter Wechselkurs aus `fx_rates`."""
+
+    __tablename__ = "fx_rates"  # type: ignore[assignment]
+
+    base: str = Field(primary_key=True)
+    quote: str = Field(primary_key=True)
+    rate: float
+    quote_time: str
+    fetched_at: str
+    source: str | None = None
+
+
+class MetaRecord(SQLModel, table=True):
+    """Ein Eintrag aus `meta`: was die Datenbank über sich selbst weiß."""
+
+    __tablename__ = "meta"  # type: ignore[assignment]
+
+    key: str = Field(primary_key=True)
+    value: str
+
+
+class InstrumentOverrideRecord(SQLModel, table=True):
+    """Eine Zeile der alten Override-Tabelle `instrument_overrides`.
+
+    Seit den Detailwerten nur noch Quelle der einmaligen Übernahme; danach
+    ist die Tabelle leer.
+    """
+
+    __tablename__ = "instrument_overrides"  # type: ignore[assignment]
+
+    instrument_id: int = Field(primary_key=True)
+    ter: float | None = None
+    volatility: float | None = None
+    accumulating: int | None = None
+    provider: str | None = None
+    replication: str | None = None
+    fund_size: float | None = None
+    fund_domicile: str | None = None
+    fund_currency: str | None = None
+    updated_at: str
+
+
+class MigrationRejectionRecord(SQLModel, table=True):
+    """Ein Eintrag des Umzugsberichts aus `migration_rejections`.
+
+    Die Tabelle entsteht erst mit dem ersten Identitäts-Umzug.
+    """
+
+    __tablename__ = "migration_rejections"  # type: ignore[assignment]
+
+    id: int | None = Field(default=None, primary_key=True)
+    symbol: str
+    isin: str | None = None
+    name: str | None = None
+    exchange: str | None = None
+    type: str | None = None
+    currency: str | None = None
+    reason: str
+    quotes: int
+    daily_closes: int
+    rejected_at: str

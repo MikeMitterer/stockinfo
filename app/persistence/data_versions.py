@@ -1,10 +1,16 @@
-"""Deklarierte und gespeicherte Datenkompatibilität je Quellenname."""
+"""Deklarierte und gespeicherte Datenkompatibilität je Quellenname.
+
+**Warum hier rohes SQL bleibt:** Nur `stored_versions` liest roh — es öffnet
+auch fremde Sicherungsdateien nur lesend, und deren `meta`-Tabelle kann
+fehlen. `stamp_versions` schreibt die laufende Datenbank über die Modelle.
+"""
 
 import json
-import sqlite3
 from pathlib import Path
 
 from app.persistence.db import connect_read_only
+from app.persistence.meta_store import get_meta, put_meta
+from app.persistence.session import open_session
 from app.sources_config import ROLES, SourcesConfig
 from app.sources_registry import specs_by_name
 
@@ -58,18 +64,9 @@ def stamp_versions(
     vorhandenen Bestand bei 1. Nur eine frische DB trägt sofort die Deklaration.
     """
     current = declared_versions(config)
-    connection = sqlite3.connect(database)
-    try:
-        with connection:
-            row = connection.execute(
-                "SELECT value FROM meta WHERE key=?", (DATA_VERSIONS_KEY,)
-            ).fetchone()
-            versions = json.loads(row[0]) if row else {}
-            for name, version in current.items():
-                versions.setdefault(name, version if fresh else 1)
-            connection.execute(
-                "INSERT OR REPLACE INTO meta(key,value) VALUES (?,?)",
-                (DATA_VERSIONS_KEY, json.dumps(versions, sort_keys=True)),
-            )
-    finally:
-        connection.close()
+    with open_session(str(database), immediate=True) as session:
+        stored = get_meta(session, DATA_VERSIONS_KEY)
+        versions = json.loads(stored) if stored else {}
+        for name, version in current.items():
+            versions.setdefault(name, version if fresh else 1)
+        put_meta(session, DATA_VERSIONS_KEY, json.dumps(versions, sort_keys=True))

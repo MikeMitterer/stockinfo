@@ -1,7 +1,14 @@
 """SQLite-Anbindung und Schema-Initialisierung.
 
-Kapselt Verbindungsaufbau und Schema. Raw-SQL für Fachlogik gehört in die
-Repository-Schicht (repository.py), nicht hierher.
+Kapselt Verbindungsaufbau und Schema. Laufzeitwege lesen und schreiben über
+die SQLModel-Modelle (`repository.py`, `detail_store.py`), nicht hierher.
+
+**Warum hier rohes SQL bleibt:** DDL (`CREATE TABLE`, Indizes, `PRAGMA
+user_version`) ist die eine Schemaquelle; die Modelle bilden sie nur ab.
+Die Altdaten-Migration (`_migrate`, `_merge_overrides`, Spaltennachzug)
+arbeitet auf Datenbanken, deren Form die Modelle gerade **nicht** abbilden —
+fehlende Spalten, alte Tabellen —, und muss in einer Transaktion mit dem
+Schema laufen.
 """
 
 import sqlite3
@@ -140,6 +147,27 @@ CREATE TABLE IF NOT EXISTS meta (
 );
 """
 
+# Die Detailtabellen: Quellenwerte und manuelle Eingaben je Feld.
+_DETAIL_SCHEMA = """
+CREATE TABLE IF NOT EXISTS detail_values (
+    instrument_id INTEGER NOT NULL REFERENCES instruments(id) ON DELETE CASCADE,
+    field TEXT NOT NULL,
+    source TEXT NOT NULL,
+    value TEXT NOT NULL,
+    currency TEXT,
+    as_of TEXT,
+    PRIMARY KEY (instrument_id, field, source)
+);
+CREATE TABLE IF NOT EXISTS detail_overrides (
+    instrument_id INTEGER NOT NULL REFERENCES instruments(id) ON DELETE CASCADE,
+    field TEXT NOT NULL,
+    value TEXT NOT NULL,
+    currency TEXT,
+    as_of TEXT,
+    PRIMARY KEY (instrument_id, field)
+);
+"""
+
 SCHEMA_VERSION = 2
 """Die Form dieses Schemas — als **Zahl**, die nur wächst.
 
@@ -232,14 +260,18 @@ def init_db(database_path: str) -> bool:
         ``True``, wenn ein Umzug aussteht, **bei dem etwas verloren geht** —
         dann gehört der Dienst in den Pending-Zustand.
     """
-    from app.persistence.detail_store import create_schema, migrate_legacy_values
+    from app.persistence.detail_store import migrate_legacy_values
     from app.persistence.session import open_session
 
     connection = get_connection(database_path)
     try:
         connection.executescript(_SCHEMA)
         _migrate(connection)
-        create_schema(connection)
+        connection.executescript(_DETAIL_SCHEMA)
+        connection.execute(
+            "INSERT OR IGNORE INTO meta(key,value) VALUES ('details_generation_id',?)",
+            (str(uuid.uuid4()),),
+        )
         _create_identity_indices(connection)
         # Erst wenn das Schema wirklich steht: Die Nummer ist eine Zusage an
         # eine spätere Wiederherstellung.
@@ -306,20 +338,19 @@ def stored_rejections(database_path: str) -> list[dict[str, object]] | None:
         das REST-Modell `RejectedInstrument` — eine zweite Feldliste hier
         liefe neben ihm auseinander.
     """
-    connection = get_connection(database_path)
-    try:
-        exists = connection.execute(
-            "SELECT 1 FROM sqlite_master WHERE type = 'table' "
-            "AND name = 'migration_rejections'"
-        ).fetchone()
-        if exists is None:
+    # Lokal: `session` baut seine Verbindungen mit `configure_connection` aus
+    # diesem Modul.
+    from sqlalchemy import inspect, select
+    from sqlmodel import col
+
+    from app.persistence.session import fetch_all, open_session
+    from app.persistence.tables import MigrationRejectionRecord, table_of
+
+    report = table_of(MigrationRejectionRecord)
+    with open_session(database_path) as session:
+        if not inspect(session.connection()).has_table(report.name):
             return None
-        rows = connection.execute(
-            "SELECT * FROM migration_rejections ORDER BY symbol"
-        ).fetchall()
-    finally:
-        connection.close()
-    return [dict(row) for row in rows]
+        return fetch_all(session, select(report).order_by(col(MigrationRejectionRecord.symbol)))
 
 
 def run_migration(database_path: str, rejected_at: str) -> MigrationPlan:

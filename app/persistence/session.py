@@ -11,6 +11,10 @@ Das SQLAlchemy-Rezept für den SQLite-Dialekt schaltet das Eigenverhalten ab
 und setzt `BEGIN` selbst — erst damit kann ein Schreiber `BEGIN IMMEDIATE`
 verlangen (`immediate=True`), und Lesen und Schreiben einer Session liegen in
 derselben Transaktion.
+
+**Die eine rohe Anweisung:** `BEGIN` beziehungsweise `BEGIN IMMEDIATE` über
+`exec_driver_sql`. Sie steuert die Transaktion, liest und schreibt keine
+Daten; einen ORM-Ausdruck dafür gibt es nicht. Sonst steht hier kein SQL.
 """
 
 from collections.abc import Iterator
@@ -46,6 +50,8 @@ def _engine(database_path: str) -> Engine:
     @event.listens_for(engine, "begin")
     def _on_begin(connection) -> None:  # noqa: ANN001
         immediate = connection.get_execution_options().get(_IMMEDIATE, False)
+        # Die einzige rohe Anweisung dieses Moduls (siehe Modul-Docstring);
+        # der Grenztest lässt hier genau `BEGIN` und `BEGIN IMMEDIATE` zu.
         connection.exec_driver_sql("BEGIN IMMEDIATE" if immediate else "BEGIN")
 
     return engine

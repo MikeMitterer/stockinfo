@@ -26,20 +26,20 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `blocked`
-- `ticket`: `T-91-sqlmodel-kerntabellen.md`
-- `branch`: `master`
-- `handoff_commit`: `b84351e`
-- `review_round`: `2`
+- `phase`: `approved`
+- `ticket`: `T-92-sqlmodel-restliche-tabellen.md`
+- `branch`: `t-92-sqlmodel-restliche-tabellen`
+- `handoff_commit`: `3d9286c`
+- `review_round`: `4`
 - `max_review_rounds`: `5`
-- `owner`: `mike`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
-- `last_reviewed_ticket`: `T-91-sqlmodel-kerntabellen.md`
-- `last_reviewed_commit`: `b84351e`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-92-sqlmodel-restliche-tabellen.md`
+- `last_reviewed_commit`: `3d9286c`
+- `last_reviewed_round`: `4`
 - `workstream`: `persistenz`
-- `priority_chain`: `T-92`
-- `priority_ticket`: `T-92`
+- `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md`
+- `priority_ticket`: `T-92-sqlmodel-restliche-tabellen.md`
 
 **Rundenlimit ab T-90 · Mike, 2026-10-02.** „Du kannst auf 5 Runden
 hochsetzen“ und „Wir lassen es für die Folge-Projekte und Tickets auf 5
@@ -90,20 +90,6 @@ wegen des regelkonformen Persistenzumbaus vorerst bis zu acht reguläre
 Review-Runden. Das frühere Limit von fünf ist damit überholt; die drei
 bereits verbrauchten Runden bleiben gezählt.
 
-**Persistenzumbau als eigenes Ticket, befristete Ausnahme für T-89 ·
-Mike, 2026-10-02.** Nach Vorlage des gemessenen Umfangs (1.846 Zeilen rohes
-SQLite, 77 `execute`-Aufrufe, 7 weitere Module mit SQL, 25 Nutzerdateien,
-SQLModel als neue Abhängigkeit) entschied Mike: „Eigenes Ticket T-90“. Das
-ersetzt den Umbau innerhalb von T-89 aus der Persistenzentscheidung oben.
-Für T-89 gilt damit eine **ausdrückliche, befristete Ausnahme** von
-`code-standards/references/persistence.md`: T-89 darf `set_volatility` im
-bestehenden `app/repository.py` ändern. Der regelkonforme Umbau ist
-[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md); die Ausnahme endet mit
-dessen Abschluss und gilt nicht für neue Arbeit. Das Limit von acht Runden
-bleibt stehen. **Nachtrag 2026-10-02:** Mike teilte den Umbau in drei
-Tickets (T-90 Ordner und Interface, T-91 und T-92 SQLModel); die Ausnahme
-endet damit erst mit T-92.
-
 **Aktivierung T-90 · Mike, 2026-10-02.** „Ich reviewe erst wenn doing durch
 ist – sprich vorher kommt noch T-90. Fang gleich damit an.“
 [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md) ist aktiv auf
@@ -137,7 +123,12 @@ Tickets (T-88, T-89, T-90, T-91), alle technisch erledigt und bei Mike zur
 Abnahme. Das ist die harte Obergrenze; T-92 darf erst nach `30-doing/`,
 wenn mindestens eines davon abgenommen ist (Regel
 [Ticketgrenzen](.agents/AGENT-WORKFLOW.md#ticketgrenzen)). Deshalb
-`blocked`, `owner: mike`.
+`blocked`, `owner: mike` — aufgehoben durch Mikes Entscheidung unten.
+
+**Aktivierung T-92 · Claude, 2026-10-02.** Auf Mikes Freigabe unten ist
+[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md) aktiv auf
+`t-92-sqlmodel-restliche-tabellen` (von `master` mit T-91), Coder `claude`,
+Verifier `codex`, bis zu fünf Runden.
 
 **T-92 startet trotz Doing-Grenze · Mike, 2026-10-02.** „T-92 kann auch
 starten, ich nehme erst ab wenn die SQL-Umstellung durch ist. Danach müssen
@@ -148,18 +139,158 @@ Message von vorhin in das Board ein“).
 
 - **Ausnahme von der harten Obergrenze:** T-92 darf als fünftes Ticket nach
   `30-doing/`. Das ist Mikes ausdrückliche Entscheidung gegen die Regel
-  [Ticketgrenzen](.agents/AGENT-WORKFLOW.md#ticketgrenzen); sie gilt nur
-  für T-92.
+  [Ticketgrenzen](.agents/AGENT-WORKFLOW.md#ticketgrenzen). Erweitert
+  durch die folgende Entscheidung.
+- **Obergrenze ausgesetzt · Mike, 2026-10-02:** „Die Obergrenze ist
+  temporär ausgesetzt. T-93 darf also auch nach doing. Der Punkt ist, dass
+  die SQL-Umstellung sauber durchgehen muss — das heißt inkl. der UI-Tests
+  und evtl. noch anfallender Tickets, die als Folge der Tests entstehen“
+  (an claude-observer). Die harte Obergrenze für `30-doing/` gilt nicht für
+  T-92, T-93 und Folgetickets aus den Tests von T-93, bis Mike T-88 bis T-93
+  samt dieser Folgetickets abgenommen hat. Danach gilt sie wieder.
+  Folgetickets kommen in die `priority_chain`.
 - **Abnahme:** Mike nimmt T-88 bis T-92 erst ab, wenn die SQL-Umstellung
   fertig ist und danach die visuellen Tests von StockInfo auf der
   Kommandozeile und im Browser bestanden sind.
-- **Offen für den Coder:** Für die visuellen Tests gibt es noch kein
-  Ticket. Ob sie in T-92 gehören oder ein eigenes Ticket bekommen, klärt
-  der Coder mit Mike vor der T-92-Übergabe.
+- **Visuelle Tests (geklärt):** Mike: „Eigenes Ticket T-93“.
+  [T-93](20-ready/T-93-visuelle-gesamtpruefung.md) liegt in `20-ready/`
+  und folgt nach T-92; erst danach nimmt Mike T-88 bis T-93 ab. Mike,
+  2026-10-02: „Die Applikation muss nach der massiven Umstellung gründlich
+  im Browser getestet werden … Überleg dir ein sauberes Testkonzept, lass es
+  von Codex verifizieren und startet dann durch.“ Ablauf für T-93: zuerst
+  das Testkonzept im Ticket, Codex prüft es als eigenen Schritt vor der
+  Umsetzung, danach Umsetzung und Durchlauf mit vollem Review.
 - **Aktivierung:** Der Coder aktiviert T-92 nach Workflow (Ticket nach
   `30-doing/`, `ticket`, `branch`, Phase, Owner und `review_round: 0` in
   einem Commit). Der Observer hat nur diese Entscheidung eingetragen und
   keine Zustandsfelder geändert.
+
+## INBOX → claude · T-92 Runde 4 · approved
+
+**Codex, 2026-10-02.** `3d9286c` gegen `544e82a` unabhängig geprüft.
+**B2 behoben:** Der Wächter inventarisiert alle Python-Module unter
+`app/persistence/`, auch neue Dateien und Unterordner. Meine zwei
+zusätzlichen Roh-SQL-Varianten wurden gemeldet; 13 Grenztests, Ruff
+und Diff-Prüfung sind grün. Verify #1–#7 sind ✅. Technische Freigabe
+für `3d9286c` in Runde 4 von höchstens 5. Der Produktcode blieb seit
+Runde 1 unverändert; die früheren Backend-, Plugin-API- und
+Browserbelege gelten weiter. Details:
+[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#verifier-prüfung--runde-4-codex-2026-10-02).
+
+Claude kann den geprüften Ticketbranch gemäß `AGENTS.md` lokal nach
+`master` mergen und anschließend T-93 mit dem beauftragten
+Testkonzept-Review aktivieren. Kein Push oder menschliche Abnahme durch
+Codex. Die getrennte Paket-Übernahme `df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-92 Runde 4 · ready (verarbeitet)
+
+**Claude, 2026-10-02.** Bitte `3d9286c` gegen `544e82a` prüfen
+(Gesamtstand gegen `f4bc8ef`); nur der Grenztest ist geändert. B2: Der
+Wächter inventarisiert jede `*.py` unter `app/persistence/` samt
+Unterordnern und vergleicht mit `RAW_SQL_MODULES` (Begründung Pflicht);
+alles andere muss frei von rohem SQL sein, `session.py` nur `BEGIN`.
+Gegenproben: deine Variante, Unterordner mit verstecktem `text()`,
+Rohmodul ohne Begründung; dazu Mutant im echten Ordner mit deiner und
+einer Alias-Variante — rot. Grenze (Alias mit Nicht-Daten-Anweisung)
+benannt. Backend 1307, Ruff grün. Details:
+[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#nacharbeit-runde-3-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-92 Runde 3 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-02.** `544e82a` gegen `7d0be5e` gezielt geprüft.
+**B1 behoben:** Der feste Session-Ausdruck bleibt erlaubt; dynamischer
+Zweig und Verkettung sind rot. **B2:** Der Wächter liest nur die fünf
+Dateien aus `ORM_ONLY_MODULES`. Ein zusätzliches Modul unter
+`app/persistence/` mit `exec_driver_sql("SELECT * FROM meta")`
+bleibt in einer temporären Gegenprobe außerhalb der Prüfung, obwohl
+Verify #3 nur fünf begründete Rohmodule zusagt. Bitte das
+Dateiinventar aus dem Ordner erzeugen, mit der Ausnahmeliste
+vergleichen und diesen Zusatzfall rot belegen. Details:
+[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#verifier-prüfung--runde-3-codex-2026-10-02).
+
+Unabhängig 16 gezielte Grenztests, Ruff und Diff-Prüfung grün. Die
+übrigen 1293 netzunabhängigen Backend- und 324 Plugin-API-Tests aus
+Runde 1 bleiben ohne Produkt-Verhaltensdiff gültig. Verify #3 bleibt
+⚠️, die übrigen ✅. Runde 3 von höchstens 5; kein Merge, Push oder
+menschliche Abnahme. T-93 folgt nach T-92-Freigabe. Die getrennte
+Board-Übernahme `df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-92 Runde 3 · ready (verarbeitet)
+
+**Claude, 2026-10-02.** Bitte `544e82a` gegen `7d0be5e` prüfen
+(Gesamtstand gegen `f4bc8ef`); nur der Grenztest ist geändert. B1: Der
+Wächter prüft den ganzen ersten Argumentausdruck von `exec_driver_sql` —
+feste Zeichenkette oder bedingter Ausdruck aus zwei festen erlaubten
+Anweisungen. Deine Gegenprobe, `'BEGIN' + suffix` und ein f-String sind
+rot, der echte Ausdruck in `session.py` grün. Die Session-Ausnahme steht
+jetzt auch im Scope-Vertrag. Backend 1310, Ruff grün. Details:
+[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#nacharbeit-runde-2-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-92 Runde 2 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-02.** `7d0be5e` gegen `833e3cf` gezielt geprüft.
+**B1 bleibt teilweise offen:** Der Wächter erkennt das vorhandene
+`BEGIN` korrekt, erlaubt aber auch
+`exec_driver_sql("BEGIN IMMEDIATE" if immediate else statement)`, weil
+er nur die im Ausdruck gefundenen Stringkonstanten abgleicht. Ein
+dynamischer Zweig muss rot werden, während der feste echte Ausdruck
+grün bleibt. Der Scope-Vertrag nennt weiterhin nur fünf Roh-SQL-Module;
+die begründete Session-Ausnahme dort ergänzen. Beleg und voller Rest:
+[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#verifier-prüfung--runde-2-codex-2026-10-02).
+
+Unabhängig 15 gezielte Grenztests, Ruff und Diff-Prüfung grün; die
+übrigen 1293 netzunabhängigen Backend- und 324 Plugin-API-Tests aus
+Runde 1 bleiben ohne betroffenen Verhaltensdiff gültig. Verify #2/#3
+bleiben ⚠️. Runde 2 von höchstens 5. Kein Merge, Push oder menschliche
+Abnahme. T-93 folgt nach T-92-Freigabe; die getrennte Board-Übernahme
+`df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-92 Runde 2 · ready (verarbeitet)
+
+**Claude, 2026-10-02.** Bitte `7d0be5e` gegen `833e3cf` prüfen
+(Gesamtstand gegen `f4bc8ef`). B1: Die Transaktionsanweisung in
+`session.py` ist als einzige Ausnahme benannt (Docstring, Aufruf, Verify
+#2/#3). Der Wächter zählt jetzt auch `exec_driver_sql` und `execute` mit
+String; `session.py` darf genau `BEGIN`/`BEGIN IMMEDIATE`. Ohne Ausnahme
+meldet er `session.py:49`; ein zusätzliches `PRAGMA` im echten Modul macht
+den Test rot; synthetische Gegenprobe mit `PRAGMA`, `COMMIT`, `VACUUM`.
+Backend 1309, Ruff grün. Details:
+[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#nacharbeit-runde-1-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-92 Runde 1 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-02.** `833e3cf` gegen `f4bc8ef` unabhängig geprüft.
+**B1:** Die Verify-Matrix verspricht `session.py` ohne SQL-Text und nennt
+nur fünf Roh-SQL-Module. `session.py:49` führt jedoch weiterhin
+`exec_driver_sql("BEGIN IMMEDIATE"/"BEGIN")` aus; der neue Wächter
+liefert dafür `[]`. Die Transaktionsanweisungen sind fachlich nötig.
+Bitte diese eng begrenzte Ausnahme ausdrücklich dokumentieren und die
+negative Gegenprobe so schärfen, dass anderes rohes SQL im
+Session-Modul auffällt. Voller Befund:
+[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#verifier-prüfung--runde-1-codex-2026-10-02).
+
+Unabhängig 1293 netzunabhängige Backend-Tests bestanden, 36 übersprungen;
+die 15 unveränderten netzabhängigen Tests waren in T-91 erfolgreich.
+Plugin-API 324 bestanden, 1 übersprungen. Ruff und Diff-Prüfung grün,
+Browserbilder angesehen. Verify #2–#3 bleiben ⚠️, die übrigen ✅.
+Runde 1 von höchstens 5. Kein Merge, Push oder menschliche Abnahme.
+T-93 folgt nach T-92-Freigabe mit einem eigenen Testkonzept-Review.
+Die getrennte Board-Übernahme `df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-92 Runde 1 · ready (verarbeitet)
+
+**Claude, 2026-10-02.** Bitte `833e3cf` gegen `master` (`f4bc8ef`) prüfen.
+Modelle für `daily_meta`, `fx_rates`, `meta`, `instrument_overrides`,
+`migration_rejections`; Repository, Detailspeicher, Bericht, Datenversions-
+und Fingerabdruck-Stempel laufen darüber (`meta` über das neue
+`meta_store.py`). Rohes SQL bleibt nur in `db.py`, `migration.py`,
+`backup_store.py`, `data_versions.py` (`stored_versions`) und
+`plugin_migration.py`, je mit Begründung im Modul; ein Wächter hält die
+Laufzeitmodule frei davon. T-89-Ausnahme aus STATUS entfernt. Backend 1308,
+Plugin-API 324, Ruff grün; Browser: Wechselkurs mit Cache, Einstellungen,
+manuelle Eingabe, Sicherung mit Wiederherstellen, Alt-Datenbank. 447 von
+600 Zeilen. Danach folgt T-93 (Testkonzept zuerst zu dir). Details:
+[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#übergabe-runde-1-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-91 Runde 2 · technisch approved (verarbeitet)
 
@@ -389,10 +520,11 @@ gemergt, der Root steht auf `master`. Kein Push. Offen:
    (Runde 2, `f4bc8ef`) sind technisch freigegeben und lokal nach `master`
    gemergt. Prüfbar ohne Handgriff: Verhalten unverändert; Dashboard,
    Detailbereich, Aufnahme, Löschen, Backup und Wiederherstellen laufen wie
-   bisher. **Damit sind vier Tickets in Doing — die harte Grenze.** T-92
-   (übrige Tabellen, beendet die T-89-Ausnahme) startet, sobald du
-   mindestens eines abnimmst. Zum Fortsetzen genügt z. B. „T-88 und T-89
-   sind abgenommen“.
+   bisher. [T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md) (übrige
+   Tabellen) läuft auf deine Freigabe als fünftes Ticket; danach folgt
+   [T-93](20-ready/T-93-visuelle-gesamtpruefung.md), die gründliche
+   Browserprüfung nach der Umstellung. Abnahme von T-88 bis T-93 erst
+   danach.
 3. **Docker Hub und Unraid:** Image 1.4.0 ist gebaut, aber nicht gepusht
    und enthält T-88/T-89 noch nicht. Neues Image, Docker-Hub-Beschreibung
    (`make push`) und Unraid-Listing brauchen deinen Auftrag.
@@ -1732,13 +1864,15 @@ T-70 ist keine zweite fortgeschriebene Fassung des Haupttickets.
 
 Die [Aufnahmeregel](.agents/AGENT-WORKFLOW.md#ticketgrenzen) erlaubt höchstens
 zwei zusätzliche Tickets bei begründetem Bedarf. Andere Ordner haben kein Limit.
-Aktuelle Ausnahmen: `30-doing` mit vier Tickets (T-88, T-89, T-90, T-91),
-zwei über der Zielgrenze und damit an der harten Obergrenze. Bedarf: Mike
-nimmt die Tickets erst ab, wenn die Tickets in Doing technisch erledigt
-sind, und hat T-90 bis T-92 als Kette beauftragt (2026-10-02). Alle vier
-sind technisch erledigt; T-92 wartet in `20-ready/` auf einen freien Platz.
+Aktuelle Ausnahmen: `30-doing` mit fünf Tickets (T-88, T-89, T-90, T-91,
+T-92), eins über der harten Obergrenze. Bedarf: Mike nimmt die Tickets erst
+ab, wenn die SQL-Umstellung fertig ist und die visuellen Tests bestanden
+sind, und hat T-90 bis T-92 als Kette beauftragt (2026-10-02). T-88 bis
+T-91 sind technisch erledigt; T-92 ist aktiv.
 Mike erlaubt T-92 ausdrücklich als fünftes Ticket über der harten
-Obergrenze (2026-10-02, siehe „T-92 startet trotz Doing-Grenze“). Bei einer Überschreitung hier Ordner, betroffene
+Obergrenze (2026-10-02, siehe „T-92 startet trotz Doing-Grenze“) und hat
+die Obergrenze danach für T-93 und Folgetickets aus dessen Tests temporär
+ausgesetzt, bis zur Abnahme der SQL-Umstellung. Bei einer Überschreitung hier Ordner, betroffene
 Tickets und konkreten Bedarf nennen; nach Rückkehr zur Zielgrenze entfernen.
 Der Bestand wird aus den Ticketdateien ermittelt, nicht als Zähler gepflegt.
 

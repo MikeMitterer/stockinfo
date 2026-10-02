@@ -230,13 +230,197 @@ def test_nur_die_persistenzschicht_spricht_mit_der_datenbank() -> None:
 
 
 def test_die_persistenzschicht_selbst_wird_gefunden() -> None:
-    """Gegenprobe am echten Code: Im Persistenzordner muss die Prüfung anschlagen."""
-    repository = (PERSISTENCE_DIR / "repository.py").read_text(encoding="utf-8")
+    """Gegenprobe am echten Code: Im Schema- und Migrationsmodul muss die Prüfung anschlagen."""
+    schema = (PERSISTENCE_DIR / "db.py").read_text(encoding="utf-8")
 
-    found = database_accesses(repository)
+    found = database_accesses(schema)
 
     assert any("SQL im String" in finding for finding in found)
     assert any(".execute(...)" in finding for finding in found)
+
+
+# Die Laufzeitwege laufen vollständig über die SQLModel-Modelle (T-92). Rohes
+# SQL bleibt nur in Schema, Migration, Backup und Plugin-Migration — und ist
+# dort begründet.
+ORM_ONLY_MODULES = ["repository.py", "detail_store.py", "meta_store.py", "session.py", "tables.py"]
+
+# Die eine zugelassene Ausnahme: `session.py` setzt die Transaktion selbst
+# (SQLAlchemy-Rezept für pysqlite) — genau diese beiden Anweisungen, sonst nichts.
+TRANSACTION_STATEMENTS = frozenset({"BEGIN", "BEGIN IMMEDIATE"})
+
+
+def _is_transaction_statement(node: ast.expr) -> bool:
+    """Ob der Ausdruck **nur** eine erlaubte Transaktionsanweisung ergeben kann.
+
+    Erlaubt sind eine feste Zeichenkette aus `TRANSACTION_STATEMENTS` oder ein
+    bedingter Ausdruck, dessen beide Zweige es wieder sind. Ein Name, eine
+    Verkettung oder ein f-String könnte beliebiges SQL tragen.
+    """
+    if isinstance(node, ast.Constant):
+        return node.value in TRANSACTION_STATEMENTS
+    if isinstance(node, ast.IfExp):
+        return _is_transaction_statement(node.body) and _is_transaction_statement(node.orelse)
+    return False
+
+
+def raw_sql(source: str, *, transactions_allowed: bool = False) -> list[str]:
+    """Nennt rohes SQL — das, was ein ORM-Modul nicht hat.
+
+    Gezählt werden SQL-Text in Strings, `text(...)`, jeder Aufruf von
+    `exec_driver_sql(...)` und ein `execute(...)`, dessen erstes Argument
+    selbst ein String ist — nicht Spaltennamen in einem SQLAlchemy-Ausdruck.
+    Mit `transactions_allowed` bleibt ein `exec_driver_sql` erlaubt, dessen
+    erstes Argument nur eine Anweisung aus `TRANSACTION_STATEMENTS` ergeben
+    kann (`_is_transaction_statement`).
+    """
+    found = [finding for finding in database_accesses(source) if "SQL im String" in finding]
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.Call):
+            continue
+        name = node.func.id if isinstance(node.func, ast.Name) else (
+            node.func.attr if isinstance(node.func, ast.Attribute) else None
+        )
+        if name == "text":
+            found.append(f"{node.lineno}: text(...)")
+        elif name == "exec_driver_sql":
+            allowed = transactions_allowed and node.args and _is_transaction_statement(node.args[0])
+            if not allowed:
+                found.append(f"{node.lineno}: exec_driver_sql(...)")
+        elif name == "execute" and node.args and _string_text(node.args[0]) is not None:
+            found.append(f"{node.lineno}: execute('...')")
+    return sorted(found)
+
+
+# Die Module, in denen rohes Daten-SQL begründet bleibt. Jedes trägt den
+# Abschnitt „Warum hier rohes SQL bleibt“; jedes andere Modul unter
+# `app/persistence/` ist frei davon — auch eines, das erst später dazukommt.
+RAW_SQL_MODULES = frozenset(
+    {"db.py", "migration.py", "backup_store.py", "data_versions.py", "plugin_migration.py"}
+)
+RAW_SQL_REASON = "Warum hier rohes SQL bleibt"
+TRANSACTION_MODULE = "session.py"
+
+
+def raw_sql_violations(directory: Path) -> dict[str, list[str]]:
+    """Prüft **jede** Python-Datei unter `directory` gegen die Ausnahmeliste.
+
+    Das Inventar kommt aus dem Ordner, nicht aus einer Liste: Eine neue Datei
+    ist automatisch dabei. Ein Rohmodul muss seine Begründung tragen; jedes
+    andere darf kein rohes SQL enthalten, `session.py` nur `BEGIN`.
+    """
+    violations: dict[str, list[str]] = {}
+    for path in sorted(directory.rglob("*.py")):
+        name = str(path.relative_to(directory))
+        source = path.read_text(encoding="utf-8")
+        if name in RAW_SQL_MODULES:
+            if RAW_SQL_REASON not in source:
+                violations[name] = [f"Begründung „{RAW_SQL_REASON}“ fehlt"]
+            continue
+        found = raw_sql(source, transactions_allowed=name == TRANSACTION_MODULE)
+        if found:
+            violations[name] = found
+    return violations
+
+
+def test_rohes_sql_steht_nur_in_den_begruendeten_modulen() -> None:
+    inventory = {str(path.relative_to(PERSISTENCE_DIR)) for path in PERSISTENCE_DIR.rglob("*.py")}
+
+    assert RAW_SQL_MODULES <= inventory, "eine Ausnahme nennt eine Datei, die es nicht gibt"
+    assert {TRANSACTION_MODULE, *ORM_ONLY_MODULES} <= inventory
+    assert raw_sql_violations(PERSISTENCE_DIR) == {}
+
+
+def test_gegenprobe_ein_neues_modul_mit_rohem_sql_faellt_auf(tmp_path: Path) -> None:
+    """Gegenprobe aus dem Review und Nachbarvarianten (SI-P-14).
+
+    Ein zusätzliches Modul, eines in einem Unterordner, eines mit verstecktem
+    `text()` und ein Rohmodul ohne Begründung werden gefunden; ein sauberes
+    neues Modul und das echte `session.py`-Muster nicht.
+    """
+    (tmp_path / "runtime_extra.py").write_text(
+        "def read(connection):\n"
+        "    return connection.exec_driver_sql('SELECT * FROM meta')\n"
+    )
+    (tmp_path / "sub").mkdir()
+    (tmp_path / "sub" / "nested.py").write_text(
+        "from sqlalchemy import text\n"
+        "def wipe(session):\n"
+        "    def inner():\n"
+        "        session.execute(text('DELETE FROM fx_rates'))\n"
+        "    inner()\n"
+    )
+    (tmp_path / "migration.py").write_text("def plan(connection):\n    connection.execute('SELECT 1')\n")
+    (tmp_path / "clean.py").write_text("def add(a, b):\n    return a + b\n")
+    (tmp_path / "session.py").write_text(
+        "def begin(connection, immediate):\n"
+        "    connection.exec_driver_sql('BEGIN IMMEDIATE' if immediate else 'BEGIN')\n"
+    )
+
+    assert raw_sql_violations(tmp_path) == {
+        "migration.py": [f"Begründung „{RAW_SQL_REASON}“ fehlt"],
+        "runtime_extra.py": ["2: SQL im String", "2: exec_driver_sql(...)"],
+        "sub/nested.py": ["4: SQL im String", "4: text(...)"],
+    }
+
+
+def test_die_transaktionsausnahme_nimmt_keinen_dynamischen_zweig() -> None:
+    """Gegenprobe aus dem Review: Ein Zweig mit Variable oder Verkettung ist kein `BEGIN`."""
+    source = (
+        "def run(connection, statement, suffix, immediate):\n"
+        "    connection.exec_driver_sql('BEGIN IMMEDIATE' if immediate else statement)\n"
+        "    connection.exec_driver_sql('BEGIN' + suffix)\n"
+        "    connection.exec_driver_sql(f'BEGIN {suffix}')\n"
+        "    connection.exec_driver_sql('BEGIN IMMEDIATE' if immediate else 'BEGIN')\n"
+    )
+
+    assert raw_sql(source, transactions_allowed=True) == [
+        "2: exec_driver_sql(...)",
+        "3: exec_driver_sql(...)",
+        "4: exec_driver_sql(...)",
+    ]
+
+
+def test_die_transaktionsausnahme_gilt_nur_fuer_begin() -> None:
+    """Gegenprobe zur Ausnahme: Anderes rohes SQL im Session-Modul fällt auf."""
+    source = (
+        "def _on_begin(connection, immediate):\n"
+        "    connection.exec_driver_sql('BEGIN IMMEDIATE' if immediate else 'BEGIN')\n"
+        "def _on_connect(connection):\n"
+        "    connection.exec_driver_sql('PRAGMA foreign_keys = OFF')\n"
+        "    connection.exec_driver_sql('COMMIT')\n"
+        "    connection.execute('VACUUM')\n"
+    )
+
+    assert raw_sql(source, transactions_allowed=True) == [
+        "4: SQL im String",
+        "4: exec_driver_sql(...)",
+        "5: exec_driver_sql(...)",
+        "6: execute('...')",
+    ]
+    assert raw_sql(source) == [
+        "2: exec_driver_sql(...)",
+        "4: SQL im String",
+        "4: exec_driver_sql(...)",
+        "5: exec_driver_sql(...)",
+        "6: execute('...')",
+    ]
+
+
+def test_gegenprobe_rohes_sql_im_ormmodul_wird_gefunden() -> None:
+    source = (
+        "from sqlalchemy import text\n"
+        "def read(session):\n"
+        "    return session.execute(text('SELECT value FROM meta WHERE key = :key'))\n"
+        "def write(session):\n"
+        "    session.execute(text('DELETE FROM instrument_overrides'))\n"
+    )
+
+    assert raw_sql(source) == [
+        "3: SQL im String",
+        "3: text(...)",
+        "5: SQL im String",
+        "5: text(...)",
+    ]
 
 
 def test_gegenprobe_die_pruefung_findet_jeden_verstoss() -> None:
