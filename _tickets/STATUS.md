@@ -26,7 +26,7 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-94-devisenkurs-zeitpunkt-der-quelle.md`
 - `branch`: `t-94-devisenkurs-zeitpunkt-der-quelle`
 - `handoff_commit`: `8991a55`
