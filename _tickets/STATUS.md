@@ -31,7 +31,7 @@ schaltet den Branch. Regel:
 - `branch`: `t-90-persistenz-sqlmodel`
 - `handoff_commit`: `88d54d8`
 - `review_round`: `2`
-- `max_review_rounds`: `3`
+- `max_review_rounds`: `5`
 - `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-90-persistenz-auf-sqlmodel.md`
@@ -40,6 +40,11 @@ schaltet den Branch. Regel:
 - `workstream`: `persistenz`
 - `priority_chain`: `T-90`
 - `priority_ticket`: `T-90`
+
+**Rundenlimit T-90 · Mike, 2026-10-02.** „Du kannst auf 5 Runden
+hochsetzen“ (an claude-observer, nach Runde 2 mit Befund B4). Für T-90
+gelten bis zu fünf reguläre Review-Runden; der Rundenverbrauch bleibt
+unverändert.
 
 **Rundenlimit T-88 · Mike, 2026-10-02.** Mike möchte das Ticket sauber
 abschließen und erlaubt bis zu fünf reguläre Review-Runden. Die frühere
