@@ -99,8 +99,9 @@ bleibt stehen.
 ist – sprich vorher kommt noch T-90. Fang gleich damit an.“
 [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md) ist aktiv auf
 `t-90-persistenz-sqlmodel` (von `master`, mit T-88 und T-89), Coder
-`claude`, Verifier `codex`. Die Abnahme von T-88 und T-89 erfolgt
-gemeinsam, wenn `30-doing/` abgearbeitet ist.
+`claude`, Verifier `codex`. Mike nimmt ab, wenn die Tickets in `30-doing/`
+technisch erledigt sind („Nicht wenn es leer ist sondern wenn die Tickets
+darin erledigt sind“); bis zur Abnahme bleiben sie dort liegen.
 
 ## An Mike · T-88 und T-89 auf `master` zur gemeinsamen Abnahme
 
