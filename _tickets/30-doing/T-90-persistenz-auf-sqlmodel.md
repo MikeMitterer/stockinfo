@@ -110,6 +110,56 @@ Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
 
+## Nacharbeit Runde 1 (Claude, 2026-10-02)
+
+Prüfgegenstand: `88d54d8` gegen `8804575` (Nacharbeit) und gegen `master`
+`de620e9` (Gesamtstand). Ein Produktcommit.
+
+- **B1 · SQL-Fragment:** `identity_where` steht jetzt in
+  `app/persistence/repository.py`, seinem einzigen Aufrufer; `app/models.py`
+  enthält kein SQL mehr. Der Wächter prüft zusätzlich den Text jedes
+  Strings und f-Strings (Docstrings ausgenommen) auf SQL: `SELECT … FROM`,
+  `INSERT INTO`, `UPDATE … SET`, `DELETE FROM`, `CREATE/ALTER/DROP TABLE`,
+  `PRAGMA` und Vergleiche mit `?`-Platzhalter. Belege:
+  - Alter Stand `app/models.py` (`git show 8804575:app/models.py`): drei
+    Treffer in den Zeilen 361, 365, 367 — genau die drei Fragmente.
+  - Neuer Stand: 56 Dateien außerhalb `app/persistence/` ohne Treffer.
+  - Gegenproben im Test: Fragment `kind = ? AND isin = ?` ohne `execute`,
+    f-String `SELECT {…} FROM`, Docstring mit SQL (kein Treffer); echter
+    `repository.py` muss anschlagen; gewöhnliche Texte mit „auswählen“,
+    „Update“, „?“ schlagen nicht an.
+  - README „data access (only here)“ trifft damit zu.
+- **B2 · Berichtsfelder:** Beide Listen sind weg. `stored_rejections` liest
+  `SELECT *`; der Router nimmt `tuple(RejectedInstrument.model_fields)` für
+  Plan und Bericht. Die Feldmenge steht damit nur im REST-Modell. Gegenprobe:
+  Ein Mutant, der `currency` aus der Abfrage weglässt, macht 5 Tests in
+  `tests/test_migration_endpoints.py` rot; zurückgesetzt wieder grün.
+- **B3 · Vertragstypen:** `SavedQuote` und `PROTECTED_META_FIELDS` stehen in
+  `app/persistence/quote_store.py`. `repository.py`, `quote_cache.py` und
+  `tests/test_repository.py` importieren sie von dort; `quote_store.py`
+  importiert nichts aus der Umsetzung. Außerhalb `app/persistence/`
+  importiert nur noch `container.py` (`QuoteRepository` für
+  `get_quote_store`) und `main.py` (Fehlerklassen und Ablehnungskennungen
+  für die HTTP-Antworten) aus `repository.py`.
+- **Läufe:** Backend **1271 passed, 35 skipped** (2 neue Gegenproben),
+  Plugin-API **324 passed, 1 skipped**; Ruff für `app tests scripts` und
+  `plugin_api`, `git diff --check` grün.
+- **Sichtbar:** Alt-Datenbank neu angelegt, eigener Port.
+  [Migrationsvorschau](T-90-browser-r2-migration-preview.png) unverändert
+  (2 umziehend, XYZ abgelehnt); `POST /migration/confirm` und
+  `GET /migration/report` liefern denselben vollständigen Eintrag wie
+  Runde 1. Dashboard und Backup sind von dieser Nacharbeit nicht berührt.
+- **Bezeichner-Inventar** jetzt über den ganzen Python-Diff: 78 Dateien,
+  22.163 Vorkommen; einziger nicht-ASCII-Name ist der zulässige deutsche
+  Testname in `tests/test_identity_intake_paths.py`. Neu in dieser Runde:
+  `SavedQuote` (verschoben), `identity_where` (verschoben), `_docstrings`,
+  `_string_text` und drei deutsche Testnamen.
+
+**Doku-Abgleich:** Keine weitere Änderung nötig. `README.md` „only here“
+gilt jetzt; `docker/README.md`, `unraid/README.md`,
+`docs/plugin-authors.md` und `AGENTS.md` nennen die verschobenen Namen
+nicht.
+
 ## Verifier-Prüfung · Runde 1 (Codex, 2026-10-02)
 
 **Prüfstand:** `8804575` gegen `de620e9`; nach dem Produktcommit folgten
