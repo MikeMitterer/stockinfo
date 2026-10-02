@@ -87,7 +87,7 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 |---|---|---|:--:|
 | 1 | `tests/test_persistence_tables.py` | Alle zehn Modelle tragen genau die Spalten ihrer Tabelle, frisch und umgezogen (`migration_rejections` nur umgezogen, frisch gibt es sie nicht) | ✅ |
 | 2 | `tests/test_persistence_boundary.py` | `repository.py`, `detail_store.py`, `meta_store.py`, `tables.py` ohne rohes SQL (SQL-Text, `text()`, `exec_driver_sql`, `execute` mit String); `session.py` ebenso bis auf genau `BEGIN`/`BEGIN IMMEDIATE`; Gegenproben | ✅ |
-| 3 | Rohe Stellen | Daten-SQL nur in `db.py`, `migration.py`, `backup_store.py`, `data_versions.py`, `plugin_migration.py`, je mit „Warum hier rohes SQL bleibt“; dazu die Transaktionsanweisung in `session.py`, dort begründet | ⚠️ |
+| 3 | Rohe Stellen | Daten-SQL nur in `db.py`, `migration.py`, `backup_store.py`, `data_versions.py`, `plugin_migration.py`, je mit „Warum hier rohes SQL bleibt“; dazu die Transaktionsanweisung in `session.py`, dort begründet | ✅ |
 | 4 | Backend, Plugin-API, Ruff | Backend 1308, Plugin-API 324, Ruff grün | ✅ |
 | 5 | Browser mit Temp-Datenbank | Wechselkurs abrufen und aus dem Cache lesen, Einstellungen, manuelle Eingabe, Sicherung mit echtem Wiederherstellen | ✅ |
 | 6 | Browser mit Alt-Datenbank | Vorschau, Bestätigung, Bericht über das Modell | ✅ |
@@ -98,6 +98,60 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 4 (Codex, 2026-10-02)
+
+**Prüfstand:** `3d9286c` gegen `544e82a`; nur
+`tests/test_persistence_boundary.py` geändert. Rollen, Owner, exakte
+Priorität, Ticketpfad und Branch stimmten. Die Paket-VERSION blieb
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+**Ergebnis: `approved`**, Runde 4 von höchstens 5. Technische Freigabe für
+den geprüften Commit; kein Push und keine menschliche Abnahme durch Codex.
+
+**B2 behoben.** `raw_sql_violations` inventarisiert mit `rglob("*.py")`
+alle Python-Module im Persistenzordner samt Unterordnern. Nur die fünf
+begründeten Rohmodule sind ausgenommen; `session.py` erlaubt ausschließlich
+den bereits geprüften festen `BEGIN`-Ausdruck. Die Prüfung verlangt zudem,
+dass alle benannten Ausnahmedateien existieren. Im aktuellen Inventar stehen
+zwölf Python-Dateien. Meine unabhängige Gegenprobe in einem temporären
+Ordner meldete ein neues `new_reader.py` mit Alias-Aufruf und
+`SELECT value FROM meta` sowie `deeper/writer.py` mit `executemany` und
+`INSERT INTO meta`. Das zuvor übersehene Zusatzmodul wird ebenfalls von
+der eingecheckten Gegenprobe erfasst. Damit ist Verify #3 ✅.
+
+**Prüfläufe:** 13 gezielte Grenztests bestanden; Ruff für die geänderte
+Testdatei und `git diff --check` grün. AST-Inventar der geänderten Datei
+enthält englische Bezeichner; die deutschen `test_…`-Namen sind nach
+`AGENTS.md` erlaubt. Die bekannte Grenze bei einem Alias für eine
+Nicht-Daten-Anweisung wie `VACUUM` ist im Nacharbeitsbericht benannt;
+im tatsächlichen Produktinventar gibt es dadurch keinen offenen Verstoß.
+Backend-Gesamtlauf, Plugin-API und Browserbelege aus den vorigen Runden
+bleiben gültig, da der Produktcode seitdem unverändert ist.
+
+**DRY und Doku-Abgleich:** Im Testdiff keine zweite Fachregel oder
+parallele Wissensquelle: das Verzeichnis liefert das Inventar, die fünf
+begründeten Ausnahmen stehen einmal in `RAW_SQL_MODULES`. Der
+README-Abgleich aus Runde 1 bleibt gültig; weder Verhalten noch
+Installation änderten sich in Runde 4. `README.md` beschreibt SQLModel
+im Persistenzordner; `docker/README.md` und `unraid/README.md` beschreiben
+weiter zutreffend die SQLite-Datenbank. Die getrennte Übernahme der
+Paketfassung `df699dd1` bleibt offen.
+
+**Standards:** `code-standards/SKILL.md` mit `architecture.md`,
+`python.md`, `persistence.md`, `quality.md`, `documentation.md`;
+`task-verification-workflow` und lokale Autor-Lessons einschließlich
+SI-P-14.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ Inventar statt gepflegter Sauberliste; keine doppelte Fachlogik; AST-Inventar geprüft. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ➖ kein UI-Diff |
+| Python, FastAPI und Webhooks | ✅ nur Testcode geändert; gezielte Tests und Ruff grün. |
+| Datenbanken und Persistenzgrenzen | ✅ neue Roh-SQL-Module und Unterordner werden gefunden; fünf begründete Ausnahmen geprüft. |
+| Fehler, Logging und Tests | ✅ unabhängige negative Gegenprobe mit zwei zusätzlichen Modulen meldet Verstöße. |
+| Markdown und Inhaltsverzeichnisse | ✅ Ticket und drei READMEs inhaltlich abgeglichen; kein Dokumentationswechsel nötig. |
 
 ## Nacharbeit Runde 3 (Claude, 2026-10-02)
 
