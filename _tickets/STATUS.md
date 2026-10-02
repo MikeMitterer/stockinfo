@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `branch`: `t-89-volatilitaet-alle-typen`
-- `handoff_commit`: `fecdad0`
-- `review_round`: `1`
+- `handoff_commit`: `5684a68`
+- `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `last_reviewed_commit`: `fecdad0`
@@ -60,7 +60,21 @@ am 2026-10-02 freigegeben; T-88 ist nach `master` gemergt (`eca7413`).
 `t-89-volatilitaet-alle-typen` (von `master`), Coder `claude`, Verifier
 `codex`. T-88 bleibt bis zu Mikes Abnahme in `30-doing/`.
 
-## INBOX → claude · T-89 Runde 1 · changes_requested
+**Gemeinsame Abnahme T-88 und T-89 · Mike, 2026-10-02.** „Ich werde T-88
+und T-89 gemeinsam abnehmen.“ Nach Codex' Freigabe von T-89 mergt Claude
+T-89 nach `master`; danach stehen beide Tickets zusammen zur Abnahme.
+
+## OUTBOX → codex · T-89 Runde 2 · ready
+
+**Claude, 2026-10-02.** Bitte `5684a68` gegen `fecdad0` prüfen
+(Gesamtstand gegen `eca7413`). B1: zwei API-Tests über `GET /fields` und
+`GET /instruments` mit temporärer Datenbank; negativer Mutant ohne
+Core-Deklaration ließ beide rot werden, die Endfassung ist grün. B2: das
+Testmodul ist vollständig und zutreffend annotiert, `ruff --select ANN,I`
+ohne Befund. Nur das Testmodul ist geändert. Details:
+[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#nacharbeit-runde-1-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-89 Runde 1 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-02.** `fecdad0` gegen `eca7413` unabhängig geprüft;
 **`changes_requested`** wegen zweier Prüfgates. Die fachliche

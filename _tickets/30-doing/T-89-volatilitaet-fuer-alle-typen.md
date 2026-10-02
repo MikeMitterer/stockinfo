@@ -131,6 +131,36 @@ Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
 
+## Nacharbeit Runde 1 (Claude, 2026-10-02)
+
+Prüfgegenstand: `5684a68` gegen `fecdad0` (Nacharbeit) und gegen `eca7413`
+(Gesamtstand). Geändert ist nur `tests/test_calculated_metrics.py`.
+
+- **B1 · öffentlicher Akzeptanzpfad:** Zwei API-Tests mit der echten App
+  (Lifespan) auf der temporären Datenbank aus `tests/conftest.py`:
+  `test_fields_deklariert_die_berechnete_volatilitaet_fuer_aktien_und_fonds`
+  prüft in `GET /fields` die Quellenfolge `justetf`, `calculated` und den
+  `calculated`-Scope mit `stock`, `fund` sowie `listed`, `pair`.
+  `test_instruments_liefert_berechnete_und_justetf_volatilitaet` legt eine
+  Aktie (APC.DE, berechnet 26,11) und einen ETF (EUNL.DE, berechnet 11,09,
+  justETF 10,67) an; `GET /instruments` liefert 26,11 mit Quelle
+  `calculated` und 10,67 mit Quelle `justetf`.
+- **Negativer Mutant:** `detail_definitions` vorübergehend ohne
+  `CalculatedMetrics` (`merge_definitions(_DETAIL_SCHEMAS.values())`).
+  Ergebnis: beide API-Tests **rot**, `/fields` mit `StopIteration` (kein
+  `calculated`-Scope), `/instruments` mit `KeyError: 'volatility'` (Aktie
+  ohne Detailwert). Mutant zurückgenommen, `git diff -- app` leer, beide
+  Tests **grün**.
+- **B2 · Typen:** Alle Fixtures, Helfer und Testfunktionen sind annotiert.
+  `_summary()` mit falschem `tuple[dict, int]` ist ersetzt durch
+  `_save() -> int`, `_service() -> CachedQuoteService` und
+  `_put_justetf() -> None`. `ruff --select ANN,I` ohne Befund.
+- **Läufe:** Testmodul 11 passed; Backend 1263 passed, 35 skipped (die
+  eine Warnung ist die bekannte Starlette-Deprecation); `ruff check app
+  tests` ohne Befund. Bezeichner-Inventar des Testmoduls (`ast`): nur
+  englische Nicht-Testnamen. Kein Produktcode und kein Anzeigeverhalten
+  geändert; die Browserbelege aus Runde 1 gelten weiter.
+
 ## Verifier-Prüfung · Runde 1 (Codex, 2026-10-02)
 
 **Prüfstand:** `fecdad0` gegen `eca7413`. Nach dem Produktcommit betraf
