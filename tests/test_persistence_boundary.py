@@ -2,7 +2,8 @@
 
 Der Test liest jede Python-Datei unter `app/` als Syntaxbaum und sucht:
 
-- einen Import von `sqlite3`,
+- einen Import von `sqlite3`, `sqlalchemy` oder `sqlmodel` — oder der
+  Modelle und Sessions aus `app/persistence/` (`tables`, `session`),
 - einen Aufruf, der SQL an eine Verbindung schickt (`execute`,
   `executemany`, `executescript`),
 - SQL im Text eines Strings — auch ein bloßes `WHERE`-Fragment mit
@@ -33,6 +34,11 @@ from pathlib import Path
 APP_DIR = Path(__file__).resolve().parent.parent / "app"
 PERSISTENCE_DIR = APP_DIR / "persistence"
 SQL_CALLS = frozenset({"execute", "executemany", "executescript"})
+# Treiber und ORM: Außerhalb des Persistenzordners gibt es weder Verbindungen
+# noch Modellobjekte (T-91).
+DATABASE_MODULES = frozenset({"sqlite3", "sqlalchemy", "sqlmodel"})
+# Die Modelle und Sessions selbst: Wer sie importiert, hält ORM-Typen in der Hand.
+ORM_MODULES = frozenset({"app.persistence.tables", "app.persistence.session"})
 SQL_TEXT = re.compile(
     r"\bSELECT\b.+\bFROM\b"
     r"|\bINSERT\s+INTO\b|\bUPDATE\s+\w+\s+SET\b|\bDELETE\s+FROM\b"
@@ -188,10 +194,11 @@ def database_accesses(source: str) -> list[str]:
             findings.update(
                 f"{node.lineno}: import {alias.name}"
                 for alias in node.names
-                if alias.name.split(".")[0] == "sqlite3"
+                if alias.name.split(".")[0] in DATABASE_MODULES or alias.name in ORM_MODULES
             )
         elif isinstance(node, ast.ImportFrom):
-            if (node.module or "").split(".")[0] == "sqlite3":
+            module = node.module or ""
+            if module.split(".")[0] in DATABASE_MODULES or module in ORM_MODULES:
                 findings.add(f"{node.lineno}: from {node.module} import")
         elif isinstance(node, ast.Call):
             if isinstance(node.func, ast.Attribute) and node.func.attr in SQL_CALLS:
@@ -250,6 +257,20 @@ def test_gegenprobe_die_pruefung_findet_jeden_verstoss() -> None:
         "5: .execute(...)",
         "7: SQL im String",
         "8: SQL im String",
+    ]
+
+
+def test_gegenprobe_orm_importe_werden_gefunden() -> None:
+    source = (
+        "from sqlmodel import Session\n"
+        "import sqlalchemy.exc\n"
+        "from app.persistence.tables import InstrumentRecord\n"
+    )
+
+    assert database_accesses(source) == [
+        "1: from sqlmodel import",
+        "2: import sqlalchemy.exc",
+        "3: from app.persistence.tables import",
     ]
 
 

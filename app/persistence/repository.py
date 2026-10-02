@@ -1,18 +1,22 @@
-"""SQLite-Repository — kapselt allen Datenbankzugriff.
+"""SQLite-Repository über SQLModel — kapselt allen Datenbankzugriff.
 
-Kein Raw-SQL außerhalb dieser Schicht. Jede Methode nutzt eine eigene, kurz
-gehaltene Verbindung — so ist der Zugriff thread-safe (Request-Threadpool und
-Hintergrund-Scheduler teilen sich keine Connection).
+Jede Methode öffnet eine eigene, kurz gehaltene Session (`open_session`) —
+so ist der Zugriff thread-safe (Request-Threadpool und Hintergrund-Scheduler
+teilen sich keine Verbindung). Die Kerntabellen laufen über die Modelle aus
+`tables.py`; `meta`, `daily_meta` und `fx_rates` bis T-92 über `text()` in
+derselben Session und Transaktion.
 """
 
 import json
-import sqlite3
 import uuid
-from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 
 import structlog
+from sqlalchemy import ColumnElement, Select, and_, delete, func, or_, select, text, update
+from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy.exc import IntegrityError
+from sqlmodel import Session
 
 from app.calculated_metrics import CALCULATED_SOURCE
 from app.detail_models import DetailDefinition
@@ -29,8 +33,19 @@ from app.models import (
     identity_from_columns,
 )
 from app.persistence import detail_store
-from app.persistence.db import get_connection
 from app.persistence.quote_store import PROTECTED_META_FIELDS, SavedQuote
+from app.persistence.session import fetch_all, fetch_one, open_session
+from app.persistence.tables import (
+    DailyCloseRecord,
+    DetailOverrideRecord,
+    DetailValueRecord,
+    InstrumentRecord,
+    QuoteRecord,
+)
+
+_INSTRUMENTS = InstrumentRecord.__table__
+_QUOTES = QuoteRecord.__table__
+_DAILY_CLOSES = DailyCloseRecord.__table__
 
 logger = structlog.get_logger()
 
@@ -58,8 +73,8 @@ def _isin_of(identity: IdentityOut) -> str | None:
     return getattr(identity, "isin", None)
 
 
-def identity_where(identity: IdentityOut) -> tuple[str, tuple]:
-    """Die `WHERE`-Bedingung, die genau diese Identität trifft.
+def identity_condition(identity: IdentityOut) -> ColumnElement[bool]:
+    """Die Bedingung, die genau diese Identität trifft.
 
     Je Form eine andere, und je Form liegt ein eigener partieller Unique-Index
     darauf. Eine gemeinsame Bedingung über alle sechs Spalten gäbe es zwar,
@@ -70,18 +85,20 @@ def identity_where(identity: IdentityOut) -> tuple[str, tuple]:
         identity: Die gesuchte Identität.
 
     Returns:
-        Die Bedingung und ihre Parameter, für ein ``SELECT … WHERE``.
+        Die Bedingung für ein ``select(...).where(...)``.
     """
     if isinstance(identity, PairIdentityOut):
-        return (
-            "kind = 'pair' AND base = ? AND quote_currency = ?",
-            (identity.base, identity.quote_currency),
+        return and_(
+            InstrumentRecord.kind == "pair",
+            InstrumentRecord.base == identity.base,
+            InstrumentRecord.quote_currency == identity.quote_currency,
         )
     if isinstance(identity, IsinOnlyIdentityOut):
-        return ("kind = 'isin_only' AND isin = ?", (identity.isin,))
-    return (
-        "kind = 'listed' AND ticker = ? AND mic = ?",
-        (identity.ticker, identity.mic),
+        return and_(InstrumentRecord.kind == "isin_only", InstrumentRecord.isin == identity.isin)
+    return and_(
+        InstrumentRecord.kind == "listed",
+        InstrumentRecord.ticker == identity.ticker,
+        InstrumentRecord.mic == identity.mic,
     )
 
 
@@ -232,23 +249,24 @@ class QuoteRepository:
         """
         self._database_path = database_path
 
-    @contextmanager
-    def _connect(self) -> Iterator[sqlite3.Connection]:
-        """Öffnet eine Verbindung, committet bei Erfolg und schließt immer."""
-        connection = get_connection(self._database_path)
-        try:
-            yield connection
-            connection.commit()
-        finally:
-            connection.close()
+    def _session(self, *, write: bool = False) -> AbstractContextManager[Session]:
+        """Eine Session auf diese Datenbank; committet bei Erfolg.
+
+        **Jeder schreibende Zugriff mit `write=True`.** Dann nimmt die Session
+        die Schreibsperre gleich mit `BEGIN IMMEDIATE`. Mit einem
+        gewöhnlichen `BEGIN` läsen parallele Schreiber zuerst denselben alten
+        Stand; im WAL-Modus scheitert danach der Wechsel zur Schreibsperre
+        sofort mit „database is locked", ohne die Wartezeit abzuwarten. So
+        warten sie der Reihe nach, und der zweite sieht, was der erste
+        geschrieben hat.
+        """
+        return open_session(self._database_path, immediate=write)
 
     def get_instrument_by_isin(self, isin: str) -> dict | None:
         """Gibt das Instrument zur ISIN zurück (oder ``None``)."""
-        with self._connect() as connection:
-            row = connection.execute(
-                "SELECT * FROM instruments WHERE isin = ?", (isin,)
-            ).fetchone()
-            return detail_store.read(connection, dict(row)) if row else None
+        with self._session() as session:
+            row = fetch_one(session, select(_INSTRUMENTS).where(InstrumentRecord.isin == isin))
+            return detail_store.read(session, row) if row else None
 
     def get_instrument_by_symbol(self, symbol: str) -> dict | None:
         """Gibt das **eindeutige** Instrument zum Symbol zurück (oder ``None``).
@@ -256,9 +274,9 @@ class QuoteRepository:
         Raises:
             AmbiguousSymbolError: Mehrere Listings tragen dieses Symbol.
         """
-        with self._connect() as connection:
-            row = self._unique_symbol_row(connection, symbol)
-            return detail_store.read(connection, dict(row)) if row else None
+        with self._session() as session:
+            row = self._unique_symbol_row(session, symbol)
+            return detail_store.read(session, row) if row else None
 
     def get_instrument_by_identity(self, identity: IdentityOut) -> dict | None:
         """Gibt das Instrument zur **kanonischen Identität** zurück.
@@ -278,14 +296,12 @@ class QuoteRepository:
         Returns:
             Die Zeile, oder ``None``.
         """
-        with self._connect() as connection:
-            row = self._identity_row(connection, identity)
-            return detail_store.read(connection, dict(row)) if row else None
+        with self._session() as session:
+            row = self._identity_row(session, identity)
+            return detail_store.read(session, row) if row else None
 
     @staticmethod
-    def _identity_row(
-        connection: sqlite3.Connection, identity: IdentityOut, columns: str = "*"
-    ) -> sqlite3.Row | None:
+    def _identity_row(session: Session, identity: IdentityOut) -> dict | None:
         """Die **eine** Abfrage über die kanonische Identität.
 
         Zwei Aufrufer stellen dieselbe Frage aus verschiedenen Lagen:
@@ -295,10 +311,7 @@ class QuoteRepository:
         Sonderfall auseinander — und genau dort ist der Unterschied teuer, weil
         er über die Zuordnung eines Papiers entscheidet.
         """
-        where, params = identity_where(identity)
-        return connection.execute(
-            f"SELECT {columns} FROM instruments WHERE {where}", params
-        ).fetchone()
+        return fetch_one(session, select(_INSTRUMENTS).where(identity_condition(identity)))
 
     # Was ein Kandidat im `409` über sich verrät. Genau die Felder der Fixture
     # `contract/fixtures/quote-409-ambiguous-symbol.json` — der Rumpf ist seit
@@ -306,9 +319,7 @@ class QuoteRepository:
     _CANDIDATE_COLUMNS = ("listing_id", "symbol", "mic", "exchange", "isin")
 
     @staticmethod
-    def _unique_symbol_row(
-        connection: sqlite3.Connection, symbol: str
-    ) -> sqlite3.Row | None:
+    def _unique_symbol_row(session: Session, symbol: str) -> dict | None:
         """Die **eine** Auskunft „eindeutig oder mehrdeutig?" über ein Symbol.
 
         Jeder Weg, der ein Symbol als Eingabe nimmt, fragt hierüber — lesend
@@ -318,7 +329,7 @@ class QuoteRepository:
         T-24 verbotene stille Raten, nur in verschiedene Richtungen.
 
         Args:
-            connection: Offene Verbindung der laufenden Abfrage.
+            session: Session der laufenden Abfrage.
             symbol: Der Anzeigename, der kein Bezeichner ist.
 
         Returns:
@@ -327,9 +338,10 @@ class QuoteRepository:
         Raises:
             AmbiguousSymbolError: Mehr als eine Zeile trägt dieses Symbol.
         """
-        rows = connection.execute(
-            "SELECT * FROM instruments WHERE symbol = ? ORDER BY id", (symbol,)
-        ).fetchall()
+        rows = fetch_all(
+            session,
+            select(_INSTRUMENTS).where(InstrumentRecord.symbol == symbol).order_by(InstrumentRecord.id),
+        )
         if len(rows) > 1:
             raise AmbiguousSymbolError(
                 symbol,
@@ -342,13 +354,14 @@ class QuoteRepository:
 
     def get_latest_quote(self, instrument_id: int) -> dict | None:
         """Gibt den jüngsten Kurspunkt eines Instruments zurück (oder ``None``)."""
-        with self._connect() as connection:
-            row = connection.execute(
-                "SELECT * FROM quotes WHERE instrument_id = ? "
-                "ORDER BY quote_time DESC LIMIT 1",
-                (instrument_id,),
-            ).fetchone()
-            return dict(row) if row else None
+        with self._session() as session:
+            return fetch_one(
+                session,
+                select(_QUOTES)
+                .where(QuoteRecord.instrument_id == instrument_id)
+                .order_by(QuoteRecord.quote_time.desc())
+                .limit(1),
+            )
 
     def get_history(
         self,
@@ -368,22 +381,14 @@ class QuoteRepository:
         Returns:
             Liste von Kurspunkt-Dicts.
         """
-        clauses = ["instrument_id = ?"]
-        params: list[object] = [instrument_id]
+        statement = select(_QUOTES).where(QuoteRecord.instrument_id == instrument_id)
         if date_from:
-            clauses.append("quote_time >= ?")
-            params.append(date_from)
+            statement = statement.where(QuoteRecord.quote_time >= date_from)
         if date_to:
-            clauses.append("quote_time <= ?")
-            params.append(date_to)
-        params.append(limit)
-        query = (
-            f"SELECT * FROM quotes WHERE {' AND '.join(clauses)} "
-            "ORDER BY quote_time DESC LIMIT ?"
-        )
-        with self._connect() as connection:
-            rows = connection.execute(query, params).fetchall()
-            return [dict(row) for row in rows]
+            statement = statement.where(QuoteRecord.quote_time <= date_to)
+        statement = statement.order_by(QuoteRecord.quote_time.desc()).limit(limit)
+        with self._session() as session:
+            return fetch_all(session, statement)
 
     def get_daily_closes(
         self, instrument_id: int, date_from: str | None = None
@@ -397,17 +402,11 @@ class QuoteRepository:
         Returns:
             Liste von Tages-Schlusskurs-Dicts.
         """
-        clauses = ["instrument_id = ?"]
-        params: list[object] = [instrument_id]
+        statement = select(_DAILY_CLOSES).where(DailyCloseRecord.instrument_id == instrument_id)
         if date_from:
-            clauses.append("date >= ?")
-            params.append(date_from)
-        query = (
-            f"SELECT * FROM daily_closes WHERE {' AND '.join(clauses)} ORDER BY date"
-        )
-        with self._connect() as connection:
-            rows = connection.execute(query, params).fetchall()
-            return [dict(row) for row in rows]
+            statement = statement.where(DailyCloseRecord.date >= date_from)
+        with self._session() as session:
+            return fetch_all(session, statement.order_by(DailyCloseRecord.date))
 
     def upsert_daily_closes(self, instrument_id: int, rows: list[dict]) -> None:
         """Speichert/aktualisiert Tages-Schlusskurse (Update bei gleichem Datum).
@@ -418,59 +417,69 @@ class QuoteRepository:
         """
         if not rows:
             return
-        with self._connect() as connection:
-            connection.executemany(
-                "INSERT INTO daily_closes (instrument_id, date, close, currency) "
-                "VALUES (?, ?, ?, ?) "
-                "ON CONFLICT (instrument_id, date) "
-                "DO UPDATE SET close = excluded.close, currency = excluded.currency",
+        # Ohne `values(...)` und mit einer Parameterliste: SQLAlchemy führt das
+        # als `executemany` aus. Eine einzige `VALUES`-Liste über die ganze
+        # Historie stieße an die Platzhaltergrenze von SQLite.
+        statement = insert(DailyCloseRecord)
+        statement = statement.on_conflict_do_update(
+            index_elements=["instrument_id", "date"],
+            set_={"close": statement.excluded.close, "currency": statement.excluded.currency},
+        )
+        with self._session(write=True) as session:
+            session.execute(
+                statement,
                 [
-                    (instrument_id, row["date"], row["close"], row.get("currency"))
+                    {
+                        "instrument_id": instrument_id,
+                        "date": row["date"],
+                        "close": row["close"],
+                        "currency": row.get("currency"),
+                    }
                     for row in rows
                 ],
             )
 
     def daily_closes_range(self, instrument_id: int) -> tuple[str, str] | None:
         """Gibt (min, max) der gecachten Datumsgrenzen zurück (oder ``None``)."""
-        with self._connect() as connection:
-            row = connection.execute(
-                "SELECT MIN(date) AS lo, MAX(date) AS hi FROM daily_closes "
-                "WHERE instrument_id = ?",
-                (instrument_id,),
-            ).fetchone()
-            if row is None or row["lo"] is None:
+        with self._session() as session:
+            row = session.execute(
+                select(func.min(DailyCloseRecord.date), func.max(DailyCloseRecord.date))
+                .where(DailyCloseRecord.instrument_id == instrument_id)
+            ).one()
+            if row[0] is None:
                 return None
-            return (row["lo"], row["hi"])
+            return (row[0], row[1])
 
     def get_daily_meta(self, instrument_id: int) -> dict | None:
         """Gibt die Fetch-Wasserzeichen (fetched_from/to) zurück (oder ``None``).
 
         ``None`` in einer Spalte bedeutet 'unbegrenzt' (gesamte Historie).
         """
-        with self._connect() as connection:
-            row = connection.execute(
-                "SELECT * FROM daily_meta WHERE instrument_id = ?", (instrument_id,)
-            ).fetchone()
-            return dict(row) if row else None
+        with self._session() as session:
+            return fetch_one(
+                session,
+                text("SELECT * FROM daily_meta WHERE instrument_id = :id").bindparams(id=instrument_id),
+            )
 
     def set_daily_meta(
         self, instrument_id: int, fetched_from: str | None, fetched_to: str | None
     ) -> None:
         """Setzt die Fetch-Wasserzeichen für ein Instrument."""
-        with self._connect() as connection:
-            connection.execute(
-                "INSERT INTO daily_meta (instrument_id, fetched_from, fetched_to) "
-                "VALUES (?, ?, ?) "
-                "ON CONFLICT (instrument_id) DO UPDATE SET "
-                "fetched_from = excluded.fetched_from, fetched_to = excluded.fetched_to",
-                (instrument_id, fetched_from, fetched_to),
+        with self._session(write=True) as session:
+            session.execute(
+                text(
+                    "INSERT INTO daily_meta (instrument_id, fetched_from, fetched_to) "
+                    "VALUES (:id, :fetched_from, :fetched_to) "
+                    "ON CONFLICT (instrument_id) DO UPDATE SET "
+                    "fetched_from = excluded.fetched_from, fetched_to = excluded.fetched_to"
+                ),
+                {"id": instrument_id, "fetched_from": fetched_from, "fetched_to": fetched_to},
             )
 
     def list_instruments(self) -> list[dict]:
         """Gibt alle bekannten Instrumente zurück (für den Hintergrund-Refresh)."""
-        with self._connect() as connection:
-            rows = connection.execute("SELECT * FROM instruments").fetchall()
-            return [detail_store.read(connection, dict(row)) for row in rows]
+        with self._session() as session:
+            return [detail_store.read(session, row) for row in fetch_all(session, select(_INSTRUMENTS))]
 
     def list_instruments_with_latest(self) -> list[dict]:
         """Gibt alle Instrumente inkl. jüngstem Kurs, History-Anzahl und Overrides zurück.
@@ -479,9 +488,9 @@ class QuoteRepository:
         gehört in die Fachschicht, nicht in SQL. Sonst stünde die Regel an einer
         Stelle, die niemand liest, wenn er sie sucht.
         """
-        with self._connect() as connection:
-            rows = connection.execute(self._instrument_query()).fetchall()
-            return [detail_store.read(connection, dict(row)) for row in rows]
+        with self._session() as session:
+            rows = fetch_all(session, self._instrument_query())
+            return [detail_store.read(session, row) for row in rows]
 
     def get_instrument_with_latest(self, instrument_id: int) -> dict | None:
         """Dieselbe Zeile wie in der Liste, für **ein** Instrument.
@@ -498,39 +507,55 @@ class QuoteRepository:
         Returns:
             Die Zeile, oder ``None`` wenn es sie nicht (mehr) gibt.
         """
-        with self._connect() as connection:
-            row = connection.execute(
-                self._instrument_query("WHERE i.id = ?"), (instrument_id,)
-            ).fetchone()
-            return detail_store.read(connection, dict(row)) if row else None
+        with self._session() as session:
+            row = fetch_one(
+                session, self._instrument_query().where(InstrumentRecord.id == instrument_id)
+            )
+            return detail_store.read(session, row) if row else None
 
     @staticmethod
-    def _instrument_query(where: str = "") -> str:
-        """Die **eine** Abfrage hinter Übersicht und Einzelzeile."""
-        return f"""
-            SELECT i.*,
-                   q.price      AS latest_price,
-                   q.quote_time AS latest_quote_time,
-                   q.currency   AS latest_currency,
-                   q.fetched_at AS latest_fetched_at,
-                   (SELECT COUNT(*) FROM quotes WHERE instrument_id = i.id)
-                       AS history_count
-            FROM instruments i
-            LEFT JOIN quotes q ON q.id = (
-                SELECT id FROM quotes WHERE instrument_id = i.id
-                ORDER BY quote_time DESC LIMIT 1
-            )
-            {where}
-            ORDER BY i.symbol
+    def _instrument_query() -> Select:
+        """Die **eine** Abfrage hinter Übersicht und Einzelzeile.
+
+        Jede Instrumentenzeile mit ihrem jüngsten Kurspunkt (`latest_*`) und der
+        Anzahl ihrer Kurspunkte (`history_count`).
         """
+        # Ein eigener Alias für die Unterabfragen: Ohne ihn bezöge SQLAlchemy
+        # deren `quotes` auf die verknüpfte Tabelle außen, und es bliebe keine
+        # Tabelle übrig, aus der sie lesen.
+        inner = _QUOTES.alias("inner_quotes")
+        latest_id = (
+            select(inner.c.id)
+            .where(inner.c.instrument_id == InstrumentRecord.id)
+            .order_by(inner.c.quote_time.desc())
+            .limit(1)
+            .correlate(_INSTRUMENTS)
+            .scalar_subquery()
+        )
+        history_count = (
+            select(func.count())
+            .select_from(inner)
+            .where(inner.c.instrument_id == InstrumentRecord.id)
+            .correlate(_INSTRUMENTS)
+            .scalar_subquery()
+        )
+        return (
+            select(
+                _INSTRUMENTS,
+                QuoteRecord.price.label("latest_price"),
+                QuoteRecord.quote_time.label("latest_quote_time"),
+                QuoteRecord.currency.label("latest_currency"),
+                QuoteRecord.fetched_at.label("latest_fetched_at"),
+                history_count.label("history_count"),
+            )
+            .select_from(_INSTRUMENTS.outerjoin(_QUOTES, QuoteRecord.id == latest_id))
+            .order_by(InstrumentRecord.symbol)
+        )
 
     def count_instruments(self) -> int:
         """Gibt die Anzahl bekannter Instrumente zurück (günstiger als eine Liste)."""
-        with self._connect() as connection:
-            row = connection.execute(
-                "SELECT COUNT(*) AS n FROM instruments"
-            ).fetchone()
-            return int(row["n"])
+        with self._session() as session:
+            return int(session.scalar(select(func.count()).select_from(_INSTRUMENTS)) or 0)
 
     def delete_instrument(self, isin: str) -> bool:
         """Löscht ein Instrument (und seine Quotes via Cascade) anhand der ISIN.
@@ -538,11 +563,9 @@ class QuoteRepository:
         Returns:
             True, wenn ein Instrument gelöscht wurde, sonst False.
         """
-        with self._connect() as connection:
-            cursor = connection.execute(
-                "DELETE FROM instruments WHERE isin = ?", (isin,)
-            )
-            return cursor.rowcount > 0
+        with self._session(write=True) as session:
+            result = session.execute(delete(InstrumentRecord).where(InstrumentRecord.isin == isin))
+            return result.rowcount > 0
 
     def set_isin(self, symbol: str, isin: str) -> None:
         """Trägt die ISIN eines Instruments nachträglich ein (per Symbol).
@@ -555,19 +578,23 @@ class QuoteRepository:
         Raises:
             AmbiguousSymbolError: Mehrere Listings tragen dieses Symbol.
         """
-        with self._connect() as connection:
-            row = self._unique_symbol_row(connection, symbol)
+        with self._session(write=True) as session:
+            row = self._unique_symbol_row(session, symbol)
             if row is None:
                 return
-            connection.execute(
-                "UPDATE instruments SET isin = ? WHERE id = ?", (isin, row["id"])
+            session.execute(
+                update(InstrumentRecord).where(InstrumentRecord.id == row["id"]).values(isin=isin)
             )
 
     def get_overrides(self, instrument_id: int) -> dict | None:
         """Kompatibilitätsprojektion der generischen manuellen Eingaben."""
 
-        with self._connect() as connection:
-            rows = connection.execute('SELECT field,value,as_of FROM detail_overrides WHERE instrument_id=?', (instrument_id,)).fetchall()
+        with self._session() as session:
+            rows = fetch_all(
+                session,
+                select(DetailOverrideRecord.field, DetailOverrideRecord.value, DetailOverrideRecord.as_of)
+                .where(DetailOverrideRecord.instrument_id == instrument_id),
+            )
             if not rows:
                 return None
             values = {field: None for field in OVERRIDE_FIELDS}
@@ -578,43 +605,43 @@ class QuoteRepository:
 
     def set_overrides(self, instrument_id: int, values: dict[str, object], updated_at: str, currency: str | None = None) -> None:
         """Der alte Vollsatz schreibt denselben Speicher wie generische Overrides."""
-        with self._connect() as connection:
+        with self._session(write=True) as session:
             for field in OVERRIDE_FIELDS:
-                detail_store.put_manual(connection, instrument_id, field, values.get(field), currency if field == 'fund_size' else None, updated_at)
+                detail_store.put_manual(session, instrument_id, field, values.get(field), currency if field == 'fund_size' else None, updated_at)
 
     def set_detail_overrides(self, instrument_id: int, values: dict, updated_at: str) -> None:
         """Schreibt einen bereits validierten Patch atomar."""
-        with self._connect() as connection:
+        with self._session(write=True) as session:
             for field, entry in values.items():
-                detail_store.put_manual(connection, instrument_id, field, entry.value, entry.currency, updated_at)
+                detail_store.put_manual(session, instrument_id, field, entry.value, entry.currency, updated_at)
 
     def detail_generation(self) -> str:
         """Bleibt über Neustarts erhalten und reist mit Sicherungen mit."""
-        with self._connect() as connection:
-            return connection.execute("SELECT value FROM meta WHERE key='details_generation_id'").fetchone()[0]
+        with self._session() as session:
+            return session.execute(text("SELECT value FROM meta WHERE key='details_generation_id'")).one()[0]
 
     def has_detail_catalog(self) -> bool:
         """Unterscheidet ein leeres Profilschema vom alten internen Aufruf ohne Schema."""
-        with self._connect() as connection:
-            return connection.execute("SELECT 1 FROM meta WHERE key='details_schema'").fetchone() is not None
+        with self._session() as session:
+            return session.execute(text("SELECT 1 FROM meta WHERE key='details_schema'")).first() is not None
 
     def detail_catalog(
         self, definitions: list[DetailDefinition] | None = None
     ) -> tuple[list[DetailDefinition], int]:
         """Liest das Profilschema oder schreibt eine neue Version atomar."""
-        with self._connect() as connection:
+        with self._session(write=definitions is not None) as session:
             if definitions is not None:
-                version = detail_store.sync_catalog(connection, definitions)
+                version = detail_store.sync_catalog(session, definitions)
             else:
-                row = connection.execute("SELECT value FROM meta WHERE key='details_version'").fetchone()
+                row = session.execute(text("SELECT value FROM meta WHERE key='details_version'")).first()
                 version = int(row[0]) if row else 0
-            return detail_store.catalog(connection), version
+            return detail_store.catalog(session), version
 
     def get_instrument_by_listing_id(self, listing_id: str) -> dict | None:
         """Eindeutiger öffentlicher Schreibweg, auch bei gleichnamigen Listings."""
-        with self._connect() as connection:
-            row = connection.execute('SELECT * FROM instruments WHERE listing_id=?', (listing_id,)).fetchone()
-            return detail_store.read(connection, dict(row)) if row else None
+        with self._session() as session:
+            row = fetch_one(session, select(_INSTRUMENTS).where(InstrumentRecord.listing_id == listing_id))
+            return detail_store.read(session, row) if row else None
 
     def set_volatility(
         self, instrument_id: int, volatility: float, as_of: str | None = None
@@ -627,8 +654,8 @@ class QuoteRepository:
             as_of: Datum des letzten Tagesschlusskurses, aus dem sie stammt;
                 ``None``, wenn es unbekannt ist.
         """
-        with self._connect() as connection:
-            detail_store.put_provider(connection, instrument_id, 'volatility',
+        with self._session(write=True) as session:
+            detail_store.put_provider(session, instrument_id, 'volatility',
                 {'value': volatility, 'source': CALCULATED_SOURCE, 'as_of': as_of})
 
     def delete_by_symbol(self, symbol: str) -> bool:
@@ -648,14 +675,12 @@ class QuoteRepository:
         Raises:
             AmbiguousSymbolError: Mehrere Listings tragen dieses Symbol.
         """
-        with self._connect() as connection:
-            row = self._unique_symbol_row(connection, symbol)
+        with self._session(write=True) as session:
+            row = self._unique_symbol_row(session, symbol)
             if row is None:
                 return False
-            cursor = connection.execute(
-                "DELETE FROM instruments WHERE id = ?", (row["id"],)
-            )
-            return cursor.rowcount > 0
+            result = session.execute(delete(InstrumentRecord).where(InstrumentRecord.id == row["id"]))
+            return result.rowcount > 0
 
     def save_instrument(self, resolved: object, fetched_at: str) -> SavedQuote:
         """Legt ein Papier **ohne Kurs** an — der Fall der OTC-Anleihe (T-31).
@@ -694,15 +719,11 @@ class QuoteRepository:
             "exchange": resolved.exchange,
             "currency": resolved.currency,
         }
-        with self._connect() as connection:
-            existing_id = self._find_instrument_id(
-                connection, facts.symbol, facts.identity
-            )
+        with self._session(write=True) as session:
+            existing_id = self._find_instrument_id(session, facts.symbol, facts.identity)
             if existing_id is not None:
                 return SavedQuote(existing_id, created=False)
-            return SavedQuote(
-                self._insert_instrument(connection, facts, meta), created=True
-            )
+            return SavedQuote(self._insert_instrument(session, facts, meta), created=True)
 
     def save_quote(self, response: QuoteResponse) -> SavedQuote:
         """Speichert Instrument-Metadaten und hängt den Kurspunkt an.
@@ -714,34 +735,38 @@ class QuoteRepository:
             Die ID des (angelegten oder aktualisierten) Instruments und ob es
             in genau diesem Aufruf entstanden ist.
         """
-        with self._connect() as connection:
-            saved = self._upsert_instrument(connection, response)
-            self._insert_quote(connection, saved.instrument_id, response)
+        with self._session(write=True) as session:
+            saved = self._upsert_instrument(session, response)
+            self._insert_quote(session, saved.instrument_id, response)
             for source, readings in response.detail_readings.items():
                 # Migrierte Sammelquellen wie yfinance+justetf werden beim ersten
                 # Einzelquellen-Refresh durch die feldweise Herkunft ersetzt.
-                connection.execute(
-                    "DELETE FROM detail_values WHERE instrument_id=? AND (source=? OR instr('+' || source || '+', '+' || ? || '+') > 0 OR source='legacy')",
-                    (saved.instrument_id, source, source),
-                )
+                session.execute(delete(DetailValueRecord).where(
+                    DetailValueRecord.instrument_id == saved.instrument_id,
+                    or_(
+                        DetailValueRecord.source == source,
+                        func.instr("+" + DetailValueRecord.source + "+", f"+{source}+") > 0,
+                        DetailValueRecord.source == "legacy",
+                    ),
+                ))
                 for field, entry in readings.items():
-                    detail_store.put_provider(connection, saved.instrument_id, field,
+                    detail_store.put_provider(session, saved.instrument_id, field,
                         {**entry, 'source': source, 'as_of': response.fetched_at})
             # Alte Provider und berechnete Kennzahlen benutzen denselben Speicher.
             declared = {field for readings in response.detail_readings.values() for field in readings}
             for field in self._writable_fields(response):
                 if field in OVERRIDE_FIELDS and field not in declared and not response.detail_readings:
-                    connection.execute('DELETE FROM detail_values WHERE instrument_id=? AND field=?',
-                                       (saved.instrument_id, field))
-                    detail_store.put_provider(connection, saved.instrument_id, field,
+                    session.execute(delete(DetailValueRecord).where(
+                        DetailValueRecord.instrument_id == saved.instrument_id,
+                        DetailValueRecord.field == field,
+                    ))
+                    detail_store.put_provider(session, saved.instrument_id, field,
                         {'value': getattr(response, field), 'source': response.source or 'legacy',
                          'currency': response.fund_currency if field == 'fund_size' else None,
                          'as_of': response.fetched_at})
             return saved
 
-    def _upsert_instrument(
-        self, connection: sqlite3.Connection, response: QuoteResponse
-    ) -> SavedQuote:
+    def _upsert_instrument(self, session: Session, response: QuoteResponse) -> SavedQuote:
         """Legt das Instrument an oder aktualisiert seine Metadaten.
 
         Ein UNIQUE-Konflikt beim Anlegen (paralleler Erst-Request oder
@@ -751,17 +776,20 @@ class QuoteRepository:
         Der Konflikt ist der einzige Ort, an dem sichtbar wird, dass ein
         anderer schneller war.
         """
-        existing_id = self._find_instrument_id(
-            connection, response.symbol, response.identity
-        )
+        existing_id = self._find_instrument_id(session, response.symbol, response.identity)
         meta = {field: getattr(response, field) for field in self._writable_fields(response) if field not in OVERRIDE_FIELDS}
 
         if existing_id is None:
             try:
+                # Scheitert das Anlegen am UNIQUE-Index, nimmt SQLite nur diese
+                # eine Anweisung zurück; die Transaktion bleibt nutzbar, und der
+                # Retry darunter findet die Zeile des Schnelleren. Ein SAVEPOINT
+                # ist dafür nicht nötig (Test
+                # `test_der_verlorene_anlegeversuch_kostet_die_transaktion_nicht`).
                 return SavedQuote(
-                    self._insert_instrument(connection, response, meta), created=True
+                    self._insert_instrument(session, response, meta), created=True
                 )
-            except sqlite3.IntegrityError:
+            except IntegrityError:
                 # **Mit derselben Auskunft wie oben.** Bis Runde 42 fragte der
                 # Retry nur nach ISIN und Symbol — und fand damit ausgerechnet
                 # das nicht wieder, worüber er gerade gestolpert war: ein
@@ -769,12 +797,12 @@ class QuoteRepository:
                 # `(ticker, mic)`-Index entstand. Aus dem zugesagten
                 # `created=false` wurde so ein `500`.
                 existing_id = self._find_instrument_id(
-                    connection, response.symbol, response.identity
+                    session, response.symbol, response.identity
                 )
                 if existing_id is None:
                     raise
 
-        meta = {**meta, **self._identity_update(connection, existing_id, response)}
+        meta = {**meta, **self._identity_update(session, existing_id, response)}
         # Ab hier wird **aktualisiert**, nicht angelegt: Was die Antwort nicht
         # weiß, bleibt stehen. Siehe `KEEP_IF_UNKNOWN`.
         #
@@ -795,22 +823,18 @@ class QuoteRepository:
             if value or field not in KEEP_IF_UNKNOWN
         }
 
-        assignments = ", ".join(f"{field} = ?" for field in meta)
-        values = list(meta.values())
         # Der Zeitstempel wandert nur mit, wenn die Antwort die ETF-Felder
         # tatsächlich kennt. Sonst gälte ein Stand als frisch, den nie jemand
         # geholt hat: `_etf_metadata_is_stale` liest genau diese Spalte, der
         # Scheduler läuft weit häufiger als `metadata_ttl_days`, und justETF
         # käme nach dem ersten Kontakt nie wieder an die Reihe.
         if response.metadata_complete:
-            assignments += ", meta_fetched_at = ?"
-            values.append(response.fetched_at)
+            meta["meta_fetched_at"] = response.fetched_at
         try:
-            connection.execute(
-                f"UPDATE instruments SET {assignments} WHERE id = ?",
-                [*values, existing_id],
+            session.execute(
+                update(InstrumentRecord).where(InstrumentRecord.id == existing_id).values(meta)
             )
-        except sqlite3.IntegrityError as exc:
+        except IntegrityError as exc:
             # Die Zeile, die über die ISIN gefunden wurde, soll eine Identität
             # annehmen, die eine **andere** Zeile schon trägt. Das ist kein
             # Rennen und keine Verletzung des Aufrufers, sondern ein gewachsener
@@ -821,9 +845,7 @@ class QuoteRepository:
         return SavedQuote(existing_id, created=False)
 
     @staticmethod
-    def _identity_update(
-        connection: sqlite3.Connection, instrument_id: int, response: QuoteResponse
-    ) -> dict:
+    def _identity_update(session: Session, instrument_id: int, response: QuoteResponse) -> dict:
         """Was diese Antwort an der gespeicherten Identität ändern darf.
 
         Die Regel hat **eine Richtung**: Eine vollständige Zuordnung darf eine
@@ -853,7 +875,7 @@ class QuoteRepository:
         den der automatische Weg nicht anfasst.
 
         Args:
-            connection: Offene Verbindung innerhalb der Transaktion.
+            session: Session innerhalb der Transaktion.
             instrument_id: Die Zeile, die aktualisiert wird.
             response: Die zu speichernde Antwort.
 
@@ -870,10 +892,11 @@ class QuoteRepository:
             # bereits an der Quelle, und der `CHECK` fängt den Rest.
             return {}
 
-        columns = ", ".join(IDENTITY_COLUMNS)
-        row = connection.execute(
-            f"SELECT {columns} FROM instruments WHERE id = ?", (instrument_id,)
-        ).fetchone()
+        row = fetch_one(
+            session,
+            select(*(getattr(InstrumentRecord, column) for column in IDENTITY_COLUMNS))
+            .where(InstrumentRecord.id == instrument_id),
+        )
         stored = identity_from_columns(row) if row else None
         if stored == identity:
             return {}
@@ -915,16 +938,13 @@ class QuoteRepository:
         )
 
     @staticmethod
-    def _insert_instrument(
-        connection: sqlite3.Connection, response: QuoteResponse, meta: dict
-    ) -> int:
+    def _insert_instrument(session: Session, response: QuoteResponse, meta: dict) -> int:
         """Legt ein neues Instrument an und gibt seine ID zurück.
 
-        Die Spaltenliste kommt aus `meta`, nicht aus `_META_FIELDS`: Eine
+        Die Spalten kommen aus `meta`, nicht aus `_META_FIELDS`: Eine
         unvollständige Antwort schreibt nur einen Teil der Felder (siehe
-        `_writable_fields`), und eine feste Spaltenliste zählte dann mehr
-        Platzhalter als Werte — SQLite bricht mit `Incorrect number of
-        bindings supplied` ab, mitten im ersten Anlegen eines Papiers.
+        `_writable_fields`); die übrigen bleiben leer, statt mit ``None``
+        überschrieben zu werden.
         """
         identity = response.identity
         if isinstance(identity, ListedIdentityOut) and not canonical_identity(
@@ -941,40 +961,27 @@ class QuoteRepository:
             # der `CHECK` im Schema.
             raise IncompleteIdentityError(response.symbol)
 
-        written = identity_columns(identity)
-        columns = (
-            "symbol, first_seen, meta_fetched_at, listing_id, "
-            + ", ".join(written)
-            + ", "
-            + ", ".join(meta)
+        result = session.execute(
+            insert(InstrumentRecord).values(
+                symbol=response.symbol,
+                first_seen=response.fetched_at,
+                # Kein Zeitstempel ohne belastbare Metadaten — `None` heißt „nie
+                # geholt" und macht den Stand beim nächsten Abruf sofort fällig.
+                meta_fetched_at=response.fetched_at if response.metadata_complete else None,
+                # Die dauerhafte Kennung entsteht **hier**, nicht erst beim
+                # nächsten Start. Sie allein in der Migration zu vergeben ließ
+                # jede zur Laufzeit angelegte Zeile ohne — und weil SQLite
+                # `NULL` im Eindeutigkeits-Index als eigenen Wert zählt, fiel
+                # das nicht einmal auf.
+                listing_id=str(uuid.uuid4()),
+                **identity_columns(identity),
+                **meta,
+            )
         )
-        placeholders = ", ".join(["?"] * (4 + len(written) + len(meta)))
-        values = [
-            response.symbol,
-            response.fetched_at,
-            # Kein Zeitstempel ohne belastbare Metadaten — `None` heißt „nie
-            # geholt" und macht den Stand beim nächsten Abruf sofort fällig.
-            response.fetched_at if response.metadata_complete else None,
-            # Die dauerhafte Kennung entsteht **hier**, nicht erst beim
-            # nächsten Start. Sie allein in der Migration zu vergeben ließ jede
-            # zur Laufzeit angelegte Zeile ohne — und weil SQLite `NULL` im
-            # Eindeutigkeits-Index als eigenen Wert zählt, fiel das nicht
-            # einmal auf.
-            str(uuid.uuid4()),
-            *written.values(),
-            *meta.values(),
-        ]
-        cursor = connection.execute(
-            f"INSERT INTO instruments ({columns}) VALUES ({placeholders})", values
-        )
-        return int(cursor.lastrowid)
+        return int(result.inserted_primary_key[0])
 
     @staticmethod
-    def _find_instrument_id(
-        connection: sqlite3.Connection,
-        symbol: str,
-        identity: IdentityOut,
-    ) -> int | None:
+    def _find_instrument_id(session: Session, symbol: str, identity: IdentityOut) -> int | None:
         """Sucht ein Instrument — ISIN, dann Identität, dann Symbol.
 
         Die Reihenfolge trägt drei verschiedene Zusagen:
@@ -994,7 +1001,7 @@ class QuoteRepository:
            identifiziert es nichts und wird nicht gefragt.
 
         Args:
-            connection: Offene Verbindung der laufenden Transaktion.
+            session: Session der laufenden Transaktion.
             symbol: Das Anbietersymbol.
             identity: Die Identität der Antwort, in ihrer Form.
 
@@ -1003,13 +1010,11 @@ class QuoteRepository:
         """
         isin = _isin_of(identity)
         if isin:
-            row = connection.execute(
-                "SELECT id FROM instruments WHERE isin = ?", (isin,)
-            ).fetchone()
-            if row:
-                return int(row["id"])
+            found = session.scalar(select(InstrumentRecord.id).where(InstrumentRecord.isin == isin))
+            if found is not None:
+                return int(found)
 
-        row = QuoteRepository._identity_row(connection, identity, columns="id")
+        row = QuoteRepository._identity_row(session, identity)
         if row:
             return int(row["id"])
 
@@ -1022,13 +1027,11 @@ class QuoteRepository:
         # Zweig heute nicht — er greift nur ohne `ticker`/`mic`, und die sind
         # seit Übergabe 2A Pflicht. Wird er es je wieder, ist die Antwort
         # dieselbe wie überall sonst.
-        row = QuoteRepository._unique_symbol_row(connection, symbol)
+        row = QuoteRepository._unique_symbol_row(session, symbol)
         return int(row["id"]) if row else None
 
     @staticmethod
-    def _insert_quote(
-        connection: sqlite3.Connection, instrument_id: int, response: QuoteResponse
-    ) -> None:
+    def _insert_quote(session: Session, instrument_id: int, response: QuoteResponse) -> None:
         """Schreibt einen Kurspunkt; ein Wert zum selben Zeitpunkt wird ersetzt.
 
         **Ein korrigierter Preis darf die vorhandene Zeile gewinnen.** Wer in
@@ -1037,30 +1040,32 @@ class QuoteRepository:
         Protokolleintrag und mit einer Erfolgsmeldung. Für zwei gleiche Abrufe
         ändert sich nichts: Dieselben Werte überschreiben sich selbst.
         """
-        connection.execute(
-            "INSERT INTO quotes "
-            "(instrument_id, price, quote_time, volume, currency, fetched_at) "
-            "VALUES (?, ?, ?, ?, ?, ?) "
-            "ON CONFLICT (instrument_id, quote_time) DO UPDATE SET "
-            "price = excluded.price, volume = excluded.volume, "
-            "currency = excluded.currency, fetched_at = excluded.fetched_at",
-            (
-                instrument_id,
-                response.price,
-                response.quote_time,
-                response.volume,
-                response.currency,
-                response.fetched_at,
-            ),
+        statement = insert(QuoteRecord).values(
+            instrument_id=instrument_id,
+            price=response.price,
+            quote_time=response.quote_time,
+            volume=response.volume,
+            currency=response.currency,
+            fetched_at=response.fetched_at,
         )
+        session.execute(statement.on_conflict_do_update(
+            index_elements=["instrument_id", "quote_time"],
+            set_={
+                "price": statement.excluded.price,
+                "volume": statement.excluded.volume,
+                "currency": statement.excluded.currency,
+                "fetched_at": statement.excluded.fetched_at,
+            },
+        ))
 
     def get_fx_rate(self, base: str, quote: str) -> dict | None:
         """Gibt den gecachten Wechselkurs für ein Paar zurück (oder ``None``)."""
-        with self._connect() as connection:
-            row = connection.execute(
-                "SELECT * FROM fx_rates WHERE base = ? AND quote = ?", (base, quote)
-            ).fetchone()
-            return dict(row) if row else None
+        with self._session() as session:
+            return fetch_one(
+                session,
+                text("SELECT * FROM fx_rates WHERE base = :base AND quote = :quote")
+                .bindparams(base=base, quote=quote),
+            )
 
     def save_fx_rate(
         self,
@@ -1078,12 +1083,21 @@ class QuoteRepository:
         ersatzweise `"cache"` ein — eine Angabe, die `cached: true` ohnehin
         macht, und die den eigentlichen Lieferanten verschwieg.
         """
-        with self._connect() as connection:
-            connection.execute(
-                "INSERT INTO fx_rates (base, quote, rate, quote_time, fetched_at, source) "
-                "VALUES (?, ?, ?, ?, ?, ?) "
-                "ON CONFLICT (base, quote) DO UPDATE SET "
-                "rate = excluded.rate, quote_time = excluded.quote_time, "
-                "fetched_at = excluded.fetched_at, source = excluded.source",
-                (base, quote, rate, quote_time, fetched_at, source),
+        with self._session(write=True) as session:
+            session.execute(
+                text(
+                    "INSERT INTO fx_rates (base, quote, rate, quote_time, fetched_at, source) "
+                    "VALUES (:base, :quote, :rate, :quote_time, :fetched_at, :source) "
+                    "ON CONFLICT (base, quote) DO UPDATE SET "
+                    "rate = excluded.rate, quote_time = excluded.quote_time, "
+                    "fetched_at = excluded.fetched_at, source = excluded.source"
+                ),
+                {
+                    "base": base,
+                    "quote": quote,
+                    "rate": rate,
+                    "quote_time": quote_time,
+                    "fetched_at": fetched_at,
+                    "source": source,
+                },
             )

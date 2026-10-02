@@ -222,18 +222,27 @@ def init_db(database_path: str) -> bool:
         ``True``, wenn ein Umzug aussteht, **bei dem etwas verloren geht** —
         dann gehört der Dienst in den Pending-Zustand.
     """
+    from app.persistence.detail_store import create_schema, migrate_legacy_values
+    from app.persistence.session import open_session
+
     connection = get_connection(database_path)
     try:
         connection.executescript(_SCHEMA)
         _migrate(connection)
-        from app.persistence.detail_store import initialize
-
-        initialize(connection)
+        create_schema(connection)
         _create_identity_indices(connection)
         # Erst wenn das Schema wirklich steht: Die Nummer ist eine Zusage an
         # eine spätere Wiederherstellung.
         connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         connection.commit()
+    finally:
+        connection.close()
+    # Vor der Vorschau: Der Umzug führt Duplikate zusammen und nimmt dabei
+    # die Detailwerte mit — sie müssen dann schon übernommen sein.
+    with open_session(database_path, immediate=True) as session:
+        migrate_legacy_values(session)
+    connection = get_connection(database_path)
+    try:
         plan = plan_migration(connection)
     finally:
         connection.close()

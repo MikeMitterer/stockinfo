@@ -26,6 +26,7 @@ from app.main import app
 from app.persistence.repository import REASON_IDENTITY_CONFLICT, QuoteRepository
 from app.providers.base import RawQuote, ResolvedInstrument
 from tests.boundaries import wire_real_chain
+from tests.raw_database import raw_database
 
 # Die echte ISIN von Apple. Sie steht hier als Konstante, weil sie in diesem
 # Modul zwei getrennte Rollen spielt: Sie ist das, was die Kursquelle meldet,
@@ -121,7 +122,7 @@ def client_and_repo_reporting_isin(
 
 
 def _row(repository: QuoteRepository, symbol: str) -> dict:
-    with repository._connect() as connection:
+    with raw_database(repository) as connection:
         row = connection.execute(
             "SELECT ticker, mic, listing_id FROM instruments WHERE symbol = ?",
             (symbol,),
@@ -243,7 +244,7 @@ def test_ein_bekanntes_papier_wird_beim_naechsten_kurs_nachgetragen(
     # Eine Zuordnung, die nicht mehr zum Symbol passt: `EUNL.DE` liegt an
     # Xetra, nicht in Mailand. So sieht die Zeile aus, nachdem jemand die
     # Vorzugsbörse umgestellt hat und dasselbe Papier neu aufgelöst wurde.
-    with repository._connect() as connection:
+    with raw_database(repository) as connection:
         connection.execute(
             "INSERT INTO instruments (isin, symbol, first_seen, listing_id, "
             "ticker, mic) VALUES (?, ?, ?, ?, ?, ?)",
@@ -421,7 +422,7 @@ def test_eine_andere_boerse_desselben_tickers_wird_nicht_verwechselt(
     indiziert. `AAPL.XNAS` ist damit ein **anderes** Listing.
     """
     client, repository = client_and_repo
-    with repository._connect() as connection:
+    with raw_database(repository) as connection:
         connection.execute(
             "INSERT INTO instruments (isin, symbol, first_seen, listing_id, "
             "ticker, mic) VALUES (?, ?, ?, ?, ?, ?)",
@@ -434,7 +435,7 @@ def test_eine_andere_boerse_desselben_tickers_wird_nicht_verwechselt(
     assert response.json()["identity"]["mic"] == "XNAS"
     assert response.json()["listing_id"] != "nyse-1"
 
-    with repository._connect() as connection:
+    with raw_database(repository) as connection:
         mics = [
             row["mic"]
             for row in connection.execute(
@@ -465,7 +466,7 @@ def test_der_zweite_anspruch_auf_dieselbe_identitaet_ist_ein_409(
     nicht zu trennen, und das Dashboard hätte nichts zu übersetzen.
     """
     client, repository = client_and_repo_reporting_isin
-    with repository._connect() as connection:
+    with raw_database(repository) as connection:
         connection.executemany(
             "INSERT INTO instruments (isin, symbol, first_seen, listing_id, "
             "ticker, mic) VALUES (?, ?, ?, ?, ?, ?)",

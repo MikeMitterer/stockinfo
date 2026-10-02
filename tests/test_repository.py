@@ -803,6 +803,34 @@ def test_zwei_zeilen_um_dieselbe_identitaet_melden_einen_konflikt(
     assert conflict.value.isin == "US0378331005"
 
 
+def test_der_verlorene_anlegeversuch_kostet_die_transaktion_nicht(
+    repo: QuoteRepository, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Das UNIQUE-Rennen beim Anlegen, nachgestellt in einem Prozess.
+
+    Seit T-91 warten Schreiber mit `BEGIN IMMEDIATE` aufeinander; in einem
+    Prozess tritt das Rennen deshalb nicht mehr von selbst auf. Nachgestellt
+    wird es so: Die erste Suche sieht die vorhandene Zeile nicht, das Anlegen
+    stößt an den Index. Danach muss der Retry die Zeile finden **und** dieselbe
+    Transaktion den Kurspunkt noch schreiben — das trägt der SAVEPOINT.
+    """
+    first = repo.save_quote(_quote(128.0, "2026-08-19T09:00:00+00:00", "2026-08-19T09:00:00+00:00"))
+    find = QuoteRepository._find_instrument_id
+    calls = []
+
+    def blind_once(session, symbol, identity):  # noqa: ANN001, ANN202
+        calls.append(symbol)
+        return None if len(calls) == 1 else find(session, symbol, identity)
+
+    monkeypatch.setattr(QuoteRepository, "_find_instrument_id", staticmethod(blind_once))
+
+    saved = repo.save_quote(_quote(129.5, "2026-08-19T10:00:00+00:00", "2026-08-19T10:00:00+00:00"))
+
+    assert len(calls) == 2, "das Anlegen ist nicht am Index gescheitert — falscher Aufbau"
+    assert saved == SavedQuote(first.instrument_id, created=False)
+    assert [point["price"] for point in repo.get_history(first.instrument_id)] == [129.5, 128.0]
+
+
 def test_genau_ein_paralleler_erstschreiber_legt_an(repo: QuoteRepository) -> None:
     """`#2j2`: `created` kommt aus der schreibenden Transaktion.
 

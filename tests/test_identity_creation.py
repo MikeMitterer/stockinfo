@@ -17,6 +17,7 @@ import pytest
 from app.models import ListedIdentityOut, QuoteResponse
 from app.persistence.db import init_db
 from app.persistence.repository import IncompleteIdentityError, QuoteRepository
+from tests.raw_database import raw_database
 
 
 @pytest.fixture
@@ -63,7 +64,7 @@ def _response(**overrides) -> QuoteResponse:
 
 
 def _row(repo: QuoteRepository, instrument_id: int) -> dict:
-    with repo._connect() as connection:
+    with raw_database(repo) as connection:
         row = connection.execute(
             "SELECT ticker, mic, listing_id, symbol FROM instruments WHERE id = ?",
             (instrument_id,),
@@ -173,7 +174,7 @@ def test_ohne_eindeutige_zuordnung_entsteht_gar_keine_zeile(repo) -> None:
     with pytest.raises(IncompleteIdentityError):
         repo.save_quote(_response(symbol="VTI", ticker="VTI", mic="US"))
 
-    with repo._connect() as connection:
+    with raw_database(repo) as connection:
         count = connection.execute("SELECT COUNT(*) FROM instruments").fetchone()[0]
     assert count == 0
 

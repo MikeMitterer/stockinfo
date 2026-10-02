@@ -150,18 +150,18 @@ def test_konstruktorfehler_behaelt_schema_und_manuelle_werte(volume, client, mon
 
 
 def test_feldauskunft_funktioniert_mit_nur_lesender_verbindung(volume, client, monkeypatch):
-    from app.persistence import repository
+    from app.persistence import session
 
     _profile(volume, {'quotes': ['yaml-file'], 'etf_meta': ['risk-demo', 'yaml-file']})
     before = client.get('/fields').json()
-    connect = repository.get_connection
+    configure = session.configure_connection
 
-    def read_only(path):
-        connection = connect(path)
+    def read_only(connection):
+        configure(connection)
         connection.execute('PRAGMA query_only=ON')
-        return connection
 
-    monkeypatch.setattr(repository, 'get_connection', read_only)
+    # Jede Verbindung, die das Repository öffnet, läuft hier durch.
+    monkeypatch.setattr(session, 'configure_connection', read_only)
     response = client.get('/fields')
     assert response.status_code == 200
     assert response.json() == before

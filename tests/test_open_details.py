@@ -128,27 +128,31 @@ def test_plausibilitaet_verwendet_die_deklarierte_einheit():
     assert result.detail_readings['sample']['ter']['value'] == 0.2
 
 
-def test_migration_uebernimmt_waehrung_des_manuellen_betrags():
+def test_migration_uebernimmt_waehrung_des_manuellen_betrags(tmp_path):
     import sqlite3
 
-    from app.persistence import detail_store
+    from app.persistence.db import init_db
 
-    connection = sqlite3.connect(':memory:')
-    connection.row_factory = sqlite3.Row
-    connection.executescript('''
-        CREATE TABLE meta(key TEXT PRIMARY KEY,value TEXT);
-        CREATE TABLE instruments(id INTEGER PRIMARY KEY,fund_currency TEXT);
-        CREATE TABLE instrument_overrides(instrument_id INTEGER,fund_size REAL,
-            fund_currency TEXT,updated_at TEXT);
-        INSERT INTO instruments VALUES(1,'USD');
-        INSERT INTO instruments VALUES(2,'GBP');
-        INSERT INTO instrument_overrides VALUES(1,500000,'EUR','2026-09-07');
-        INSERT INTO instrument_overrides VALUES(2,200000,NULL,'2026-09-07');
-    ''')
-    detail_store.initialize(connection)
-    rows = connection.execute("SELECT instrument_id,currency FROM detail_overrides WHERE field='fund_size' ORDER BY instrument_id").fetchall()
-    assert [tuple(row) for row in rows] == [(1, 'EUR'), (2, 'GBP')]
-    connection.close()
+    # Echtes Schema, Altwerte in den alten Spalten; ohne die Marke läuft die
+    # Übernahme beim nächsten `init_db` noch einmal.
+    path = str(tmp_path / 'legacy-details.db')
+    init_db(path)
+    with sqlite3.connect(path) as connection:
+        connection.executescript('''
+            INSERT INTO instruments(id,symbol,ticker,mic,listing_id,first_seen,fund_currency)
+                VALUES(1,'EUNL.DE','EUNL','XETR','a','2026-01-01','USD');
+            INSERT INTO instruments(id,symbol,ticker,mic,listing_id,first_seen,fund_currency)
+                VALUES(2,'VGWL.DE','VGWL','XETR','b','2026-01-01','GBP');
+            INSERT INTO instrument_overrides(instrument_id,fund_size,fund_currency,updated_at)
+                VALUES(1,500000,'EUR','2026-09-07');
+            INSERT INTO instrument_overrides(instrument_id,fund_size,fund_currency,updated_at)
+                VALUES(2,200000,NULL,'2026-09-07');
+            DELETE FROM meta WHERE key='details_migrated';
+        ''')
+    init_db(path)
+    with sqlite3.connect(path) as connection:
+        rows = connection.execute("SELECT instrument_id,currency FROM detail_overrides WHERE field='fund_size' ORDER BY instrument_id").fetchall()
+    assert rows == [(1, 'EUR'), (2, 'GBP')]
 
 
 def test_alter_override_weg_erhaelt_die_gespeicherte_betragswaehrung(tmp_path):

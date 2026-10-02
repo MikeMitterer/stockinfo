@@ -72,6 +72,7 @@ from app.plugins.yahoo_search_resolver import YahooSearchResolverPlugin
 from app.providers.base import RawQuote, ResolvedInstrument
 from app.resolver import CompositeResolver
 from tests.boundaries import wire_real_chain
+from tests.raw_database import raw_database
 
 # Eine echte Bundesanleihe — Prüfziffer gültig, damit die Aufnahme nicht schon
 # an der Form scheitert und der Test die Gattung prüft statt der Eingabe.
@@ -207,7 +208,7 @@ def _chain(
 
 def _stored(repository: QuoteRepository, symbol: str) -> dict:
     """Die gespeicherte Zeile — die Identitätsspalten und die Gattung."""
-    with repository._connect() as connection:
+    with raw_database(repository) as connection:
         row = connection.execute(
             "SELECT kind, ticker, mic, base, quote_currency, isin, type "
             "FROM instruments WHERE symbol = ?",

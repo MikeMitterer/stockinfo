@@ -31,6 +31,7 @@ from app.main import app
 from app.persistence.repository import REASON_SYMBOL_AMBIGUOUS, QuoteRepository
 from app.providers.base import RawQuote, ResolvedInstrument
 from tests.boundaries import wire_real_chain
+from tests.raw_database import raw_database
 
 # Der Alias, den sich die US-Plätze teilen — sie führen kein Suffix.
 _ALIAS = "AAPL"
@@ -86,7 +87,7 @@ def _two_listings(repository: QuoteRepository) -> None:
     beide nebeneinander stehen sollen. Mehrdeutig ist nicht der Bestand,
     sondern die **Frage** nach dem Alias.
     """
-    with repository._connect() as connection:
+    with raw_database(repository) as connection:
         connection.executemany(
             "INSERT INTO instruments (isin, symbol, first_seen, listing_id, "
             "ticker, mic, exchange, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
@@ -98,7 +99,7 @@ def _two_listings(repository: QuoteRepository) -> None:
 
 
 def _row_count(repository: QuoteRepository) -> int:
-    with repository._connect() as connection:
+    with raw_database(repository) as connection:
         return connection.execute(
             "SELECT COUNT(*) AS total FROM instruments"
         ).fetchone()["total"]
@@ -185,7 +186,7 @@ def test_auch_das_nachtragen_einer_isin_trifft_nicht_die_aeltere(
 
     assert response.status_code == 409, response.text
     assert response.json()["code"] == REASON_SYMBOL_AMBIGUOUS
-    with repository._connect() as connection:
+    with raw_database(repository) as connection:
         isins = [
             row["isin"]
             for row in connection.execute("SELECT isin FROM instruments ORDER BY id")
@@ -215,7 +216,7 @@ def test_die_fixture_zeigt_was_der_dienst_wirklich_antwortet(client_and_repo) ->
         ).read_text(encoding="utf-8")
     )
     expected = fixture["response"]["body"]
-    with repository._connect() as connection:
+    with raw_database(repository) as connection:
         connection.executemany(
             "INSERT INTO instruments (isin, symbol, first_seen, listing_id, "
             "ticker, mic, exchange) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -247,7 +248,7 @@ def test_ein_eindeutiges_symbol_bleibt_unberuehrt(client_and_repo) -> None:
     Regel, nicht die Ausnahme.
     """
     client, repository = client_and_repo
-    with repository._connect() as connection:
+    with raw_database(repository) as connection:
         connection.execute(
             "INSERT INTO instruments (isin, symbol, first_seen, listing_id, "
             "ticker, mic, exchange, currency) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",

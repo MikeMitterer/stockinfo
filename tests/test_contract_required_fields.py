@@ -52,6 +52,7 @@ from app.providers.base import ResolvedInstrument
 from app.resolver import CompositeResolver
 from tests import test_yaml_profile as yaml_profile
 from tests.boundaries import wire_real_chain
+from tests.raw_database import raw_database
 
 fields_client = yaml_profile.client
 volume = yaml_profile.volume
@@ -127,7 +128,7 @@ def _chain(db_path: str, source: object) -> tuple[TestClient, QuoteRepository]:
 
 def _stored(repository: QuoteRepository, isin: str) -> dict:
     """Die gespeicherte Zeile — Name und Gattung, wie sie wirklich dastehen."""
-    with repository._connect() as connection:
+    with raw_database(repository) as connection:
         row = connection.execute(
             "SELECT name, type FROM instruments WHERE isin = ?", (isin,)
         ).fetchone()
@@ -676,7 +677,7 @@ def test_zwei_papiere_ohne_isin_lassen_sich_nacheinander_aufnehmen(
         assert response.json()["identity"]["mic"] == "XETR"
         assert response.json()["exchange"] == "Xetra"
 
-    with repository._connect() as connection:
+    with raw_database(repository) as connection:
         stored_rows = connection.execute(
             "SELECT symbol, isin FROM instruments ORDER BY symbol"
         ).fetchall()
