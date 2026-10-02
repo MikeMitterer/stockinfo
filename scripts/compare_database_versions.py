@@ -263,6 +263,9 @@ def collect(base: str, fx_pairs: list[tuple[str, str]]) -> dict:
     for base_currency, quote_currency in fx_pairs:
         answers["fx"][f"{base_currency}{quote_currency}"] = get(base, f"/fx?base={base_currency}&quote={quote_currency}")
     answers["migration"] = get(base, "/migration")
+    # Sicherungsliste und Datenversionen der Quellen (der Daten-Versionsstand).
+    answers["backups"] = get(base, "/backups")
+    answers["sources"] = get(base, "/sources")
     return answers
 
 
@@ -366,7 +369,10 @@ def main() -> None:
             instance = Instance(source_dir, database, policy, run_dir / f"{name}.log")
             instances.append(instance)
             check_network_blocked(policy, instance.port)
-            answers[name] = collect(instance.base, fx_pairs)
+            # Der eigene Datenordner steht in Antworten wie `/sources`
+            # (`config_path`); er unterscheidet die Läufe, nicht die Stände.
+            raw = json.dumps(collect(instance.base, fx_pairs))
+            answers[name] = json.loads(raw.replace(str(run_dir / name), "<datenordner>"))
             (run_dir / f"{name}.json").write_text(json.dumps(answers[name], indent=1, sort_keys=True))
 
         expected, findings, field_count = compare(answers["before"], answers["after"])
