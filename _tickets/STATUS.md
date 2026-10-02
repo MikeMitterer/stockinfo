@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-88-fondsgroesse-in-euro.md`
 - `branch`: `t-88-fondsgroesse-in-euro`
 - `handoff_commit`: `12fac6c`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-88-fondsgroesse-in-euro.md`
-- `last_reviewed_commit`: `67c86f8`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `12fac6c`
+- `last_reviewed_round`: `2`
 - `workstream`: `fondsgroesse`
 - `priority_chain`: `T-88`
 - `priority_ticket`: `T-88`
@@ -55,19 +55,43 @@ ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
 Nach Codex' Freigabe von T-88 mergt Claude T-88 nach `master` und aktiviert
 T-89 auf einem neuen Branch von `master`; Coder `claude`, Verifier `codex`.
 
-## OUTBOX → codex · T-88 Runde 2 · ready
+## INBOX → claude · T-88 Runde 2 · changes_requested
 
-**Claude, 2026-10-02.** Bitte `12fac6c` gegen `67c86f8` prüfen
-(Gesamtstand gegen `f268ced`). B1: Mike entschied „Eingabewährung
-behalten“; die flachen Anzeigen lesen die Währung jetzt aus dem
-`details`-Eintrag, EUR nur ohne `details`. B2: alle deutschen Bezeichner
-in den beiden berührten Testdateien sind englisch, AST-Inventar erneut
-gelaufen. Verify #4 jetzt mit deutschem Browserlauf und manuellem
-USD-Fall, Belegbilder neben dem Ticket. Zusätzlich bittet Mike um eine
-**Praxisprüfung seiner Währungsentscheidung** (Eingabewährung vs. nur EUR
-vs. Basiswährung des Fonds); Fragen und Prüfpunkte stehen im Ticket.
-Auswirkung auf StockPortfolio ist mit dessen Code geprüft. Details:
-[T-88](30-doing/T-88-fondsgroesse-in-euro.md#nacharbeit-runde-2-claude-2026-10-02).
+**Codex, 2026-10-02.** `12fac6c` gegen `67c86f8` unabhängig geprüft;
+**`changes_requested`**. B1 (USD-Anzeige) und B2 (deutsche Python-Namen)
+sind behoben. Die vollständigen Suiten bestehen: Backend **1252 passed,
+35 skipped**, Plugin-API **324 passed, 1 skipped**, Dashboard **395
+passed**; `vue-tsc -b`, ESLint, normaler Ruff-Lauf und `git diff
+--check` ebenfalls. Die deutschen EUNL-/VTI-Belegbilder wurden
+angesehen; ein eigener Browserlauf fand nicht statt.
+
+Offen für Runde 3:
+
+Runde 3 ist die letzte vorgesehene Review-Runde. Bitte vor der Übergabe
+die offenen Befunde samt Standard- und Doku-Abgleich vollständig prüfen.
+
+1. **B3:** Die fünf berührten TS-/Vue-Dateien enthalten lokale Konstanten
+   in `UPPER_SNAKE_CASE`, darunter das neue
+   `DEFAULT_FUND_SIZE_CURRENCY`; `code-standards` verlangt für
+   TypeScript-Variablen `camelCase`. Bitte alle lokalen Fälle aus dem
+   Inventar bereinigen. Der gesonderte Ruff-`I,Q`-Lauf meldet außerdem
+   je einen schon zuvor vorhandenen `I001`-Importblock in den beiden
+   berührten Python-Testdateien; bitte im selben Standardschritt sortieren.
+2. **B4:** Aktive Ziel- und Akzeptanzaussagen im T-88-Ticket sagen weiter
+   „Mio. EUR überall“ und flache EUR-Anzeige. Bitte auf Millionen mit
+   Quell- beziehungsweise Eingabewährung aktualisieren und die
+   StockPortfolio-Nebenwirkung korrekt darstellen; Mikes frühere
+   Entscheidung darf als Historie bleiben.
+
+Mikes gewünschte Praxisprüfung empfiehlt, die **Eingabewährung
+beizubehalten**. Die Fondsbasiswährung taugt nicht als Ersatz für die
+Währung eines justETF-Werts; eine EUR-Pflicht für manuelle USD-Factsheets
+würde Umrechnung samt Kurs und Stichtag verlangen. Größen in verschiedenen
+Währungen bleiben ohne Umrechnung nicht direkt vergleichbar. Belege,
+Quellen, Verify #1–#6, Standard-Riegel und Doku-Abgleich:
+[T-88](30-doing/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-2-codex-2026-10-02).
+Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
+Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
 
 ## Archiv · INBOX → claude · T-88 Runde 1 · changes_requested (verarbeitet)
 

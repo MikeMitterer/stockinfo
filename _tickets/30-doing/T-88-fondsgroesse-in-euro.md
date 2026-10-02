@@ -264,3 +264,125 @@ Codeänderung, weil StockPortfolio die Einheit `millions` schon kennt.
 Nachzuziehen in StockPortfolio: Fixture-Kopie (T-78), kurzzeitiges „—“ für
 in IndexedDB gespeicherte Kurse mit alter Einheit bis zum nächsten Abruf,
 Formatierung „129.791,00 € Mio.“. Erfasst in StockPortfolio T-79.
+
+## Verifier-Prüfung · Runde 2 (Codex, 2026-10-02)
+
+**Prüfstand:** `12fac6c` gegen `67c86f8`, Gesamtstand gegen `f268ced`.
+Seit dem Produktcommit wurden nur `_tickets/`-Dateien committet; der
+Arbeitsbaum war zu Beginn der Prüfung nach dem Übergabecommit `1c87ab1`
+sauber. Ergebnis: **`changes_requested`** wegen B3 und B4. B1 und B2 aus
+Runde 1 sind behoben. Keine technische oder menschliche Abnahme.
+
+### Befunde
+
+1. **B1 behoben · Währung der Anzeige.** `fundSizeCurrency()` liest
+   `details.fund_size.currency` für den wirksamen Wert und
+   `manual_currency` für den verdeckten oder bearbeiteten manuellen Wert.
+   Gegenprobe mit demselben Instrument: wirksam EUR, manuell USD; der
+   Helfer liefert getrennt EUR und USD. Die beiden Komponenten verwenden
+   die passende Variante. Die neuen USD-Komponententests, der deutsche
+   VTI-Beleg mit 30 Mio. und USD-Auswahl sowie der EUNL-Beleg mit
+   „129.791 Mio. EUR“ stimmen damit überein. Die Bilder wurden unabhängig
+   angesehen; einen eigenen Browserlauf habe ich nicht behauptet.
+2. **B2 behoben · Python-Bezeichner.** Das vollständige `ast`-Inventar der
+   beiden betroffenen Dateien einschließlich Klassen, Funktionen,
+   Parametern, lokalen Namen, Attributen und Keyword-Namen umfasst 135
+   beziehungsweise 156 eindeutige Bezeichner. Die deutschen Namen aus
+   Runde 1 sind ersetzt; deutsche Testfunktionsnamen sind ausdrücklich
+   erlaubt. Die gezielten Tests dazu bestehen.
+3. **B3 blockierend · TypeScript-Namensschema.** Die Projektregel erhält
+   das Namensschema je Sprache; `code-standards` verlangt `camelCase` für
+   TypeScript-Variablen. Das Compiler-API-Inventar der fünf in Runde 2
+   geänderten TS-/Vue-Dateien fand in
+   `dashboard/src/utils/fundSize.ts:12` den neu benannten
+   `DEFAULT_FUND_SIZE_CURRENCY` sowie in den berührten Komponenten
+   `FIELD_KIND`, `NUMBER_MAX` und zweimal `DIGITS`
+   (`MetricEditor.vue:74,119,122`, `MetricValue.vue:63`). Bitte diese
+   lokalen Konstanten einheitlich in `camelCase` umbenennen und die fünf
+   Dateien erneut vollständig inventarisieren. Der zusätzliche Ruff-Lauf
+   mit `I,Q` meldet in den beiden berührten Python-Testdateien je einen
+   schon vor Runde 2 vorhandenen `I001`-Importblock; diese mechanische
+   Importsortierung bitte im selben Standardschritt mitziehen. Der normale
+   Ruff-Lauf erfasst `I,Q` nicht.
+4. **B4 blockierend · aktiver Scope widerspricht Mikes neuer
+   Entscheidung.** Titel, Ergebnis, Anzeigeweg 2 und Akzeptanzkriterium 1
+   am Anfang dieses Tickets sagen weiter „Mio. EUR überall“ beziehungsweise
+   flache Felder mit EUR. Die Nacharbeit und die aktuelle Entscheidung
+   erlauben ausdrücklich eine manuelle Fondsgröße in USD. Auch der
+   Side-Effects-Abschnitt legt nahe, StockPortfolio zeige die Größe nicht,
+   während die Nacharbeit die sichtbare Ausgabe über
+   `projectDetailFields` belegt. Bitte die aktuellen Ergebnis- und
+   Abnahmeaussagen auf **Millionen mit Quell- oder Eingabewährung** ziehen;
+   die ursprüngliche Entscheidung und Runde 1 dürfen als Historie
+   erkennbar bleiben. `README.md` und `docker/README.md` beschreiben
+   justETF-Quellwerte weiterhin zutreffend in EUR; der Plugin-Vertrag
+   nennt für manuelle Werte bereits die Eingabewährung.
+
+### Praxisempfehlung an Mike zur Währungsentscheidung
+
+**Eingabewährung beibehalten.** Ein manueller Wert bleibt dadurch in der
+Währung seiner Quelle, ohne stillschweigende Umrechnung. Ein nur auf EUR
+beschränktes Feld würde bei einem USD-Factsheet eine Umrechnung samt
+Wechselkurs und Stichtag vom Nutzer verlangen. Die Fondsbasiswährung ist
+keine zuverlässige Anzeigewährung für die Größe: iShares nennt für
+IE00B4L5Y983 USD als Fondswährung und berichtet Fondsvermögen in USD,
+während justETF für denselben Fonds die Größe in EUR ausweist.
+Vanguard weist VTI-Fondsvermögen ebenfalls in USD aus.
+Belege: [iShares-Produktdaten](https://www.ishares.com/uk/individual/en/products/251882/ishares-core-msci-world-ucits-etf),
+[justETF-Profil](https://www.justetf.com/de/etf-profile.html?isin=IE00B4L5Y983),
+[Vanguard-Factsheet](https://workplace.vanguard.com/assets/corp/fund_communications/pdf_publish/us-products/fact-sheet/F0970.pdf).
+
+Die Kehrseite ist fehlende direkte Vergleichbarkeit: 30 Mio. USD und
+30 Mio. EUR dürfen ohne Umrechnung weder als gleicher Betrag behandelt
+noch roh nach Größe sortiert werden. StockInfos Dashboard verwendet
+`fund_size` derzeit nur für Anzeige und Bearbeitung, nicht zum Sortieren
+oder Filtern (`rg fund_size dashboard/src`). Eine künftige
+größenbasierte Rangliste braucht eine ausdrücklich festgelegte
+Vergleichswährung mit Kurs und Stichtag. Bei einem EUR-Quellenwert, der
+eine manuelle USD-Eingabe verdeckt, sollen wirksamer Wert und Hinweis
+jeweils ihre eigene Währung zeigen; die Runde-2-Logik trennt diese
+Währungen. Diese Empfehlung ist eine technische Bewertung und keine
+menschliche Abnahme.
+
+### Verify und Standards
+
+- **#1:** ✅ Katalog, Plugin, Adapter und Vertrag führen Millionen; B1
+  ist korrigiert. Der aktuelle Scope-Text muss mit B4 nachziehen.
+- **#2:** ✅ Backend **1252 passed, 35 skipped**; Plugin-API
+  **324 passed, 1 skipped**. Gezielt: 61 Backend- und 24
+  Plugin-Mutantentests bestanden.
+- **#3:** ✅ Dashboard **395 passed**; gezielt 37 Komponententests,
+  `vue-tsc -b` und `eslint src tests` bestanden.
+- **#4:** ✅ Die deutschen EUNL- und VTI-Belegbilder wurden visuell
+  geprüft; der frühere englische Beleg steht in Runde 1. Kein eigener
+  Browserlauf in dieser Runde.
+- **#5:** ⚠️ B3; Python-`ast` über die beiden Testdateien ohne deutsche
+  Nicht-Testbezeichner, TypeScript-Compiler-API über alle fünf geänderten
+  TS-/Vue-Dateien mit den genannten Schemaabweichungen.
+- **#6 / Doku-Abgleich:** ⚠️ B4 im aktuellen Tickettext. Die beiden
+  READMEs und `contract/core-contract.json` widersprechen der
+  Quellen-/Eingabewährung nicht; `unraid/README.md` enthält weiterhin
+  keine Fondsgrößenaussage. Die Docker-Hub-Vorschau war in Runde 1 mit
+  8.784 UTF-8-Bytes unter der Grenze; `docker/README.md` blieb seither
+  unverändert. `git diff --check` für Nacharbeit und Gesamtstand bestand.
+
+**Standard-Riegel:** Gelesen wurde
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md` mit
+`references/architecture.md`, `frontend.md`, `python.md`, `quality.md`
+und `documentation.md`.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ⚠️ B3; `fundSizeCurrency` bündelt die Währungswahl, keine neue doppelte Fachregel im Nacharbeitsdiff gefunden. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ⚠️ B3; Komponenten nutzen den gemeinsamen i18n-Text mit getrennten Währungen, Typprüfung und ESLint bestehen. |
+| Python, FastAPI und Webhooks | ⚠️ zwei bereits vorhandene `I001`-Importblöcke in den berührten Tests; B2 ist per AST und Tests behoben. |
+| Datenbanken und Persistenzgrenzen | ➖ keine produktive Persistenzänderung im Nacharbeitsdiff |
+| Fehler, Logging und Tests | ✅ vollständige Suiten, gezielte USD-Tests und kontrastierende EUR/USD-Helfer-Gegenprobe. |
+| Markdown und Inhaltsverzeichnisse | ⚠️ B4; aktueller Scope und Akzeptanztext müssen die neue Entscheidung wiedergeben. |
+
+**Offene Board-Übernahme:** Activity-/Observer-/Lessons-Abgleich aus der
+lokalen Paketfassung `df699dd1` bleibt getrennt offen. Er erweitert das
+T-88-Review nicht. Kein Produktcode, keine menschliche Abnahme und kein
+Merge oder Push durch Codex.
