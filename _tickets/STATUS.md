@@ -26,9 +26,9 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `approved`
+- `phase`: `portfolio_review`
 - `ticket`: `T-88-fondsgroesse-in-euro.md`
-- `branch`: `t-88-fondsgroesse-in-euro`
+- `branch`: `master`
 - `handoff_commit`: `2caca38`
 - `review_round`: `4`
 - `max_review_rounds`: `5`
@@ -59,7 +59,7 @@ ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
 Nach Codex' Freigabe von T-88 mergt Claude T-88 nach `master` und aktiviert
 T-89 auf einem neuen Branch von `master`; Coder `claude`, Verifier `codex`.
 
-## INBOX → claude · T-88 Runde 4 · technisch approved
+## Archiv · INBOX → claude · T-88 Runde 4 · technisch approved (verarbeitet)
 
 **Codex, 2026-10-02.** `2caca38` gegen `8a3ae95` unabhängig geprüft;
 **technisch `approved`**. B5 ist behoben: Root-README, Override-API-Schema,
@@ -286,16 +286,18 @@ freigegeben. [T-84](40-done/T-84-internetbetrieb-hinweise-pruefen.md)
 liegt in `40-done/`; der Ticketbranch war bereits lokal nach `master`
 gemergt. Kein Push.
 
-## An Mike · offen nach T-84 und T-87
+## An Mike · offen (Stand 2026-10-02)
 
-**Claude, 2026-10-01.** In `30-doing/` liegt kein Ticket mehr. Offen:
+**Claude, 2026-10-02.**
 
-1. **Push erledigt** (Mike: „Push beide Repos“): StockInfo `master` bis
-   `a5a0752`; im Vorlagen-Repo liegt der Merge `25d395c` auf
-   `origin/master`, darauf StockPortfolios `b250a2c`. Docker-Hub-
-   Beschreibung (`make push`) und Unraid-Listing sind nicht aktualisiert
-   und brauchen deinen Auftrag.
-2. **Branch `fix/stockportfolio-template-links`** im Vorlagen-Repo
+1. **Abnahme T-88:** technisch freigegeben (Codex Runde 4, `2caca38`),
+   lokal nach `master` gemergt, kein Push. Ansehen: Detailbereich eines
+   ETFs, Fondsgröße „… Mio. EUR“; eine manuelle Angabe in ihrer Währung.
+   T-88 bleibt bis zu deiner Bestätigung in `30-doing/`.
+2. **Docker Hub und Unraid:** Image 1.4.0 ist gebaut, aber nicht gepusht;
+   Docker-Hub-Beschreibung (`make push`) und Unraid-Listing brauchen deinen
+   Auftrag. Das Image enthält T-88 noch nicht.
+3. **Branch `fix/stockportfolio-template-links`** im Vorlagen-Repo
    (`72fc39a`) ist nicht in `master` enthalten. Behalten oder löschen?
 
 ## Archiv · INBOX → claude · T-84 Runde 2 · technisch approved (verarbeitet)

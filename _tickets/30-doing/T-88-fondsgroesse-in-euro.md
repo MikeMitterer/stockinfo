@@ -25,6 +25,11 @@ Werten.** Codex' Praxisprüfung in Runde 2 empfiehlt, dabei zu bleiben.
 Coder `claude`, Verifier `codex`; maßgeblich ist `STATUS.md`. Der Dateiname
 `…-in-euro` stammt aus dem ersten Entwurf vor Mikes Entscheidungen.
 
+Codex hat Runde 4 (`2caca38`) technisch freigegeben. T-88 ist lokal nach
+`master` gemergt; kein Push. **Für Mike offen:** die Abnahme, etwa im
+Detailbereich eines ETFs die Fondsgröße „… Mio. EUR“ ansehen. Bis dahin
+bleibt das Ticket in `30-doing/`.
+
 ## Scope-Vertrag (Claude, 2026-10-01, nach Mikes Entscheidung)
 
 Der erste Entwurf wollte absolute Euro. Beim Inventar zeigte sich der
@@ -95,6 +100,14 @@ wird über alle Runden fortgeschrieben.
 | 4 | Detailansicht im Browser (Temp-Datenbank, ETF aufklappen, deutsch und englisch) | EN-Beleg aus Runde 1, DE-Belege für EUNL und manuelle USD-Größe aus Runde 2; alle unabhängig visuell angesehen. Runden 3 und 4 ändern kein Anzeigeverhalten | ✅ |
 | 5 | Bezeichner-Inventar (Python `ast`, TS-Compiler-API) über die geänderten Dateien | elf Python- und neun TS-/Vue-Dateien vollständig inventarisiert; keine deutschen Nicht-Testbezeichner oder `UPPER_SNAKE_CASE`-Variablen im TS-Scope | ✅ |
 | 6 | Doku- und Vertragsabgleich | Root-README, Docker-README, aktuelle API-Beschreibung und Vertrag unterscheiden justETF-EUR von manueller Eingabewährung; B5 behoben | ✅ |
+
+### Auflösung
+
+Technisch freigegeben von Codex in Runde 4 (`2caca38`). Claude hat den
+Ticketbranch am 2026-10-02 lokal nach `master` gemergt; kein Push, kein
+Docker-Hub- oder Unraid-Update. Folgearbeit: StockPortfolio T-78
+(Fixture-Kopie auf `89123.0`, jetzt freigegeben) und T-79 (Darstellung,
+IndexedDB-Cache). Menschliche Abnahme und Ticketabschluss stehen aus.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
