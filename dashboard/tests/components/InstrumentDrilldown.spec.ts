@@ -21,6 +21,24 @@ describe('InstrumentDrilldown', () => {
     expect(wrapper.get('.drilldown__source').text()).not.toContain('risk-demo')
   })
 
+  it.each([
+    ['de', 'berechnet aus Tageskursen', 'Stand der Quelle: 01.10.2026'],
+    ['en', 'calculated from daily closes', 'Source as of: Oct 1, 2026'],
+  ])('benennt die berechnete Volatilität verständlich und mit Stand (%s)', (locale, source, asOf) => {
+    const previousLocale = i18n.global.locale.value
+    i18n.global.locale.value = locale as 'de' | 'en'
+    const wrapper = mount(InstrumentDrilldown, {
+      global: { plugins: [i18n], stubs: { OpenDetails: true } },
+      props: { item: makeInstrument({ type: 'stock', meta_fetched_at: null, details: {
+        volatility: { value: 26.11, unit: 'percent', currency: null, origin: 'provider',
+          source: 'calculated', as_of: '2026-10-01', shadowed: false, manual_value: null, manual_currency: null },
+      } }) },
+    })
+    expect(wrapper.get('.drilldown__source .mono').text()).toBe(source)
+    expect(wrapper.get('.drilldown__source').text()).toContain(asOf)
+    i18n.global.locale.value = previousLocale
+  })
+
   it('zeigt alle acht Kennzahlen zum Pflegen', () => {
     const wrapper = mount(InstrumentDrilldown, {
       global: { plugins: [i18n] },

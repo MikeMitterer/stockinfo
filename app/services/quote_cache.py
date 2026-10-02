@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 import structlog
 from stockinfo_plugin import Identity
 
+from app.calculated_metrics import CALCULATED_SOURCE
 from app.detail_models import DetailInput, DetailValue
 from app.details import CANONICAL, merge_value, validate_input
 from app.models import (
@@ -592,24 +593,34 @@ class CachedQuoteService:
         """
         stored = self._stored_metadata(fresh)
         previous_volatility = stored["volatility"] if stored else None
+        # Vor `save_quote` lesen: Es kann die gespeicherten Kennzahlen ersetzen.
+        previous_detail = ((stored or {}).get("details") or {}).get("volatility") or {}
+        previous_as_of = (previous_detail.get("as_of")
+                          if previous_detail.get("source") == CALCULATED_SOURCE else None)
         instrument_id = self._repository.save_quote(fresh).instrument_id
         if fresh.volatility is None:
-            volatility = self._volatility_from_cache(instrument_id, fresh)
+            volatility, as_of = self._volatility_from_cache(instrument_id, fresh)
             if volatility is not None:
                 fresh.volatility = volatility
-                self._repository.set_volatility(instrument_id, volatility)
+                self._repository.set_volatility(instrument_id, volatility, as_of=as_of)
             elif previous_volatility is not None:
                 fresh.volatility = previous_volatility
-                self._repository.set_volatility(instrument_id, previous_volatility)
+                self._repository.set_volatility(
+                    instrument_id, previous_volatility, as_of=previous_as_of
+                )
         return self._with_overrides(
             self._keep_stored_metadata(fresh, stored), instrument_id
         )
 
-    def _volatility_from_cache(self, instrument_id: int, quote) -> float | None:
+    def _volatility_from_cache(self, instrument_id: int, quote) -> tuple[float | None, str | None]:
         """Berechnet die 1-Jahres-Volatilität aus dem akkumulierenden EOD-Cache.
 
         Zieht zunächst das Delta nach (nur fehlende Tage) und rechnet dann über
         die letzten ~370 Tage. Best-effort: fehlende/zu wenige Daten → ``None``.
+
+        Returns:
+            Volatilität und das Datum des jüngsten verwendeten Schlusskurses
+            (der Stand des Werts); beides ``None``, wenn nichts berechenbar ist.
         """
         start = (datetime.now(timezone.utc).date() - timedelta(days=370)).isoformat()
         self._daily_sync.sync(
@@ -623,9 +634,10 @@ class CachedQuoteService:
             identity=identity_from_row(identity_columns(quote.identity)),
             instrument_type=quote.type,
         )
-        rows = self._repository.get_daily_closes(instrument_id, start)
-        closes = [row["close"] for row in rows if row.get("close") is not None]
-        return annualized_volatility(closes)
+        rows = [row for row in self._repository.get_daily_closes(instrument_id, start)
+                if row.get("close") is not None]
+        volatility = annualized_volatility([row["close"] for row in rows])
+        return volatility, rows[-1]["date"] if volatility is not None else None
 
     def list_instruments(self) -> list[dict]:
         """Gibt alle Instrumente inkl. letztem Kurs und wirksamer Kennzahlen zurück."""

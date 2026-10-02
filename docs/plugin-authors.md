@@ -626,9 +626,11 @@ fetch `/fields` again to discover a change.
 
 StockInfo itself declares `volatility` under the source name `calculated`, for
 all instrument types with the identity kinds `listed` and `pair`, because it
-computes that value from the stored daily closes. Host declarations come after all plugins, so `sources`
-reads for example `["justetf", "calculated"]`: when a plugin delivers the same
-field, the plugin value wins; otherwise the computed value fills the gap.
+computes that value from the stored daily closes. Its `as_of` is the date of
+the latest daily close used, as a plain date such as `2026-10-01`. Host
+declarations come after all plugins, so `sources` reads for example
+`["justetf", "calculated"]`: when a plugin delivers the same field, the plugin
+value wins; otherwise the computed value fills the gap.
 
 `GET /instrument-types` sends that same UUID in `StockInfo-Generation`,
 alongside `Cache-Control: no-store`. This is not a type-catalog version.

@@ -629,11 +629,20 @@ class QuoteRepository:
             row = connection.execute('SELECT * FROM instruments WHERE listing_id=?', (listing_id,)).fetchone()
             return detail_store.read(connection, dict(row)) if row else None
 
-    def set_volatility(self, instrument_id: int, volatility: float) -> None:
-        """Berechnete Volatilität ist ebenfalls ein generischer Quellenwert."""
+    def set_volatility(
+        self, instrument_id: int, volatility: float, as_of: str | None = None
+    ) -> None:
+        """Berechnete Volatilität ist ebenfalls ein generischer Quellenwert.
+
+        Args:
+            instrument_id: ID des Instruments.
+            volatility: Annualisierte Volatilität in Prozent.
+            as_of: Datum des letzten Tagesschlusskurses, aus dem sie stammt;
+                ``None``, wenn es unbekannt ist.
+        """
         with self._connect() as connection:
             detail_store.put_provider(connection, instrument_id, 'volatility',
-                {'value': volatility, 'source': CALCULATED_SOURCE})
+                {'value': volatility, 'source': CALCULATED_SOURCE, 'as_of': as_of})
 
     def delete_by_symbol(self, symbol: str) -> bool:
         """Löscht **ein** Instrument (und seine Quotes via Cascade) per Symbol.

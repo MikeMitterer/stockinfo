@@ -425,6 +425,7 @@ export const en = {
   drilldown: {
     fetchedAt: 'Source as of',
     source: 'Source',
+    sourceCalculated: 'calculated from daily closes',
     /* No text names a source: which one answers is up to `sources.yaml`. */
     explain:
       'The configured source provides the figures where it has them. You can only ' +

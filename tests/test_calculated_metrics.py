@@ -7,6 +7,7 @@ nur für ETFs und ETCs; bei Aktien und Fonds blieb der Wert unsichtbar.
 """
 
 from collections.abc import Iterator
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -98,6 +99,55 @@ def test_etf_zeigt_justetf_vor_der_berechnung(repo: QuoteRepository) -> None:
     assert detail["source"] == "justetf"
 
 
+# ─── Stand des berechneten Werts ────────────────────────────────────────────
+
+
+def _stock_with_closes(repo: QuoteRepository, days: int) -> tuple[CachedQuoteService, str, str]:
+    """Aktie mit `days` Tagesschlusskursen; gibt Dienst, ISIN und letztes Datum zurück."""
+    response = _response(_now()).model_copy(update={"type": "stock"})
+    instrument_id = repo.save_quote(response).instrument_id
+    today = date.today()
+    rows = [
+        {"date": (today - timedelta(days=days - index)).isoformat(),
+         "close": 100.0 + (index % 3), "currency": "EUR"}
+        for index in range(days)
+    ]
+    repo.upsert_daily_closes(instrument_id, rows)
+    service = CachedQuoteService(FakeQuoteService(response), repo, 6, empty_daily_sync(repo))
+    last_date = rows[-1]["date"] if rows else ""
+    return service, response.identity.isin, last_date
+
+
+def _volatility_detail(service: CachedQuoteService, repo: QuoteRepository, isin: str) -> dict:
+    instrument_id = repo.get_instrument_by_isin(isin)["id"]
+    return service.get_instrument_summary(instrument_id)["details"]["volatility"]
+
+
+def test_berechnete_volatilitaet_traegt_das_datum_des_letzten_schlusskurses(
+    repo: QuoteRepository,
+) -> None:
+    service, isin, last_date = _stock_with_closes(repo, 30)
+
+    service.refresh_one(isin)
+
+    detail = _volatility_detail(service, repo, isin)
+    assert detail["value"] is not None
+    assert detail["as_of"] == last_date
+
+
+def test_wiederhergestellte_volatilitaet_behaelt_ihr_datum(repo: QuoteRepository) -> None:
+    """Fehlen Tageskurse, bleibt der alte Wert stehen, und mit ihm sein Stand."""
+    service, isin, _ = _stock_with_closes(repo, 0)
+    instrument_id = repo.get_instrument_by_isin(isin)["id"]
+    repo.set_volatility(instrument_id, 12.5, as_of="2026-09-30")
+
+    service.refresh_one(isin)
+
+    detail = _volatility_detail(service, repo, isin)
+    assert detail["value"] == 12.5
+    assert detail["as_of"] == "2026-09-30"
+
+
 # ─── Öffentlicher Weg: GET /fields und GET /instruments ──────────────────────
 
 
@@ -123,7 +173,7 @@ def test_fields_deklariert_die_berechnete_volatilitaet_fuer_aktien_und_fonds(
 def test_instruments_liefert_berechnete_und_justetf_volatilitaet(client: TestClient) -> None:
     repo = QuoteRepository(get_settings().database_path)
     stock_id = _save(repo, "stock", "APC.DE")
-    repo.set_volatility(stock_id, 26.11)
+    repo.set_volatility(stock_id, 26.11, as_of="2026-10-01")
     etf_id = _save(repo, "etf", "EUNL.DE")
     repo.set_volatility(etf_id, 11.09)
     _put_justetf(repo, etf_id, 10.67)
@@ -132,5 +182,6 @@ def test_instruments_liefert_berechnete_und_justetf_volatilitaet(client: TestCli
 
     assert by_symbol["APC.DE"]["details"]["volatility"]["value"] == 26.11
     assert by_symbol["APC.DE"]["details"]["volatility"]["source"] == "calculated"
+    assert by_symbol["APC.DE"]["details"]["volatility"]["as_of"] == "2026-10-01"
     assert by_symbol["EUNL.DE"]["details"]["volatility"]["value"] == 10.67
     assert by_symbol["EUNL.DE"]["details"]["volatility"]["source"] == "justetf"
