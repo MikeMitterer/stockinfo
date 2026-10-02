@@ -31,7 +31,7 @@ schaltet den Branch. Regel:
 - `branch`: `t-89-volatilitaet-alle-typen`
 - `handoff_commit`: `5684a68`
 - `review_round`: `2`
-- `max_review_rounds`: `3`
+- `max_review_rounds`: `5`
 - `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
@@ -69,6 +69,11 @@ T-89 nach `master`; danach stehen beide Tickets zusammen zur Abnahme.
 in T-89 (Mike: „Das war eine Erkenntnis aus dem Review“, „Mach das gleich
 in T-89 mit c“). Die technische Freigabe von Runde 2 gilt für `5684a68`;
 der erweiterte Stand geht als Runde 3 an Codex. Kein Merge vorher.
+
+**Rundenlimit T-89 · Mike, 2026-10-02.** Wegen des erweiterten Umfangs
+sind bis zu fünf reguläre Review-Runden erlaubt. Die frühere Dreiergrenze
+ist damit überholt; die geprüfte Fassung und der bisherige Rundenverbrauch
+bleiben unverändert.
 
 ## Archiv · INBOX → claude · T-89 Runde 2 · technisch approved (durch Scope-Erweiterung überholt)
 
