@@ -470,8 +470,12 @@ class Unit(Enum):
     PERCENT = "percent"
     RATIO = "ratio"
     BASIS_POINTS = "basis_points"
-    MILLIONS = "millions"
+    MILLIONS = "millions"  # Betrag in Millionen; braucht eine Währungsangabe
     ABSOLUTE = "absolute"  # braucht zusätzlich eine Währungsangabe
+
+
+MONEY_UNITS: frozenset[Unit] = frozenset({Unit.ABSOLUTE, Unit.MILLIONS})
+"""Einheiten für Beträge. Ein Wert in einer davon braucht eine Währung."""
 
 
 @dataclass(frozen=True)
@@ -488,7 +492,8 @@ class Reading:
     unit: Unit | None = None
     source: str = ""
     currency: str | None = None
-    """Währung bei ``Unit.ABSOLUTE`` — ohne sie ist ein Betrag bedeutungslos.
+    """Währung bei ``Unit.ABSOLUTE`` und ``Unit.MILLIONS`` — ohne sie ist ein
+    Betrag bedeutungslos.
 
     Ein Fondsvolumen von 2.289.978.572.800 sagt nichts, solange nicht dabeisteht,
     ob es USD oder CAD sind. Bei allen anderen Einheiten bleibt das Feld leer.

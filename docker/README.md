@@ -68,7 +68,8 @@ Start it with `docker compose up -d`. This is an alternative to the
 
 - Stock and ETF quotes by ISIN or symbol and exchange.
 - Cached prices, automatic refreshes and historical price charts.
-- ETF metadata such as TER, provider and fund size when the source supplies it.
+- ETF metadata such as TER, provider and fund size (in millions of EUR) when the
+  source supplies it.
 - Manual values for metadata that the sources do not provide.
 - A dashboard for managing instruments, viewing charts and configuring sources.
   A short note below the asset list states the limits of the displayed data.

@@ -21,6 +21,7 @@ export const de = {
     shadowed: 'Eigener Wert {value} wird von der Quelle verdeckt.',
     loadFailed: 'Feldkatalog konnte nicht geladen werden.',
     empty: 'Für dieses Instrument sind keine Detailfelder deklariert.',
+    amountMillions: '{amount} Mio. {currency}',
   },
   /*
    * Wortmarke in zwei Teilen: Farbig ist der Teil, der die App

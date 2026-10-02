@@ -25,6 +25,7 @@ Das gilt auch bei manuellem Einstieg ohne Scheduler oder Loop.
 - [Rollen und Zustandsprotokoll](#rollen-und-zustandsprotokoll)
 - [Observer — beobachten, nicht mitarbeiten](#observer--beobachten-nicht-mitarbeiten)
 - [Ticketpfade und Arbeitsbeginn](#ticketpfade-und-arbeitsbeginn)
+- [Review-Verlauf — neueste Runde zuerst](#review-verlauf--neueste-runde-zuerst)
 - [Ticketgrenzen](#ticketgrenzen)
 - [Scope-Checkpoint — Breite entscheiden, bevor sie zum Review-Diff wird](#scope-checkpoint--breite-entscheiden-bevor-sie-zum-review-diff-wird)
 - [Verifier-Selbstheilung — mechanische Kleinigkeiten ohne Zusatzrunde](#verifier-selbstheilung--mechanische-kleinigkeiten-ohne-zusatzrunde)
@@ -164,6 +165,33 @@ Ordnerwechsel folgen der [Board-Anleitung](../README.md#von-der-aufnahme-bis-zum
 Beim Verschieben aktuelle Verweise mitführen; historische Freigaben und
 menschliche Antworten erhalten. Für bereits archivierte StockInfo-Skripte
 bei T-68 gilt der dort genannte unveränderte Bestand.
+
+[↑ Übersicht](#übersicht)
+
+## Review-Verlauf — neueste Runde zuerst
+
+*(Mike, 2026-10-02. Lokaler Zusatz, bis das gemeinsame Paket die Regel
+übernimmt: [AgentLessons T-53](../../../../../DevKI/Production/AgentLessons/_tickets/20-ready/T-53-review-verlauf-neueste-runde-zuerst.md).)*
+
+Wer ein Ticket öffnet, soll zuerst die aktuelle Rückmeldung lesen, nicht
+Runde 1. Deshalb gilt:
+
+1. Oben steht der feste Kopf: Warum, Beispiel, Stand, Scope-Vertrag,
+   Akzeptanzkriterien, Side-Effects. Der „Stand“ fasst den aktuellen
+   Zustand zusammen.
+2. Darunter steht die Überschrift `## Review-Verlauf (neueste Runde zuerst)`.
+3. Jede neue Übergabe, Nacharbeit oder Verifier-Prüfung kommt **direkt unter
+   diese Überschrift**, nie ans Dateiende. Ihre Unterabschnitte (Verify,
+   Befunde) bleiben in ihrer Runde.
+
+**Beispiel T-88:** Verifier-Prüfung · Runde 3, Nacharbeit Runde 3,
+Verifier-Prüfung · Runde 2, Nacharbeit Runde 2, Verifier-Prüfung · Runde 1,
+Übergabe Runde 1.
+
+Die Überschriften der Runden bleiben unverändert, damit Links wie
+`#verifier-prüfung--runde-2-codex-2026-10-02` weiter gelten. Aktive Tickets
+werden beim nächsten Anfassen umgestellt; Tickets in `40-done/` bleiben, wie
+sie sind. Das Umstellen ändert weder Phase noch Owner noch Freigabestand.
 
 [↑ Übersicht](#übersicht)
 

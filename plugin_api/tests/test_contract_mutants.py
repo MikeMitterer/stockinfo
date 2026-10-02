@@ -93,7 +93,7 @@ def assert_contract_rejects(
 # ─── Gemeinsam für alle Rollen ────────────────────────────────────────────────
 
 
-class _StummeQuelle(FakeResolver):
+class _SilentSource(FakeResolver):
     """Steht still und sagt nicht, warum. Der Befund aus Runde 1, als Plugin."""
 
     name = "stumm"
@@ -107,12 +107,12 @@ def test_wer_stillsteht_muss_es_begruenden() -> None:
     assert_contract_rejects(
         SourceContract,
         "test_wer_stillsteht_sagt_warum",
-        _StummeQuelle,
+        _SilentSource,
         "begründet es mit",
     )
 
 
-class _SchwaetzerischeQuelle(FakeResolver):
+class _ChattySource(FakeResolver):
     """Arbeitet und beanstandet sich trotzdem — Rauschen in der Diagnose."""
 
     name = "schwaetzer"
@@ -133,7 +133,7 @@ def test_wer_arbeitet_schweigt() -> None:
     assert_contract_rejects(
         SourceContract,
         "test_wer_stillsteht_sagt_warum",
-        _SchwaetzerischeQuelle,
+        _ChattySource,
         "die Quelle arbeitet, meldet aber",
     )
 
@@ -298,8 +298,13 @@ def test_ein_wert_ausserhalb_des_selbst_deklarierten_bereichs_faellt_auf() -> No
     )
 
 
-def test_ein_absoluter_betrag_ohne_waehrung_faellt_auf() -> None:
-    """Ein Fondsvolumen ohne Währung ist eine Zahl. Der Befund, wörtlich."""
+@pytest.mark.parametrize(
+    ("unit", "value"),
+    [(Unit.ABSOLUTE, 2_289_978_572_800.0), (Unit.MILLIONS, 2_289_978.5728)],
+    ids=["absolut", "millionen"],
+)
+def test_ein_betrag_ohne_waehrung_faellt_auf(unit: Unit, value: float) -> None:
+    """Ein Fondsvolumen ohne Währung ist eine Zahl — absolut wie in Millionen."""
     assert_contract_rejects(
         MetadataContract,
         "test_ein_betrag_ohne_waehrung_ist_bedeutungslos",
@@ -307,14 +312,14 @@ def test_ein_absoluter_betrag_ohne_waehrung_faellt_auf() -> None:
             [
                 Reading(
                     field="fund_size",
-                    value=2_289_978_572_800.0,
-                    unit=Unit.ABSOLUTE,
+                    value=value,
+                    unit=unit,
                     currency=None,
                     source="mutant",
                 )
             ]
         ),
-        "absoluter Betrag ohne",
+        "Betrag ohne",
         **METADATA_REQUESTS,
     )
 
@@ -365,7 +370,7 @@ def test_ein_kurs_von_null_faellt_auf() -> None:
     )
 
 
-class _HalbherzigeZone(tzinfo):
+class _HalfheartedZone(tzinfo):
     """Eine `tzinfo`, deren `utcoffset()` ``None`` liefert.
 
     Das ist erlaubt — und Python behandelt einen damit versehenen Zeitpunkt als
@@ -389,7 +394,7 @@ class _HalbherzigeZone(tzinfo):
     ("label", "moment"),
     [
         ("ohne tzinfo", datetime(2026, 1, 2, 12, 0)),
-        ("mit wirkungsloser tzinfo", datetime(2026, 1, 2, 12, 0, tzinfo=_HalbherzigeZone())),
+        ("mit wirkungsloser tzinfo", datetime(2026, 1, 2, 12, 0, tzinfo=_HalfheartedZone())),
     ],
 )
 def test_ein_zeitpunkt_ohne_wirksame_zone_faellt_auf(label: str, moment: datetime) -> None:

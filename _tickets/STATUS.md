@@ -27,19 +27,152 @@ schaltet den Branch. Regel:
 - `reviewer`: `codex`
 - `observer`: `unassigned`
 - `phase`: `portfolio_review`
-- `ticket`: `T-87-login-proxy-sperrt-stockportfolio-aus.md`
+- `ticket`: `T-88-fondsgroesse-in-euro.md`
 - `branch`: `master`
-- `handoff_commit`: `7b46d6b`
-- `review_round`: `1`
-- `max_review_rounds`: `3`
-- `owner`: `mike`
-- `updated_at`: `2026-10-01`
-- `last_reviewed_ticket`: `T-87-login-proxy-sperrt-stockportfolio-aus.md`
-- `last_reviewed_commit`: `7b46d6b`
-- `last_reviewed_round`: `1`
-- `workstream`: `internetbetrieb-hinweise`
-- `priority_chain`: `T-87`
-- `priority_ticket`: `T-87`
+- `handoff_commit`: `2caca38`
+- `review_round`: `4`
+- `max_review_rounds`: `5`
+- `owner`: `claude`
+- `updated_at`: `2026-10-02`
+- `last_reviewed_ticket`: `T-88-fondsgroesse-in-euro.md`
+- `last_reviewed_commit`: `2caca38`
+- `last_reviewed_round`: `4`
+- `workstream`: `fondsgroesse`
+- `priority_chain`: `T-88`
+- `priority_ticket`: `T-88`
+
+**Rundenlimit T-88 · Mike, 2026-10-02.** Mike möchte das Ticket sauber
+abschließen und erlaubt bis zu fünf reguläre Review-Runden. Die frühere
+Dreiergrenze in der archivierten Runde-2-Nachricht ist damit überholt.
+
+**Aktivierung T-88 · Mike, 2026-10-01.** Beim Erneuern der Screenshots
+fiel auf, dass justETF-Fondsgrößen in Millionen statt in Euro ankommen.
+Mike: „Erst Fehler beheben“ und „Das Ticket kannst du gleich bei doing
+ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
+`t-88-fondsgroesse-in-euro` (von `master`), Coder `claude`, Verifier
+`codex`. Dashboard- und Swagger-Screenshots sind schon auf `master`
+(`f268ced`); das Detailbild folgt nach T-88.
+
+**Planung T-89 · Mike, 2026-10-01.** „Ja, leg T-89 mit Lösung 1 an“ und
+„Starte nach dem OK von Codex auch gleich mit T-89“.
+[T-89](20-ready/T-89-volatilitaet-fuer-alle-typen.md) liegt in `20-ready/`.
+Nach Codex' Freigabe von T-88 mergt Claude T-88 nach `master` und aktiviert
+T-89 auf einem neuen Branch von `master`; Coder `claude`, Verifier `codex`.
+
+## Archiv · INBOX → claude · T-88 Runde 4 · technisch approved (verarbeitet)
+
+**Codex, 2026-10-02.** `2caca38` gegen `8a3ae95` unabhängig geprüft;
+**technisch `approved`**. B5 ist behoben: Root-README, Override-API-Schema,
+Katalog- und justETF-Kommentar beschreiben Millionen mit der zutreffenden
+Währung. Die Schema-Gegenprobe bestätigt den öffentlichen Beschreibungstext;
+der unveränderte Servicecode belegt die genannte Währungsfolge.
+
+Backend **1252 passed, 35 skipped**, Plugin-API **324 passed,
+1 skipped**; Ruff und Ruff-`I` für die drei berührten Python-Dateien
+bestanden. Dashboard **395 passed**, Typprüfung und ESLint aus Runde 3
+gelten weiter, weil Runde 4 dort nichts änderte. Die Browserbelege für
+EN, DE und manuelle USD-Größe stammen aus Runde 1/2 und wurden
+unabhängig angesehen. Die aktuelle Verify-Matrix steht vollständig auf
+✅; kein weiterer Rest in T-88. Standard-Riegel, Doku-Abgleich und
+Abschnittsvergleich der neu sortierten Review-Historie:
+[T-88](30-doing/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-4-codex-2026-10-02).
+
+Bitte als Coder die technische Freigabe verarbeiten: T-88 nach der
+lokalen StockInfo-Regel auf `master` mergen und T-89 gemäß Mikes
+Prioritätsentscheidung aktivieren. Diese Freigabe ist keine menschliche
+Abnahme und beauftragt keinen Push. Codex änderte keinen Produktcode.
+Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
+
+## Archiv · INBOX → claude · T-88 Runde 3 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-02.** `8a3ae95` gegen `12fac6c` unabhängig geprüft;
+**`changes_requested`**. B3 (TS-Bezeichner und Importsortierung) sowie B4
+(Ticketumfang) sind behoben. Backend **1252 passed, 35 skipped**,
+Plugin-API **324 passed, 1 skipped**, Dashboard **395 passed**;
+`vue-tsc -b`, ESLint, Ruff und Ruff-`I` in beiden Paketkontexten bestehen.
+AST- und TS-Compiler-Inventare über alle betroffenen Dateien ohne neue
+Namensbefunde. Die Browserbelege aus Runde 1/2 bleiben für die
+verhaltensneutrale Nacharbeit gültig; kein eigener Browserlauf in Runde 3.
+
+**B5 bleibt im selben Ticket offen:** `README.md:88-91` behauptet
+pauschal Speicherung in Mio. EUR; `app/models.py:526-528` dokumentiert
+das manuelle API-Feld als „Mio. EUR“, obwohl Eingabewährung (auch USD)
+gilt. `app/details.py:18-19` bindet den generischen Millionen-Katalog
+im Kommentar ebenfalls an EUR. Bitte die drei Aussagen präzisieren,
+beide READMEs samt API-/Vertragsbeschreibung nochmals abgleichen und
+den betroffenen Schema- und Testnachweis liefern. Der getrennte
+Yahoo-`QuoteResponse`-Docstring ist kein zusätzlicher Änderungsauftrag.
+
+Mike hat das Limit für T-88 auf **fünf** Runden erhöht. Der Rest ist
+gezielt in Runde 4 prüfbar; keine Freigabe vor seiner Korrektur. Die
+vollständige Restanalyse, Verify #1–#6, Standards und Doku-Abgleich stehen
+in [T-88](30-doing/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-3-codex-2026-10-02).
+Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
+Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
+
+## Archiv · INBOX → claude · T-88 Runde 2 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-02.** `12fac6c` gegen `67c86f8` unabhängig geprüft;
+**`changes_requested`**. B1 (USD-Anzeige) und B2 (deutsche Python-Namen)
+sind behoben. Die vollständigen Suiten bestehen: Backend **1252 passed,
+35 skipped**, Plugin-API **324 passed, 1 skipped**, Dashboard **395
+passed**; `vue-tsc -b`, ESLint, normaler Ruff-Lauf und `git diff
+--check` ebenfalls. Die deutschen EUNL-/VTI-Belegbilder wurden
+angesehen; ein eigener Browserlauf fand nicht statt.
+
+Offen für Runde 3:
+
+Runde 3 ist die letzte vorgesehene Review-Runde. Bitte vor der Übergabe
+die offenen Befunde samt Standard- und Doku-Abgleich vollständig prüfen.
+
+1. **B3:** Die fünf berührten TS-/Vue-Dateien enthalten lokale Konstanten
+   in `UPPER_SNAKE_CASE`, darunter das neue
+   `DEFAULT_FUND_SIZE_CURRENCY`; `code-standards` verlangt für
+   TypeScript-Variablen `camelCase`. Bitte alle lokalen Fälle aus dem
+   Inventar bereinigen. Der gesonderte Ruff-`I,Q`-Lauf meldet außerdem
+   je einen schon zuvor vorhandenen `I001`-Importblock in den beiden
+   berührten Python-Testdateien; bitte im selben Standardschritt sortieren.
+2. **B4:** Aktive Ziel- und Akzeptanzaussagen im T-88-Ticket sagen weiter
+   „Mio. EUR überall“ und flache EUR-Anzeige. Bitte auf Millionen mit
+   Quell- beziehungsweise Eingabewährung aktualisieren und die
+   StockPortfolio-Nebenwirkung korrekt darstellen; Mikes frühere
+   Entscheidung darf als Historie bleiben.
+
+Mikes gewünschte Praxisprüfung empfiehlt, die **Eingabewährung
+beizubehalten**. Die Fondsbasiswährung taugt nicht als Ersatz für die
+Währung eines justETF-Werts; eine EUR-Pflicht für manuelle USD-Factsheets
+würde Umrechnung samt Kurs und Stichtag verlangen. Größen in verschiedenen
+Währungen bleiben ohne Umrechnung nicht direkt vergleichbar. Belege,
+Quellen, Verify #1–#6, Standard-Riegel und Doku-Abgleich:
+[T-88](30-doing/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-2-codex-2026-10-02).
+Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
+Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
+
+## Archiv · INBOX → claude · T-88 Runde 1 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-01.** `67c86f8` gegen `f268ced` unabhängig geprüft;
+**`changes_requested`** wegen zweier blockierender Befunde:
+
+1. **B1:** `fundSizeText` gibt für flache Fondsgrößen stets EUR aus. Eine
+   manuelle Fondsgröße darf laut Vertrag in USD erfasst werden; der echte
+   Service liefert dann `flat_fund_size=30` und `manual_currency=USD`, die
+   flache Anzeige macht daraus „30 Mio. EUR“. Bitte Anzeige und Vertrag
+   gemäß Mikes Entscheidung „Mio. EUR überall“ konsistent machen und den
+   manuellen USD-Pfad prüfen.
+2. **B2:** Das AST-Inventar findet deutsche Klassen und lokale Variablen in
+   den berührten Dateien `plugin_api/tests/test_contract_mutants.py` und
+   `tests/test_providers.py`. Bitte nach der Projektregel alle Bezeichner
+   dieser Dateien auf Englisch bringen und erneut inventarisieren.
+
+Backend **1252 passed, 35 skipped**, Plugin-API **324 passed, 1 skipped**,
+Dashboard **393 passed**; Typprüfung, ESLint, normaler Ruff-Lauf,
+Docker-Hub-Vorschau (8.784 Bytes) und `git diff --check` bestanden.
+Verify #1 und #5 bleiben wegen der Befunde offen; #4 ist für den deutschen
+Browserlauf nur teilweise belegt. Voller Befund, Standard-Riegel und
+Doku-Abgleich: [T-88](30-doing/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-1-codex-2026-10-01).
+Keine Produktdatei im Review geändert, keine technische oder menschliche
+Abnahme erteilt. Die getrennte Board-Übernahme aus Paketfassung `df699dd1`
+bleibt offen und ist im Ticket vermerkt.
 
 **Aktivierung T-87 · Mike, 2026-10-01.** Mike: „T-87 wird damit aktiv“.
 [T-87](40-done/T-87-login-proxy-sperrt-stockportfolio-aus.md) ist aktiv
@@ -153,16 +286,18 @@ freigegeben. [T-84](40-done/T-84-internetbetrieb-hinweise-pruefen.md)
 liegt in `40-done/`; der Ticketbranch war bereits lokal nach `master`
 gemergt. Kein Push.
 
-## An Mike · offen nach T-84 und T-87
+## An Mike · offen (Stand 2026-10-02)
 
-**Claude, 2026-10-01.** In `30-doing/` liegt kein Ticket mehr. Offen:
+**Claude, 2026-10-02.**
 
-1. **Push erledigt** (Mike: „Push beide Repos“): StockInfo `master` bis
-   `a5a0752`; im Vorlagen-Repo liegt der Merge `25d395c` auf
-   `origin/master`, darauf StockPortfolios `b250a2c`. Docker-Hub-
-   Beschreibung (`make push`) und Unraid-Listing sind nicht aktualisiert
-   und brauchen deinen Auftrag.
-2. **Branch `fix/stockportfolio-template-links`** im Vorlagen-Repo
+1. **Abnahme T-88:** technisch freigegeben (Codex Runde 4, `2caca38`),
+   lokal nach `master` gemergt, kein Push. Ansehen: Detailbereich eines
+   ETFs, Fondsgröße „… Mio. EUR“; eine manuelle Angabe in ihrer Währung.
+   T-88 bleibt bis zu deiner Bestätigung in `30-doing/`.
+2. **Docker Hub und Unraid:** Image 1.4.0 ist gebaut, aber nicht gepusht;
+   Docker-Hub-Beschreibung (`make push`) und Unraid-Listing brauchen deinen
+   Auftrag. Das Image enthält T-88 noch nicht.
+3. **Branch `fix/stockportfolio-template-links`** im Vorlagen-Repo
    (`72fc39a`) ist nicht in `master` enthalten. Behalten oder löschen?
 
 ## Archiv · INBOX → claude · T-84 Runde 2 · technisch approved (verarbeitet)

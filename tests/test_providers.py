@@ -12,7 +12,6 @@ from app.providers.openfigi_provider import OpenFigiClient
 from app.providers.yfinance_etf_provider import YFinanceEtfEnricher
 from app.providers.yfinance_provider import YFinanceProvider
 
-
 # ─── OpenFIGI ─────────────────────────────────────────────────────────────────
 
 
@@ -123,9 +122,46 @@ def test_justetf_mappt_dict_felder(monkeypatch) -> None:
     assert details is not None
     assert details.ter == 0.19
     assert details.provider == "Vanguard"
-    assert details.fund_size == 22638.0
     assert details.volatility == 9.95
     assert details.accumulating is False
+
+
+def test_justetf_fondsgroesse_bleibt_in_millionen(monkeypatch) -> None:
+    """justETF schreibt „EUR 22,638 m"; die Bibliothek liefert daraus 22638.0.
+
+    Der Katalog führt die Fondsgröße in Mio. EUR, der Wert bleibt also
+    unverändert. Die Einheit deklariert das justETF-Plugin.
+    """
+    overview = {"fund_size_eur": 22638.0}
+    monkeypatch.setattr(
+        justetf_module.justetf_scraping, "get_etf_overview", lambda isin, **kw: overview
+    )
+
+    details = JustEtfProvider().fetch_etf("IE00B3RBWM25")
+
+    assert details is not None
+    assert details.fund_size == 22638.0
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("Physical(Optimized sampling)", "Physical (Optimized sampling)"),
+        ("Physical (Full replication)", "Physical (Full replication)"),
+        ("Synthetic", "Synthetic"),
+    ],
+    ids=["leerzeichen-fehlt", "leerzeichen-vorhanden", "ohne-klammer"],
+)
+def test_justetf_replikation_hat_leerzeichen_vor_der_klammer(monkeypatch, raw, expected) -> None:
+    overview = {"replication": raw}
+    monkeypatch.setattr(
+        justetf_module.justetf_scraping, "get_etf_overview", lambda isin, **kw: overview
+    )
+
+    details = JustEtfProvider().fetch_etf("IE00B3RBWM25")
+
+    assert details is not None
+    assert details.replication == expected
 
 
 def test_justetf_thesaurierend_wird_erkannt(monkeypatch) -> None:
@@ -187,17 +223,17 @@ def test_justetf_holt_den_gettex_kurs_nicht_mit(monkeypatch) -> None:
     Scrape-Zeit — Median 0,99 s mit, 0,53 s ohne — und das bei jedem Refresh
     und jedem Papier.
     """
-    aufrufe: list[dict] = []
+    invocations: list[dict] = []
 
-    def spion(isin: str, **kw: object) -> dict:
-        aufrufe.append(dict(kw))
+    def spy_overview(isin: str, **kw: object) -> dict:
+        invocations.append(dict(kw))
         return {"name": "iShares Core MSCI World", "ter": 0.2}
 
-    monkeypatch.setattr(justetf_module.justetf_scraping, "get_etf_overview", spion)
+    monkeypatch.setattr(justetf_module.justetf_scraping, "get_etf_overview", spy_overview)
 
     JustEtfProvider().fetch_etf("IE00B4L5Y983")
 
-    assert aufrufe == [{"include_gettex": False}]
+    assert invocations == [{"include_gettex": False}]
 
 
 def test_justetf_versucht_europaeische_isin(monkeypatch) -> None:
@@ -357,24 +393,24 @@ def test_unbekannte_ausschuettungspolitik_bleibt_unbekannt(monkeypatch) -> None:
     `None` heißt „nicht gepflegt" und lässt sich von Hand nachtragen; ein
     falsches `False` sieht wie eine gesicherte Angabe aus.
     """
-    for politik in ("Thesaurierend", "unbekannt", "n/a", "Acc.", "-", "   "):
+    for policy in ("Thesaurierend", "unbekannt", "n/a", "Acc.", "-", "   "):
         monkeypatch.setattr(
             justetf_module.justetf_scraping,
             "get_etf_overview",
-            lambda isin, **kw: {"distribution_policy": politik},
+            lambda isin, **kw: {"distribution_policy": policy},
         )
 
         details = JustEtfProvider().fetch_etf("IE00B3RBWM25")
 
         assert details is not None
-        assert details.accumulating is None, f"'{politik}' ist keine Aussage"
+        assert details.accumulating is None, f"'{policy}' ist keine Aussage"
 
 
 def test_bekannte_ausschuettungspolitik_wird_unabhaengig_von_schreibweise_erkannt(
     monkeypatch,
 ) -> None:
     """Gross-/Kleinschreibung und Leerraum sind Formatierung, keine Bedeutung."""
-    faelle = {
+    cases = {
         "Accumulating": True,
         "accumulating": True,
         "  ACCUMULATING ": True,
@@ -382,17 +418,17 @@ def test_bekannte_ausschuettungspolitik_wird_unabhaengig_von_schreibweise_erkann
         "distributing": False,
         "  DISTRIBUTING ": False,
     }
-    for politik, erwartet in faelle.items():
+    for policy, expected_accumulating in cases.items():
         monkeypatch.setattr(
             justetf_module.justetf_scraping,
             "get_etf_overview",
-            lambda isin, **kw: {"distribution_policy": politik},
+            lambda isin, **kw: {"distribution_policy": policy},
         )
 
         details = JustEtfProvider().fetch_etf("IE00B3RBWM25")
 
         assert details is not None
-        assert details.accumulating is erwartet, politik
+        assert details.accumulating is expected_accumulating, policy
 
 
 class _FakeTicker(FakeTicker):
@@ -405,8 +441,8 @@ class _FakeTicker(FakeTicker):
         )()
 
 
-@pytest.mark.parametrize("kaputt", [float("nan"), float("inf"), float("-inf"), 0.0, -1.5])
-def test_unbrauchbare_kurse_werden_verworfen(monkeypatch, kaputt) -> None:
+@pytest.mark.parametrize("broken", [float("nan"), float("inf"), float("-inf"), 0.0, -1.5])
+def test_unbrauchbare_kurse_werden_verworfen(monkeypatch, broken) -> None:
     """Nicht jeder Zahlenwert ist ein Kurs.
 
     Geprüft wurde bisher nur gegen `None`. `NaN` und `Infinity` überstehen
@@ -416,16 +452,16 @@ def test_unbrauchbare_kurse_werden_verworfen(monkeypatch, kaputt) -> None:
     verfälschen, statt sie als fehlend auszuweisen.
     """
     monkeypatch.setattr(
-        yfinance_module.yf, "Ticker", lambda symbol: _FakeTicker(price=kaputt)
+        yfinance_module.yf, "Ticker", lambda symbol: _FakeTicker(price=broken)
     )
 
     assert YFinanceProvider().fetch_quote("VGWL.DE") is None
 
 
-@pytest.mark.parametrize("kaputt", [float("nan"), float("inf"), 0.0, -1.0])
-def test_unbrauchbare_wechselkurse_werden_verworfen(monkeypatch, kaputt) -> None:
+@pytest.mark.parametrize("broken", [float("nan"), float("inf"), 0.0, -1.0])
+def test_unbrauchbare_wechselkurse_werden_verworfen(monkeypatch, broken) -> None:
     monkeypatch.setattr(
-        yfinance_module.yf, "Ticker", lambda symbol: _FakeTicker(price=kaputt)
+        yfinance_module.yf, "Ticker", lambda symbol: _FakeTicker(price=broken)
     )
 
     assert YFinanceProvider().fetch_fx_rate("EUR", "USD").is_hit is False
@@ -535,7 +571,7 @@ def test_yfinance_etf_ohne_symbol_liefert_nichts(monkeypatch) -> None:
 # ─── Zusammenspiel der ETF-Quellen ────────────────────────────────────────────
 
 
-class _KontextabhaengigerEnricher:
+class _ContextDependentEnricher:
     """Liefert nur, wenn er beim **Abruf** Börse und Währung bekommt.
 
     Bildet ab, was das Protokoll zusagt: `fetch_etf` nimmt denselben Kontext
@@ -545,7 +581,7 @@ class _KontextabhaengigerEnricher:
     """
 
     def __init__(self) -> None:
-        self.fetch_kontext: tuple | None = None
+        self.fetch_context: tuple | None = None
 
     def is_responsible(
         self,
@@ -566,7 +602,7 @@ class _KontextabhaengigerEnricher:
         identity: object | None = None,
         instrument_type: str | None = None,
     ) -> EtfDetails | None:
-        self.fetch_kontext = (exchange, currency)
+        self.fetch_context = (exchange, currency)
         if not exchange or not currency:
             return None
         return EtfDetails(provider="BlackRock Canada", source="test")
@@ -581,14 +617,14 @@ def test_composite_reicht_den_kontext_bis_zum_abruf_durch() -> None:
     Kontext zum Holen braucht, bekäme eine erfolgreiche Zuständigkeitsprüfung
     und danach nichts.
     """
-    enricher = _KontextabhaengigerEnricher()
+    enricher = _ContextDependentEnricher()
     composite = CompositeEtfEnricher(enricher)
 
     details = composite.fetch_etf(
         None, symbol="XIC.TO", exchange="Toronto", currency="CAD"
     )
 
-    assert enricher.fetch_kontext == ("Toronto", "CAD")
+    assert enricher.fetch_context == ("Toronto", "CAD")
     assert details is not None
     assert details.provider == "BlackRock Canada"
 
@@ -599,7 +635,7 @@ class _StubEnricher:
     def __init__(self, responsible: bool, details: EtfDetails | None) -> None:
         self._responsible = responsible
         self._details = details
-        self.gefragt = 0
+        self.asked = 0
 
     def is_responsible(
         self,
@@ -620,20 +656,20 @@ class _StubEnricher:
         identity: object | None = None,
         instrument_type: str | None = None,
     ) -> EtfDetails | None:
-        self.gefragt += 1
+        self.asked += 1
         return self._details
 
 
 def test_composite_fragt_nur_die_zustaendige_quelle() -> None:
-    europaeisch = _StubEnricher(True, EtfDetails(provider="iShares"))
-    uebersee = _StubEnricher(False, EtfDetails(provider="Vanguard"))
-    composite = CompositeEtfEnricher(europaeisch, uebersee)
+    european = _StubEnricher(True, EtfDetails(provider="iShares"))
+    overseas = _StubEnricher(False, EtfDetails(provider="Vanguard"))
+    composite = CompositeEtfEnricher(european, overseas)
 
     details = composite.fetch_etf("IE00B4L5Y983")
 
     assert details is not None
     assert details.provider == "iShares"
-    assert uebersee.gefragt == 0  # nicht zuständig, also gar nicht erst gefragt
+    assert overseas.asked == 0  # nicht zuständig, also gar nicht erst gefragt
 
 
 def test_composite_ist_zustaendig_wenn_eine_quelle_es_ist() -> None:
@@ -656,12 +692,12 @@ def test_composite_ohne_zustaendige_quelle_meldet_das_ehrlich() -> None:
 
 def test_composite_geht_bei_ausfall_zur_naechsten_zustaendigen_quelle() -> None:
     """Ein Ausfall der ersten Quelle darf eine zweite nicht verhindern."""
-    ausgefallen = _StubEnricher(True, None)
-    ersatz = _StubEnricher(True, EtfDetails(provider="Vanguard"))
-    composite = CompositeEtfEnricher(ausgefallen, ersatz)
+    failed = _StubEnricher(True, None)
+    fallback = _StubEnricher(True, EtfDetails(provider="Vanguard"))
+    composite = CompositeEtfEnricher(failed, fallback)
 
     details = composite.fetch_etf("US9229087690")
 
     assert details is not None
     assert details.provider == "Vanguard"
-    assert ausgefallen.gefragt == 1
+    assert failed.asked == 1

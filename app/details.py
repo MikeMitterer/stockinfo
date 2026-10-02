@@ -5,6 +5,7 @@ import re
 from collections.abc import Iterable
 
 from stockinfo_plugin import Unit
+from stockinfo_plugin.types import MONEY_UNITS as CONTRACT_MONEY_UNITS
 from stockinfo_plugin.types import convert
 
 from app.detail_models import DetailDefinition, DetailInput, DetailScope, DetailValue
@@ -14,13 +15,18 @@ from app.detail_models import DetailDefinition, DetailInput, DetailScope, Detail
 CANONICAL = {
     'ter': ('number', 'percent', 0, 5),
     'volatility': ('number', 'percent', 0, 500),
-    'fund_size': ('number', 'absolute', 0, 2_000_000),
+    # In Millionen; die Währung trägt jeder Wert selbst (justETF: EUR).
+    # 2.000.000 entspricht 2 Billionen.
+    'fund_size': ('number', 'millions', 0, 2_000_000),
     'accumulating': ('boolean', None, None, None),
     'provider': ('text', None, None, None),
     'replication': ('text', None, None, None),
     'fund_domicile': ('text', None, None, None),
     'fund_currency': ('text', None, None, None),
 }
+
+# Betragseinheiten als Katalogwerte; die Regel selbst steht im Plugin-Vertrag.
+MONEY_UNITS = frozenset(unit.value for unit in CONTRACT_MONEY_UNITS)
 
 
 def definitions_for(source: object) -> list[DetailDefinition]:
@@ -60,7 +66,7 @@ def definitions_for(source: object) -> list[DetailDefinition]:
             name=name, kind=kind, unit=unit, minimum=minimum, maximum=maximum,
             label_en=spec.label_en or spec.name, label_de=spec.label_de,
             overridable=spec.overridable, sources=[source.name],
-            currency_required=unit == 'absolute',
+            currency_required=unit in MONEY_UNITS,
             scopes=[DetailScope(source=source.name,
                 instrument_types=sorted(supported if types is None else types),
                 identity_kinds=sorted(getattr(source, 'SUPPORTED_KINDS', ())))],

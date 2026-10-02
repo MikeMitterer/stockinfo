@@ -18,7 +18,6 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 import pytest
-
 from stockinfo_plugin import (
     DailyRequest,
     FxRequest,
@@ -63,7 +62,7 @@ class FakeJustEtf:
             ter=0.2,
             provider="iShares",
             replication="Physisch",
-            fund_size=1_200_000_000.0,
+            fund_size=1200.0,
             fund_currency="USD",
             fund_domicile="Irland",
             name="iShares Core MSCI World",
@@ -116,8 +115,8 @@ class TestJustEtfMetadata(MetadataContract):
     * Bei Unzuständigkeit kam `None` statt einer leeren Liste zurück. Das ist
       ein Unterschied: „nicht zuständig" und „zuständig, nichts gefunden" darf
       der Aufrufer nicht verwechseln.
-    * `fund_size` trägt `Unit.ABSOLUTE` und kam **ohne Währung**. Ein Betrag
-      ohne Währung ist bedeutungslos — dieselbe Regel, die für Kurse gilt.
+    * `fund_size` ist ein Betrag und kam **ohne Währung**. Ein Betrag ohne
+      Währung ist bedeutungslos — dieselbe Regel, die für Kurse gilt.
     """
 
     responsible = ResolveRequest(isin="IE00B4L5Y983")
@@ -226,7 +225,7 @@ def test_das_fondsvolumen_traegt_euro_und_nicht_die_fondswaehrung() -> None:
     Der Test nimmt deshalb bewusst einen Fonds, dessen Fondswährung **nicht**
     EUR ist: Mit einem EUR-Fonds wäre er grün gewesen, ohne etwas zu prüfen.
     """
-    details = EtfDetails(fund_size=1_200_000_000.0, fund_currency="USD")
+    details = EtfDetails(fund_size=1200.0, fund_currency="USD")
 
     readings = {reading.field: reading for reading in as_readings(details)}
 
@@ -286,16 +285,16 @@ def test_die_kette_laeuft_durch_composite_adapter_plugin(
         """Eine Anbindung, die genau sagt, wer geantwortet hat."""
 
         def __init__(self, source: str, european: bool) -> None:
-            self._quelle = source
-            self._europaeisch = european
+            self._source = source
+            self._european = european
 
         def is_responsible(self, isin, *, exchange=None, currency=None) -> bool:
             if isin:
-                return isin.startswith(("IE", "LU", "DE")) is self._europaeisch
-            return (currency == "EUR") is self._europaeisch
+                return isin.startswith(("IE", "LU", "DE")) is self._european
+            return (currency == "EUR") is self._european
 
         def fetch_etf(self, isin, symbol=None, *, exchange=None, currency=None):
-            return EtfDetails(provider=self._quelle, name="egal")
+            return EtfDetails(provider=self._source, name="egal")
 
     chain = CompositeEtfEnricher(
         MetadataAdapter(

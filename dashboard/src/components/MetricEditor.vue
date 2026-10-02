@@ -7,6 +7,7 @@ import { UxInlineNumber } from '@mmit/ux-foundation'
 import MetricValue from './MetricValue.vue'
 import { manualValue, sourceProvides } from '../composables/useOverrides'
 import { FIELD_LABEL_KEY } from '../utils/fieldLabels'
+import { fundSizeCurrency, fundSizeText } from '../utils/fundSize'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
 /**
@@ -70,7 +71,7 @@ const { t, n } = useI18n()
 type FieldKind = 'number' | 'boolean' | 'text'
 
 /** Bedienart je Feld — steuert, welcher Zweig im Template greift. */
-const FIELD_KIND: Record<OverrideField, FieldKind> = {
+const fieldKinds: Record<OverrideField, FieldKind> = {
   ter: 'number',
   volatility: 'number',
   fund_size: 'number',
@@ -81,7 +82,7 @@ const FIELD_KIND: Record<OverrideField, FieldKind> = {
   fund_currency: 'text',
 }
 
-const kind = computed(() => FIELD_KIND[props.field])
+const kind = computed(() => fieldKinds[props.field])
 
 /**
  * Liefert die Quelle etwas? Dann wird hier nichts gepflegt.
@@ -115,10 +116,10 @@ function onRemove(): void {
 
 // ─── Zahlenfelder (ter, volatility, fund_size) ─────────────────────────────
 
-const DIGITS = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+const twoDecimals = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
 
 /** Obergrenze je Zahlenfeld — dieselben Werte prüft das Backend noch einmal. */
-const NUMBER_MAX: Partial<Record<OverrideField, number>> = {
+const numberMaxByField: Partial<Record<OverrideField, number>> = {
   ter: 5,
   volatility: 500,
   fund_size: 2_000_000,
@@ -126,13 +127,15 @@ const NUMBER_MAX: Partial<Record<OverrideField, number>> = {
 
 const numericValue = computed(() => (typeof manual.value === 'number' ? manual.value : null))
 
-const numberMax = computed(() => NUMBER_MAX[props.field] ?? Number.MAX_SAFE_INTEGER)
+const numberMax = computed(() => numberMaxByField[props.field] ?? Number.MAX_SAFE_INTEGER)
 
-/** Fondsvolumen ist keine Prozentzahl — TER und Volatilität schon. */
+/** Fondsvolumen steht in Millionen mit seiner Eingabewährung — TER und Volatilität in Prozent. */
 const numberDisplay = computed(() => {
   if (numericValue.value === null) return t('common.noValue')
-  const formatted = n(numericValue.value, DIGITS)
-  return props.field === 'fund_size' ? formatted : `${formatted} %`
+  const formatted = n(numericValue.value, twoDecimals)
+  return props.field === 'fund_size'
+    ? fundSizeText(t, formatted, fundSizeCurrency(props.item, 'manual'))
+    : `${formatted} %`
 })
 
 function onNumber(value: number | null): void {

@@ -82,8 +82,37 @@ def test_katalogversion_steigt_nur_bei_schemawechsel(tmp_path):
     assert repo.detail_catalog([])[1] == first + 2
 
 
+@pytest.mark.parametrize(
+    ('value', 'accepted'),
+    [(129_791.0, True), (2_000_000.0, True), (2_000_001.0, False)],
+    ids=['msci-world-129791-mio', 'obergrenze-2-billionen', 'ueber-der-obergrenze'],
+)
+def test_fondsgroesse_steht_in_millionen_mit_waehrung(value, accepted):
+    """Die Fondsgröße steht in Mio. EUR, wie justETF sie liefert.
+
+    Auch ein Betrag in Millionen braucht seine Währung; ohne sie wäre
+    „129.791 Mio." bedeutungslos.
+    """
+    from app.detail_models import DetailInput
+    from app.details import validate_input
+
+    class FundSizeSource(SampleSource):
+        FIELDS = (FieldSpec('fund_size', kind='number', unit=Unit.MILLIONS),)
+
+    definition = definitions_for(FundSizeSource())[0]
+    assert definition.unit == 'millions'
+    assert definition.currency_required is True
+    entry = DetailInput(value=value, currency='EUR')
+    if accepted:
+        assert validate_input(definition, entry) == entry
+    else:
+        with pytest.raises(ValueError):
+            validate_input(definition, entry)
+
+
 def test_plausibilitaet_verwendet_die_deklarierte_einheit():
     from stockinfo_plugin import Reading
+
     from app.plugin_adapters import MetadataAdapter
 
     class RatioSource(SampleSource):
@@ -101,6 +130,7 @@ def test_plausibilitaet_verwendet_die_deklarierte_einheit():
 
 def test_migration_uebernimmt_waehrung_des_manuellen_betrags():
     import sqlite3
+
     from app import detail_store
 
     connection = sqlite3.connect(':memory:')
@@ -130,7 +160,7 @@ def test_alter_override_weg_erhaelt_die_gespeicherte_betragswaehrung(tmp_path):
     from tests.test_quote_cache import FakeQuoteService, _now, _response
 
     class FundSource(SampleSource):
-        FIELDS = (FieldSpec('fund_size', kind='number', unit=Unit.ABSOLUTE),
+        FIELDS = (FieldSpec('fund_size', kind='number', unit=Unit.MILLIONS),
                   FieldSpec('fund_currency'))
 
     path = str(tmp_path / 'money.db')

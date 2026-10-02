@@ -523,9 +523,15 @@ class InstrumentOverrides(BaseModel):
     replication: str | None = Field(
         default=None, max_length=100, description="Replikationsart"
     )
-    # Obergrenze in Mio. EUR: 2 Bio. — der größte Fonds der Welt liegt bei rund 1,5.
+    # Obergrenze in Millionen: 2 Bio. — der größte Fonds der Welt liegt bei rund 1,5.
     fund_size: float | None = Field(
-        default=None, ge=0, le=2_000_000, description="Fondsvolumen in Mio. EUR"
+        default=None,
+        ge=0,
+        le=2_000_000,
+        description=(
+            "Fondsvolumen in Millionen. Währung: das mitgesendete fund_currency, "
+            "sonst die bisher gespeicherte Währung, sonst die Fondswährung"
+        ),
     )
     fund_domicile: str | None = Field(
         default=None, max_length=100, description="Fondsdomizil"
