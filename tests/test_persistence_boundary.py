@@ -8,14 +8,19 @@ Der Test liest jede Python-Datei unter `app/` als Syntaxbaum und sucht:
 - SQL im Text eines Strings — auch ein bloßes `WHERE`-Fragment mit
   `?`-Platzhalter, das erst an anderer Stelle ausgeführt wird,
 - einen Dateizugriff auf die Datenbankdatei: `os.replace`, `shutil.copy2`
-  und Verwandte mit einem Argument, dessen Name `database` enthält, oder
-  Pfadmethoden wie `exists`, `stat`, `unlink` auf einem solchen Pfad,
+  und Verwandte mit einem Datenbankpfad als Argument, oder Pfadmethoden wie
+  `exists`, `stat`, `unlink` auf einem solchen Pfad,
 - die Journalendungen `-wal` und `-shm` als String.
+
+Ein Datenbankpfad ist ein Ausdruck mit einem Namen, der `database` enthält,
+oder ein Alias davon: `path = Path(database_path)` macht `path` innerhalb
+dieser Funktion zum Datenbankpfad, auch über weitere Zuweisungen. `.parent`
+beendet die Spur — das Verzeichnis ist nicht die Datei. Sicherungsdateien
+im Archiv entstehen über das Verzeichnis und bleiben Sache des Dienstes.
 
 Docstrings zählen nicht: Sie erklären SQL, sie setzen keines ab. Eine
 Textsuche fände dagegen jede Erwähnung in einem Docstring und übersähe
-`import sqlite3 as db`. Der Dateizugriff wird am Namen erkannt; die
-Sicherungsdateien im Archiv heißen anders und bleiben Sache des Dienstes.
+`import sqlite3 as db`.
 
 Die Gegenproben laufen dieselbe Prüfung über Quelltext mit genau diesen
 Verstößen. Findet sie dort nichts, wäre ein grüner Lauf über `app/` wertlos.
@@ -51,26 +56,99 @@ PATH_METHODS = frozenset(
 JOURNAL_SUFFIXES = frozenset({"-wal", "-shm"})
 
 
-def _names_database(node: ast.AST) -> bool:
-    """Ob ein Ausdruck einen Namen mit `database` darin enthält."""
-    return any(
-        "database" in (part.id if isinstance(part, ast.Name) else part.attr).lower()
-        for part in ast.walk(node)
-        if isinstance(part, (ast.Name, ast.Attribute))
+def _names_database(node: ast.AST, aliases: frozenset[str]) -> bool:
+    """Ob ein Ausdruck auf die Datenbankdatei zeigt.
+
+    Das tut er, wenn ein Name darin `database` enthält oder ein Alias ist, der
+    aus einem solchen Ausdruck stammt (`path = Path(database_path)`).
+    `.parent` beendet die Spur: Das Verzeichnis ist nicht die Datei.
+    """
+    if isinstance(node, ast.Attribute):
+        if node.attr == "parent":
+            return False
+        if "database" in node.attr.lower() or node.attr in aliases:
+            return True
+        return _names_database(node.value, aliases)
+    if isinstance(node, ast.Name):
+        return "database" in node.id.lower() or node.id in aliases
+    return any(_names_database(child, aliases) for child in ast.iter_child_nodes(node))
+
+
+def _database_aliases(scope: ast.AST, known: frozenset[str] = frozenset()) -> frozenset[str]:
+    """Alle Namen in `scope`, denen ein Datenbankpfad zugewiesen wird — auch über Ketten.
+
+    Args:
+        scope: Eine Funktion oder die ganze Datei.
+        known: Bereits bekannte Aliase, etwa Attribute aus der ganzen Datei.
+    """
+    aliases: set[str] = set(known)
+    while True:
+        found = set(aliases)
+        for node in ast.walk(scope):
+            if isinstance(node, ast.Assign):
+                targets, value = node.targets, node.value
+            elif isinstance(node, (ast.AnnAssign, ast.NamedExpr)) and node.value:
+                targets, value = [node.target], node.value
+            else:
+                continue
+            if not _names_database(value, frozenset(found)):
+                continue
+            for target in targets:
+                if isinstance(target, ast.Name):
+                    found.add(target.id)
+                elif isinstance(target, ast.Attribute):
+                    found.add(target.attr)
+        if found == aliases:
+            return frozenset(aliases)
+        aliases = found
+
+
+def _scoped_aliases(tree: ast.Module) -> dict[int, frozenset[str]]:
+    """Die Aliase, die für jeden Knoten gelten — je innerster Funktion.
+
+    Ein lokaler Name wie `path` gilt nur in der Funktion, in der er einen
+    Datenbankpfad bekommt. Attribute (`self._file = Path(database_path)`)
+    gelten in der ganzen Datei, weil sie über Methoden hinweg leben.
+    """
+    attributes = frozenset(
+        target.attr
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Assign)
+        for target in node.targets
+        if isinstance(target, ast.Attribute)
+        and target.attr in _database_aliases(tree)
     )
+    module_level = _database_aliases(
+        ast.Module(
+            body=[
+                statement
+                for statement in tree.body
+                if not isinstance(statement, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+            ],
+            type_ignores=[],
+        ),
+        attributes,
+    )
+    owners = {id(node): module_level for node in ast.walk(tree)}
+    for function in ast.walk(tree):
+        if isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            local = _database_aliases(function, attributes)
+            for node in ast.walk(function):
+                owners[id(node)] = local
+    return owners
 
 
-def _file_access(call: ast.Call) -> str | None:
+def _file_access(call: ast.Call, aliases: frozenset[str]) -> str | None:
     """Beschreibt einen Dateizugriff auf die Datenbank, sonst ``None``."""
     function = call.func
     if not isinstance(function, ast.Attribute):
         return None
     module = function.value.id if isinstance(function.value, ast.Name) else None
     if (module, function.attr) in FILE_FUNCTIONS and any(
-        _names_database(argument) for argument in call.args
+        _names_database(argument, aliases) for argument in call.args
     ):
         return f"{module}.{function.attr}(Datenbank)"
-    if function.attr in PATH_METHODS and _names_database(function.value):
+    if function.attr in PATH_METHODS and _names_database(function.value, aliases):
         return f"Datenbankpfad.{function.attr}()"
     return None
 
@@ -102,6 +180,7 @@ def database_accesses(source: str) -> list[str]:
     """Nennt jede Stelle im Quelltext, die direkt mit SQLite spricht."""
     tree = ast.parse(source)
     docstrings = _docstrings(tree)
+    aliases = _scoped_aliases(tree)
     findings: set[str] = set()
     for node in ast.walk(tree):
         text = _string_text(node)
@@ -117,7 +196,7 @@ def database_accesses(source: str) -> list[str]:
         elif isinstance(node, ast.Call):
             if isinstance(node.func, ast.Attribute) and node.func.attr in SQL_CALLS:
                 findings.add(f"{node.lineno}: .{node.func.attr}(...)")
-            elif access := _file_access(node):
+            elif access := _file_access(node, aliases[id(node)]):
                 findings.add(f"{node.lineno}: {access}")
         elif text is not None and id(node) not in docstrings:
             if SQL_TEXT.search(text):
@@ -193,6 +272,28 @@ def test_gegenprobe_dateizugriffe_auf_die_datenbank_werden_gefunden() -> None:
         "5: Datenbankpfad.unlink()",
         "5: Journaldatei -wal",
         "7: Datenbankpfad.exists()",
+    ]
+
+
+def test_gegenprobe_ein_alias_des_datenbankpfads_wird_verfolgt() -> None:
+    source = (
+        "import os\n"
+        "from pathlib import Path\n"
+        "def swap(database_path, incoming):\n"
+        "    path = Path(database_path)\n"
+        "    os.replace(incoming, path)\n"
+        "def chain(settings):\n"
+        "    target = Path(settings.database_path)\n"
+        "    file = target\n"
+        "    return file.stat().st_size\n"
+        "def directory(database_path):\n"
+        "    folder = Path(database_path).parent\n"
+        "    return folder.exists()\n"
+    )
+
+    assert database_accesses(source) == [
+        "5: os.replace(Datenbank)",
+        "9: Datenbankpfad.stat()",
     ]
 
 
