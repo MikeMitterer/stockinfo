@@ -93,7 +93,9 @@ Für T-89 gilt damit eine **ausdrückliche, befristete Ausnahme** von
 bestehenden `app/repository.py` ändern. Der regelkonforme Umbau ist
 [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md); die Ausnahme endet mit
 dessen Abschluss und gilt nicht für neue Arbeit. Das Limit von acht Runden
-bleibt stehen.
+bleibt stehen. **Nachtrag 2026-10-02:** Mike teilte den Umbau in drei
+Tickets (T-90 Ordner und Interface, T-91 und T-92 SQLModel); die Ausnahme
+endet damit erst mit T-92.
 
 **Aktivierung T-90 · Mike, 2026-10-02.** „Ich reviewe erst wenn doing durch
 ist – sprich vorher kommt noch T-90. Fang gleich damit an.“

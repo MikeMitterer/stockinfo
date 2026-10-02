@@ -1,56 +1,91 @@
-# T-90 · Persistenz auf SQLModel in `app/persistence/`
+# T-90 · Persistenz in `app/persistence/` mit Repository-Interface
 
 **Warum dieses Ticket:** StockInfo greift mit rohem SQLite auf seine
-Datenbank zu, verteilt über mehrere Module. Der Hausstandard
-(`code-standards/references/persistence.md`) verlangt dagegen eine schlanke
-ORM-Schicht (SQLModel) in `app/persistence/`, nach außen ein
-Repository-Interface (`typing.Protocol`) per Dependency Injection und kein SQL
-außerhalb dieses Ordners. Die Regel gilt bei Berührung; T-89 hat sie
-berührt, ein Teilumbau nur dort hätte aber zwei Datenbankzugänge
-nebeneinander erzeugt.
+Datenbank zu, verteilt über mehrere Module, sogar aus einem Router. Der
+Hausstandard (`code-standards/references/persistence.md`) verlangt: alle
+Datenbankzugriffe in `app/persistence/`, nach außen ein Repository-Interface
+(`typing.Protocol`) per Dependency Injection, kein SQL und keine
+Verbindungsobjekte außerhalb dieses Ordners, und eine schlanke ORM-Schicht
+(SQLModel). T-90 ist der erste von drei Schritten.
 
-**Beispiel:** `QuoteRepository.set_volatility` in `app/repository.py`
-schreibt über `detail_store.put_provider` mit rohem SQL. Nach T-90 liegt der
-Zugriff in `app/persistence/`, der Dienst kennt nur das Interface.
+**Beispiel:** `app/routers/migration.py` öffnet heute selbst eine
+SQLite-Verbindung und setzt SQL ab. Nach T-90 ruft der Router eine Funktion
+aus `app/persistence/` auf und kennt weder Verbindung noch SQL.
 
-**Stand:** Angelegt am 2026-10-02. Mike: „Persistenz regelkonform umbauen“
-(Codex-Befund B5 in T-89), nach Vorlage des Umfangs: „Eigenes Ticket T-90“.
-Folgt nach dem Abschluss von T-89; Rollen und Aktivierung legt `STATUS.md`
-fest. Für Mike steht kein Handgriff an.
+**Stand:** Mike: „Persistenz regelkonform umbauen“, „Eigenes Ticket T-90“,
+nach Vorlage des Umfangs „Drei Tickets nacheinander“. Aktiv seit
+2026-10-02; Coder `claude`, Verifier `codex`, maßgeblich ist `STATUS.md`.
+Für Mike steht kein Handgriff an.
+
+## Schnitt in drei Tickets (Mike, 2026-10-02)
+
+| Ticket | Inhalt |
+|---|---|
+| **T-90** (dieses) | Ordner, Interface, kein SQL außerhalb `app/persistence/`; noch kein ORM |
+| [T-91](../20-ready/T-91-sqlmodel-kerntabellen.md) | SQLModel für die Kerntabellen (Instrumente, Kurse, Tageskurse, Detailwerte) |
+| [T-92](../20-ready/T-92-sqlmodel-restliche-tabellen.md) | SQLModel für die übrigen Tabellen; Migrationen und Backup bleiben begründet rohes SQL im Persistenzordner |
+
+Die befristete Ausnahme aus T-89 endet mit T-92, wenn auch die ORM-Regel
+erfüllt ist.
 
 ## Ausgangslage (gemessen am 2026-10-02)
 
-| | Umfang |
-|---|---|
-| Rohes SQLite in `app/repository.py`, `app/detail_store.py`, `app/db.py` | 1.846 Zeilen, 77 `execute`-Aufrufe |
-| Weitere App-Module mit SQL | `app/data_versions.py`, `app/exchanges.py`, `app/migration.py`, `app/persistence/plugin_migration.py`, `app/providers/base.py`, `app/routers/migration.py`, `app/services/backup.py` |
-| Nutzer von `QuoteRepository`/`detail_store` | 25 Dateien in `app` und `tests` |
-| ORM | keines; SQLModel ist neue Abhängigkeit |
+| Bereich | Dateien | SQL-Aufrufe |
+|---|---|---|
+| Schema, Verbindung, Altdaten-Migration | `app/db.py` (601 Z.), `app/migration.py` (733 Z.) | 31 + 21 |
+| Repository, Detailspeicher | `app/repository.py` (1.102 Z.), `app/detail_store.py` (143 Z.) | 30 + 16 |
+| Datenversionen | `app/data_versions.py` | 4 |
+| Router | `app/routers/migration.py` | 2 |
+| Backup | `app/services/backup.py` | 4 |
+| bereits im Ordner | `app/persistence/plugin_migration.py` | 3 |
 
-## Was zu klären ist (Scope-Vertrag vor Beginn)
+`app/exchanges.py` und `app/providers/base.py` nennen `sqlite3.Row` nur im
+Docstring; sie greifen nicht auf die Datenbank zu. 38 Dateien in `app`,
+`tests` und `scripts` importieren die verschobenen Module.
 
-- Schnitt in Teilschritte, die einzeln prüfbar sind (etwa: Ordner und
-  Interface, dann Tabellen nacheinander auf SQLModel).
-- Umgang mit den bestehenden Migrationen in `app/db.py` und den
-  Datenversionen; Backup und Wiederherstellung dürfen nicht brechen.
-- Ob rohes SQL für einzelne Abfragen im Repository bleibt (der Standard
-  erlaubt das dort).
-- Vor der ersten Verwendung ein aktuelles SQLModel-Beispiel aus der
-  offiziellen Doku nachschlagen (Pflicht laut Standard).
+## Scope-Vertrag (Claude, 2026-10-02)
+
+- **Ergebnis:** Außerhalb `app/persistence/` gibt es kein SQL, kein
+  `sqlite3`-Verbindungsobjekt und keinen Datenbankzugriff. Dienste
+  bekommen das Repository über ein Protocol per Dependency Injection.
+  Verhalten, API und Daten bleiben unverändert.
+- **Fachliche Änderungen (3):**
+  1. Verschieben per `git mv` nach `app/persistence/`: `db.py`,
+     `repository.py`, `detail_store.py`, `migration.py`,
+     `data_versions.py`; Importe in allen Nutzern anpassen. Keine
+     Weiterleitungsmodule an den alten Pfaden.
+  2. SQL aus `app/routers/migration.py` und `app/services/backup.py` in
+     Funktionen unter `app/persistence/` verlagern; Router und Dienst rufen
+     nur diese Funktionen.
+  3. Protocol `QuoteStore` in `app/persistence/` mit den Methoden, die die
+     Dienste nutzen; Dienste annotieren damit statt mit `QuoteRepository`.
+- **Tests:** bestehende Suite unverändert grün; ein Wächtertest, der per
+  `ast` sicherstellt, dass außerhalb `app/persistence/` kein `sqlite3`
+  importiert und kein `.execute(` auf Verbindungen aufgerufen wird
+  (negativer Gegenfall dokumentiert).
+- **Sichtbare Prüfung:** Temp-Instanz: Dashboard, Detailbereich, Backup
+  anlegen und wiederherstellen, Migrationsvorschau.
+- **Doku:** Plugin-Anleitung und READMEs auf Pfade prüfen
+  (`docs/plugin-authors.md` nennt Migrationen); `AGENTS.md` „Datenbankzugriffe
+  in Tests“ auf Pfade prüfen.
+- **Budget:** 0 neue Abhängigkeiten; Produktdateien rund 45 (überwiegend
+  Importzeilen), Diff ohne reine Umbenennungen höchstens 800 Zeilen.
+- **Nicht-Ziele:** kein ORM (T-91/T-92), keine Schemaänderung, keine
+  Verhaltensänderung, keine Änderung an StockPortfolio.
 
 ### Akzeptanzkriterien
 
-- [ ] Außerhalb von `app/persistence/` gibt es kein SQL, keine
-      Verbindungs- oder Session-Objekte und keine ORM-Typen.
-- [ ] Dienste und Router kennen nur Repository-Interfaces (Protocol) und
-      bekommen sie per Dependency Injection.
+- [ ] Außerhalb von `app/persistence/` gibt es kein SQL, kein
+      `sqlite3`-Verbindungsobjekt und keinen Datenbankzugriff; ein Test
+      sichert das ab.
+- [ ] Dienste kennen das Repository nur über ein Protocol und bekommen es
+      per Dependency Injection.
 - [ ] Bestehende Daten, Migrationen, Backup und Wiederherstellung
       funktionieren unverändert; Tests mit temporärer Datenbank belegen das.
-- [ ] Die befristete Ausnahme für T-89 in `STATUS.md` entfällt.
 - [ ] **Sichtbare Prüfung im Browser** mit Temp-Datenbank: Dashboard,
       Detailbereich, Backup.
 
 ### Side-Effects
 
-Betrifft fast alle Backend-Module; keine Änderung an API oder Vertrag
-beabsichtigt. StockPortfolio ist nur über die API betroffen.
+Betrifft fast alle Backend-Module über ihre Importe; keine Änderung an API
+oder Vertrag. StockPortfolio ist nur über die API betroffen.
