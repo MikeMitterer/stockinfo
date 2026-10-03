@@ -11,7 +11,7 @@ Prüfziffer). `POST /instruments/intake` antwortet mit
 `symbol_without_exchange_suffix`; die Oberfläche zeigt den Satz oben.
 
 **Stand:** Technisch freigegeben in Runde 2 am 2026-10-02 für `c0dd47e`.
-Die menschliche Abnahme der Gesamtkette bleibt offen.
+Mike hat die Kette T-88 bis T-97 am 2026-10-03 abgenommen („ja, die Tickets T-88 bis T-97“); das Ticket liegt in `40-done/`.
 Angelegt am 2026-10-02 aus T-93 als Folgeticket der visuellen
 Tests (Mike: Folgetickets aus den Tests gehören zur SQL-Umstellung und
 kommen in die `priority_chain`). Älter als die SQL-Umstellung. Aktiviert

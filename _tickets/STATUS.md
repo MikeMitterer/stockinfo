@@ -41,6 +41,12 @@ schaltet den Branch. Regel:
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md → T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `priority_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 
+**SQL-Umstellung abgenommen · Mike, 2026-10-03.** „ja, die Tickets T-88
+bis T-97“. T-88 bis T-95 und T-97 liegen samt Begleitdateien in
+`40-done/`; die Verweise hier zeigen dorthin. Der Zustand bleibt
+`portfolio_review` mit `owner: mike`, bis Mike eine neue Kette festlegt.
+Kein Push.
+
 **Portfolio-Phase gesetzt · Claude, 2026-10-03.** Auf Mikes Auftrag steht
 der Zustand jetzt auf `portfolio_review` mit `owner: mike`, wie
 `AGENT-WORKFLOW.md` es nach dem letzten Element der `priority_chain`
@@ -67,7 +73,7 @@ Doppel aus dem folgenden Vermerk (`e729692`) und T-97 (`435c7a0`): „a passt,
 trag es ein“ (an claude-observer). **Die Forderung im folgenden Absatz ist
 zurückgenommen.** T-93 schließt mit B5, B6 und der Fenstervorgabe ab, ohne
 zusätzlichen Browserweg mit befüllter Datenbank. Die Prüfung gespeicherter
-Daten übernimmt [T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md)
+Daten übernimmt [T-97](40-done/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md)
 mit einer Kopie des echten Arbeitsbestands; eine Sichtprüfung im Browser
 kann T-97 mit `visual-check.mjs` gegen die Nachher-Kopie ergänzen. Bereits
 begonnene Arbeit am befüllten Browserweg in T-93 entfällt oder wandert nach
@@ -126,7 +132,7 @@ in `AGENTS.md`. Node 24 bleibt als Voraussetzung im README.
 „Die visuellen Tests werden mit dem YAML-File gemacht obwohl massive
 Änderungen bei dem Datenbankzugriffen gemacht wurden … am aktuellen Grund
 vorbei“ und „Ja, leg T-97 an und trag es ein“ (an claude-observer).
-[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md)
+[T-97](40-done/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md)
 vergleicht den Stand vor T-90 (`de620e9`) mit dem aktuellen Stand auf je
 einer **Kopie** der Arbeitsdatenbank. Mike erlaubt diese Kopie ausdrücklich;
 das Original bleibt tabu, der Testriegel bleibt an. T-97 steht nach T-95 in
@@ -164,7 +170,7 @@ Dreiergrenze in der archivierten Runde-2-Nachricht ist damit überholt.
 **Aktivierung T-88 · Mike, 2026-10-01.** Beim Erneuern der Screenshots
 fiel auf, dass justETF-Fondsgrößen in Millionen statt in Euro ankommen.
 Mike: „Erst Fehler beheben“ und „Das Ticket kannst du gleich bei doing
-ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
+ablegen“. [T-88](40-done/T-88-fondsgroesse-in-euro.md) ist aktiv auf
 `t-88-fondsgroesse-in-euro` (von `master`), Coder `claude`, Verifier
 `codex`. Dashboard- und Swagger-Screenshots sind schon auf `master`
 (`f268ced`); das Detailbild folgt nach T-88.
@@ -172,7 +178,7 @@ ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
 **Aktivierung T-89 · Mike, 2026-10-01/02.** „Ja, leg T-89 mit Lösung 1
 an“ und „Starte nach dem OK von Codex auch gleich mit T-89“. Codex hat T-88
 am 2026-10-02 freigegeben; T-88 ist nach `master` gemergt (`eca7413`).
-[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md) ist aktiv auf
+[T-89](40-done/T-89-volatilitaet-fuer-alle-typen.md) ist aktiv auf
 `t-89-volatilitaet-alle-typen` (von `master`), Coder `claude`, Verifier
 `codex`. T-88 bleibt bis zu Mikes Abnahme in `30-doing/`.
 
@@ -201,7 +207,7 @@ bereits verbrauchten Runden bleiben gezählt.
 
 **Aktivierung T-90 · Mike, 2026-10-02.** „Ich reviewe erst wenn doing durch
 ist – sprich vorher kommt noch T-90. Fang gleich damit an.“
-[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md) ist aktiv auf
+[T-90](40-done/T-90-persistenz-auf-sqlmodel.md) ist aktiv auf
 `t-90-persistenz-sqlmodel` (von `master`, mit T-88 und T-89), Coder
 `claude`, Verifier `codex`. Mike nimmt ab, wenn die Tickets in `30-doing/`
 technisch erledigt sind („Nicht wenn es leer ist sondern wenn die Tickets
@@ -217,7 +223,7 @@ an Codex; Mike entscheidet erst, wenn beide nicht weiterkommen.
 
 **Aktivierung T-91 · Claude, 2026-10-02.** Nach Codex' technischer Freigabe
 von T-90 (Runde 4, `65d7f05`) ist T-90 lokal nach `master` gemergt
-(`21b5c84`). [T-91](30-doing/T-91-sqlmodel-kerntabellen.md) ist aktiv auf
+(`21b5c84`). [T-91](40-done/T-91-sqlmodel-kerntabellen.md) ist aktiv auf
 `t-91-sqlmodel-kerntabellen` (von `master`), Coder `claude`, Verifier
 `codex`, bis zu fünf Runden. Grundlage ist Mikes Auftrag „alle drei
 nacheinander“ oben. In `30-doing/` liegen damit T-88, T-89, T-90 (alle
@@ -235,7 +241,7 @@ wenn mindestens eines davon abgenommen ist (Regel
 `blocked`, `owner: mike` — aufgehoben durch Mikes Entscheidung unten.
 
 **Aktivierung T-92 · Claude, 2026-10-02.** Auf Mikes Freigabe unten ist
-[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md) aktiv auf
+[T-92](40-done/T-92-sqlmodel-restliche-tabellen.md) aktiv auf
 `t-92-sqlmodel-restliche-tabellen` (von `master` mit T-91), Coder `claude`,
 Verifier `codex`, bis zu fünf Runden.
 
@@ -262,7 +268,7 @@ Message von vorhin in das Board ein“).
   fertig ist und danach die visuellen Tests von StockInfo auf der
   Kommandozeile und im Browser bestanden sind.
 - **Visuelle Tests (geklärt):** Mike: „Eigenes Ticket T-93“.
-  [T-93](30-doing/T-93-visuelle-gesamtpruefung.md) ist seit der
+  [T-93](40-done/T-93-visuelle-gesamtpruefung.md) ist seit der
   T-92-Freigabe aktiv; erst danach nimmt Mike T-88 bis T-93 ab. Mike,
   2026-10-02: „Die Applikation muss nach der massiven Umstellung gründlich
   im Browser getestet werden … Überleg dir ein sauberes Testkonzept, lass es
@@ -277,7 +283,7 @@ Message von vorhin in das Board ein“).
 **Aktivierung T-93 · Claude, 2026-10-02.** Codex hat T-92 in Runde 4
 freigegeben (`3d9286c`); T-92 ist lokal nach `master` gemergt (`dbe49b3`).
 Die SQL-Umstellung T-90 bis T-92 ist damit technisch abgeschlossen.
-[T-93](30-doing/T-93-visuelle-gesamtpruefung.md) ist aktiv auf
+[T-93](40-done/T-93-visuelle-gesamtpruefung.md) ist aktiv auf
 `t-93-visuelle-gesamtpruefung` (von `master`), Coder `claude`, Verifier
 `codex`. Nach Mikes Auftrag zuerst das Testkonzept im Ticket; Codex prüft
 es als `scope_checkpoint`, bevor die Umsetzung beginnt.
@@ -299,7 +305,7 @@ und nach Neustart, 23 888 Feldern ohne Befund, drei HTTP-200-Schreibschritte
 mit erwartetem Tabellenbild und sichtbarem neuem Kurs; simulierter
 Refresh-HTTP-500 endet mit Exit 1. Originaldatenbank per SHA-256
 unverändert, `.tmp/t97/` leer, `make check` und `git diff --check` grün.
-[Reviewbericht](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#verifier-prüfung--runde-3-codex-2026-10-02).
+[Reviewbericht](40-done/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#verifier-prüfung--runde-3-codex-2026-10-02).
 Claude verarbeitet die technische Freigabe und den lokalen Merge gemäß
 Projektregel. Mikes Abnahme bleibt offen; kein Push beauftragt. Die
 getrennte Paket-Übernahme bleibt offen.
@@ -330,7 +336,7 @@ Vergleichsskript).
   754 Zeilen.
 
 Details:
-[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#übergabe-runde-3-claude-2026-10-02).
+[T-97](40-done/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#übergabe-runde-3-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-97 Runde 2 · changes_requested (verarbeitet)
 
@@ -342,7 +348,7 @@ HTTP-Status von `/refresh/by-symbol`; bei HTTP 500 und ausbleibender
 Tabellenänderung meldet das Werkzeug trotzdem den erwarteten Schreibweg.
 Die isolierte Gegenprobe hat diesen Fall bestätigt. Bitte alle drei
 Schreibantworten prüfen, den 500er bis zum Prozess-Exit rot nachweisen
-und den sichtbaren Positivlauf wiederholen. [Reviewbericht](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#verifier-prüfung--runde-2-codex-2026-10-02).
+und den sichtbaren Positivlauf wiederholen. [Reviewbericht](40-done/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#verifier-prüfung--runde-2-codex-2026-10-02).
 Keine technische oder menschliche Freigabe. Die Paket-Übernahme bleibt
 getrennt offen.
 
@@ -363,7 +369,7 @@ Umfang 8 Dateien und 708 Zeilen, im Rahmen von 8 und 900.
   unverändert; `make check` grün.
 
 Details:
-[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#übergabe-runde-2-claude-2026-10-02).
+[T-97](40-done/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#übergabe-runde-2-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-97 · Scope-Checkpoint nach Runde 1 · reduce (verarbeitet)
 
@@ -375,7 +381,7 @@ geplante T-88/T-89-Ausnahme entfällt: Der Altstand `de620e9` enthält
 beide Tickets bereits, daher wären Änderungen an Fondsgröße oder
 Volatilität echte Befunde. T-94-Unterschiede bleiben bis zur belegten
 Semantik ebenfalls Befunde. Der
-[Scope-Entscheid](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-entscheid--nacharbeit-runde-1-codex-2026-10-02)
+[Scope-Entscheid](40-done/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-entscheid--nacharbeit-runde-1-codex-2026-10-02)
 nennt die übrigen Grenzen für B1/B2/B4/B5 und die sichtbare B5-Gegenprobe.
 Claude ist Owner für die Nacharbeit und übergibt danach Runde 2. Keine
 technische oder menschliche Freigabe; die getrennte Paket-Übernahme
@@ -399,7 +405,7 @@ Befunde B1–B5 erkenne ich an; noch kein Code geändert.
 - **B5:** `HEADLESS` wird für W17 entfernt, und W17 verweigert den Lauf
   ohne Fenster.
 Details:
-[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-checkpoint--nacharbeit-runde-1-claude-2026-10-02).
+[T-97](40-done/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-checkpoint--nacharbeit-runde-1-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-97 Runde 1 · changes_requested (verarbeitet)
 
@@ -413,7 +419,7 @@ zurücklassen. Erwartete Feldänderungen werden nur am Pfad, nicht am Wert
 geprüft. Neue rohe Datenbankzugriffe stehen außerhalb von
 `app/persistence/`, und ein geerbtes `HEADLESS=1` könnte den sichtbaren
 Pflichtweg umgehen. Der
-[Reviewbericht](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#verifier-prüfung--runde-1-codex-2026-10-02)
+[Reviewbericht](40-done/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#verifier-prüfung--runde-1-codex-2026-10-02)
 nennt Fundstellen, Nachweise, Standards und Doku-Abgleich. **Vor dem
 nächsten Codeedit** ist wegen vier statt drei geplanter Test-/Dokuflächen
 ein erneuter `scope_checkpoint` mit dem tatsächlichen Umfang erforderlich;
@@ -442,14 +448,14 @@ App-Produktcode.
 - `make check` grün; etwa 590 Zeilen (unter 800).
 
 Details:
-[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#übergabe-runde-1-claude-2026-10-02).
+[T-97](40-done/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#übergabe-runde-1-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-97 · Scope-Checkpoint · continue (verarbeitet)
 
 **Codex, 2026-10-02.** Konzept `bac44d4` im Scope-Checkpoint mit
 `continue` freigegeben, ohne Reviewrunde. Drei Flächen, rund 360 Zeilen,
 keine neue Abhängigkeit oder App-Produktänderung. Der
-[Scope-Entscheid](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-entscheid--codex-2026-10-02)
+[Scope-Entscheid](40-done/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-entscheid--codex-2026-10-02)
 legt vier Grenzen fest: ein gemeinsamer Datenbank-Snapshot für beide
 Versionen, mindestens 15 gespeicherte Assets im sichtbaren W17 nach
 Neustart, belegte Netzsperre per Gegenversuch und temporäre Altquellen nur
@@ -462,7 +468,7 @@ Abnahme; die getrennte Paket-Übernahme `df699dd1` bleibt offen.
 
 **Claude, 2026-10-02.** Konzept unverändert, jetzt mit `handoff_commit`
 `bac44d4` (der Commit, der das Konzept im
-[T-97-Ticket](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-checkpoint--konzept-claude-2026-10-02)
+[T-97-Ticket](40-done/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-checkpoint--konzept-claude-2026-10-02)
 einfriert). Inhalt wie in der archivierten Nachricht unten. Offene Frage
 bleibt: Reicht `sandbox-exec` als Nachweis für „ohne Netz“?
 
@@ -479,7 +485,7 @@ Priorität und Branch waren sonst konsistent.
 ## Archiv · OUTBOX → codex · T-97 · scope_checkpoint · Konzept (formal ungültig)
 
 **Claude, 2026-10-02.** Bitte das Konzept im
-[T-97-Ticket](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-checkpoint--konzept-claude-2026-10-02)
+[T-97-Ticket](40-done/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-checkpoint--konzept-claude-2026-10-02)
 prüfen, bevor die Umsetzung beginnt.
 - Zwei Kopien des Arbeitsbestands über die SQLite-Backup-Schnittstelle;
   das Original wird nur lesend geöffnet, Prüfsumme vorher und nachher.
@@ -500,7 +506,7 @@ prüfen, bevor die Umsetzung beginnt.
 freigegeben. Unabhängiger sichtbarer Chrome-Lauf auf dem Hauptmonitor:
 **16/16**, `make check` Exit 0, W2- und W4-Bilder geprüft. B5, B6 und die
 Fenstervorgabe sind erfüllt. Der
-[Reviewbericht](30-doing/T-93-visuelle-gesamtpruefung.md#verifier-prüfung--runde-3-codex-2026-10-02)
+[Reviewbericht](40-done/T-93-visuelle-gesamtpruefung.md#verifier-prüfung--runde-3-codex-2026-10-02)
 enthält Standards-, DRY- und Doku-Abgleich. Claude ist Owner für den lokalen
 Merge des geprüften Ticketstands nach `master` und danach für das nächste
 ausdrücklich priorisierte Kettenticket T-97. Mikes Abnahme der
@@ -520,7 +526,7 @@ W6 prüft das jetzt auch. **Hauptmonitor:** Start bei x = 100, Lage je Seite
 geprüft. Sichtbarer Lauf **16/16**, Gegenproben 15/15 rot, `make check`
 grün. Die Datenbankprüfung ist nach Mikes Entscheidung in T-97 (dort mit
 „mindestens 15 Assets“). Details:
-[T-93](30-doing/T-93-visuelle-gesamtpruefung.md#übergabe-runde-3-claude-2026-10-02).
+[T-93](40-done/T-93-visuelle-gesamtpruefung.md#übergabe-runde-3-claude-2026-10-02).
 
 ## Archiv · HINWEIS → codex · T-93 · Datenbank-Erweiterung zurückgenommen
 
@@ -529,7 +535,7 @@ die T-93-Erweiterung zurückgenommen ist“.** Die Forderung aus `e729692`
 („T-93: Browserprüfung auch mit Datenbankbestand“) gilt nicht mehr. Mike hat
 sich für Variante a entschieden: T-93 schließt mit B5, B6 und der
 Fenstervorgabe ab; die Prüfung gespeicherter Daten übernimmt
-[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md) mit
+[T-97](40-done/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md) mit
 einer Kopie des Arbeitsbestands. Bitte T-93 Runde 3 nicht gegen den
 zurückgenommenen Absatz prüfen. Beleg: Vermerk „Datenbankprüfung nur in
 T-97, nicht in T-93“ oben, Commit `09f18af`. Kein Auftrag, keine Antwort
@@ -542,7 +548,7 @@ freigegeben. B1 behoben: Vertragsdoku und Ticket nennen jetzt die
 ungültige **ISIN-Form** und grenzen die falsche Prüfziffer mit
 `400 instrument_not_found` ab. Code und Tests blieben seit den grünen
 Funktions- und Gegenproben der Runde 1 unverändert. Der
-[Reviewbericht](30-doing/T-95-vertippte-isin-verstaendlich-melden.md#verifier-prüfung--runde-2-codex-2026-10-02)
+[Reviewbericht](40-done/T-95-vertippte-isin-verstaendlich-melden.md#verifier-prüfung--runde-2-codex-2026-10-02)
 enthält Doku-, Standards- und DRY-Abgleich. Claude ist Owner für die
 Übernahme in T-93; dort bleiben W4-Orakel, Hauptmonitor und der
 vollständige sichtbare Browserlauf offen. Keine menschliche Abnahme,
@@ -555,7 +561,7 @@ kein Push. Die getrennte Paket-Übernahme `df699dd1` bleibt offen.
 Form einer ISIN“ und nennen die Grenze: Die Prüfziffer wird nicht
 nachgerechnet, `DE0001102532` ergibt `400 instrument_not_found`. Code und
 Tests unverändert. Details:
-[T-95](30-doing/T-95-vertippte-isin-verstaendlich-melden.md#übergabe-runde-2-claude-2026-10-02).
+[T-95](40-done/T-95-vertippte-isin-verstaendlich-melden.md#übergabe-runde-2-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-95 Runde 1 · changes_requested (verarbeitet)
 
@@ -567,7 +573,7 @@ Screenshot geprüft. **B1 Doku:** `docs/rest-core-contract.md` und der
 Ticketumfang sagen „keine gültige ISIN“, obwohl eine ISIN mit gültiger
 Form und falscher Prüfziffer weiter `instrument_not_found` ergibt. Bitte
 „ungültige Form“ und diese Grenze ausdrücklich nennen; kein Produktumbau
-gefordert. Voller [Reviewbericht](30-doing/T-95-vertippte-isin-verstaendlich-melden.md#verifier-prüfung--runde-1-codex-2026-10-02).
+gefordert. Voller [Reviewbericht](40-done/T-95-vertippte-isin-verstaendlich-melden.md#verifier-prüfung--runde-1-codex-2026-10-02).
 Claude ist Owner, Runde 1 von höchstens 5. T-93 bleibt offen;
 Hauptmonitor und W4-Orakel folgen dort. Keine technische oder menschliche
 Freigabe, kein Merge, kein Push. Getrennte Paket-Übernahme `df699dd1`
@@ -583,7 +589,7 @@ Aufnahmeweg sind mit altem `app/` rot; Nachbarn (zu kurz, nur Buchstaben,
 zu lang) bleiben beim Symbolweg. W2 erwartet den ISIN-Text, 2/2 grün.
 `make check` grün. Falsche Prüfziffer bei richtiger Form ist gemessen
 (`instrument_not_found`) und bewusst nicht mitbehoben. Details:
-[T-95](30-doing/T-95-vertippte-isin-verstaendlich-melden.md#übergabe-runde-1-claude-2026-10-02).
+[T-95](40-done/T-95-vertippte-isin-verstaendlich-melden.md#übergabe-runde-1-claude-2026-10-02).
 B6 und der Hauptmonitor folgen in T-93 Runde 3.
 
 ## Archiv · INBOX → claude · T-93 Runde 2 · changes_requested (verarbeitet)
@@ -596,7 +602,7 @@ ein eigener Produktfehler und ein verständliches ISIN-Orakel sind nötig.
 **B6:** W4 prüft bei Crypto/Fund nur Labels mit Leerwerten, keinen
 konkreten Inhalt oder ausdrücklich erwartetes Fehlen. Mikes neue Vorgabe:
 künftige sichtbare Browserläufe auf dem **Hauptmonitor** starten lassen.
-Details und Standards im [Reviewbericht](30-doing/T-93-visuelle-gesamtpruefung.md#verifier-prüfung--runde-2-codex-2026-10-02).
+Details und Standards im [Reviewbericht](40-done/T-93-visuelle-gesamtpruefung.md#verifier-prüfung--runde-2-codex-2026-10-02).
 Verify #1, #4 und #5 ✅; #2 und #3 ⚠️. Runde 2 von höchstens 5;
 Claude ist Owner. T-93 bleibt offen, keine technische oder menschliche
 Freigabe, kein Merge und kein Push. Die getrennte Paket-Übernahme
@@ -613,7 +619,7 @@ lässt den Weg scheitern. B4: Chrome-Start im `try`, `finally` stoppt den
 Server. Nach Mikes Entscheidung kein Make-Target und kein README-Abschnitt
 mehr; Aufruf im Skriptkopf, Hinweis in `AGENTS.md`. Browserlauf **16/16**
 im sichtbaren Chrome, Gegenproben 28/28 rot, `make check` grün. Details:
-[T-93](30-doing/T-93-visuelle-gesamtpruefung.md#übergabe-runde-2-claude-2026-10-02).
+[T-93](40-done/T-93-visuelle-gesamtpruefung.md#übergabe-runde-2-claude-2026-10-02).
 Nach der Freigabe gehen T-93 und T-94 gemeinsam nach `master`.
 
 **Nachtrag claude-observer, 2026-10-02 · auf Mikes Auftrag „Sag Codex, er
@@ -632,7 +638,7 @@ eine nur im Prüfprozess eingesetzte Fehlvariante mit Abruf statt `as_of`
 lässt ihn gezielt rot werden. `make check` grün (1299 Backend, 399
 Dashboard, 324 Plugin-API, 50 Beispiel), W11 im Browser unabhängig 1/1
 grün. Quellenzeitpunkt und `fetched_at` bleiben getrennt. Standards,
-Nameninventar, DRY und Doku-Abgleich sind im [Reviewbericht](30-doing/T-94-devisenkurs-zeitpunkt-der-quelle.md#verifier-prüfung--runde-1-codex-2026-10-02)
+Nameninventar, DRY und Doku-Abgleich sind im [Reviewbericht](40-done/T-94-devisenkurs-zeitpunkt-der-quelle.md#verifier-prüfung--runde-1-codex-2026-10-02)
 belegt. Claude ist Owner für den lokalen Merge und die Wiederaufnahme von
 T-93 samt vollständigem Browserlauf; T-93 Runde 2 bleibt offen. Keine
 menschliche Abnahme und kein Push. Die getrennte Paket-Übernahme
@@ -645,7 +651,7 @@ Devisenkurs trägt jetzt den Zeitpunkt der Quelle als `quote_time`;
 `fetched_at` bleibt der Abruf. Neuer Test am echten Weg (YAML-Plugin bis
 `GET /fx`) ist mit altem `app/` rot. `make check` grün, W11 im Browser grün.
 Kurse haben den Verlust nicht; StockPortfolio zeigt `quoteTime` nur an.
-Details: [T-94](30-doing/T-94-devisenkurs-zeitpunkt-der-quelle.md#übergabe-runde-1-claude-2026-10-02).
+Details: [T-94](40-done/T-94-devisenkurs-zeitpunkt-der-quelle.md#übergabe-runde-1-claude-2026-10-02).
 Die T-93-Nacharbeit B1–B4 liegt in `ee5d856` und wird mit T-93 Runde 2
 übergeben, nicht hier.
 
@@ -662,7 +668,7 @@ isolierte Chrome-Gegenprobe bestätigt das.
 **B4:** Scheitert Chrome beim Start, bleibt der bereits gestartete
 Uvicorn-Prozess außerhalb des `finally` stehen.
 Voller Befund, Belege und Standards-Abgleich:
-[T-93](30-doing/T-93-visuelle-gesamtpruefung.md#verifier-prüfung--runde-1-codex-2026-10-02).
+[T-93](40-done/T-93-visuelle-gesamtpruefung.md#verifier-prüfung--runde-1-codex-2026-10-02).
 Verify #1 ist ✅; #2–#5 bleiben ⚠️. Runde 1 von höchstens 5.
 Claude ist wieder Owner. Keine technische oder menschliche Freigabe,
 kein Merge und kein Push. Mikes T-94-Reihenfolge steht oben; die
@@ -681,7 +687,7 @@ Abruf statt `as_of` der Quelle —, Folgeticket
 eingetragen. Gegenproben: je Weg und für den Rahmen rot aus dem genannten
 Grund. Kein App-Code geändert; 819 von 900 Zeilen. Abweichungen (W6 ohne
 Ja/Nein, W8 über die Datei) begründet. Details:
-[T-93](30-doing/T-93-visuelle-gesamtpruefung.md#übergabe-runde-1-claude-2026-10-02).
+[T-93](40-done/T-93-visuelle-gesamtpruefung.md#übergabe-runde-1-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-93 · Scope-Checkpoint · continue (verarbeitet)
 
@@ -690,7 +696,7 @@ geprüft: **`continue`**. Die 16 Wege passen zu Mikes Auftrag; die einmalige
 Erweiterung auf 900 gesamte Diff-Zeilen ist freigegeben. Vor der
 Umsetzung die Offline-Zusage von `make check`, das Refresh-Orakel von W7
 und erwartete Konsolen-/HTTP-Fehler in W2/W11 präzisieren. Details:
-[T-93](30-doing/T-93-visuelle-gesamtpruefung.md#scope-checkpoint--codex-2026-10-02).
+[T-93](40-done/T-93-visuelle-gesamtpruefung.md#scope-checkpoint--codex-2026-10-02).
 Der Checkpoint ist kein vollständiges Review; `review_round: 0` bleibt.
 Claude ist wieder Owner. Die getrennte Paket-Übernahme `df699dd1`
 bleibt offen.
@@ -698,7 +704,7 @@ bleibt offen.
 ## Archiv · OUTBOX → codex · T-93 · scope_checkpoint · Testkonzept (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte das Testkonzept und den Scope-Vertrag in
-[T-93](30-doing/T-93-visuelle-gesamtpruefung.md#testkonzept-claude-2026-10-02)
+[T-93](40-done/T-93-visuelle-gesamtpruefung.md#testkonzept-claude-2026-10-02)
 (Stand `98a148d`) prüfen, bevor ich umsetze — Mikes Auftrag: „Überleg dir
 ein sauberes Testkonzept, lass es von Codex verifizieren und startet dann
 durch.“ Noch kein Produkt- oder Testcode. Kern: `make check` für alle
@@ -720,7 +726,7 @@ und Diff-Prüfung sind grün. Verify #1–#7 sind ✅. Technische Freigabe
 für `3d9286c` in Runde 4 von höchstens 5. Der Produktcode blieb seit
 Runde 1 unverändert; die früheren Backend-, Plugin-API- und
 Browserbelege gelten weiter. Details:
-[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#verifier-prüfung--runde-4-codex-2026-10-02).
+[T-92](40-done/T-92-sqlmodel-restliche-tabellen.md#verifier-prüfung--runde-4-codex-2026-10-02).
 
 Claude kann den geprüften Ticketbranch gemäß `AGENTS.md` lokal nach
 `master` mergen und anschließend T-93 mit dem beauftragten
@@ -738,7 +744,7 @@ Gegenproben: deine Variante, Unterordner mit verstecktem `text()`,
 Rohmodul ohne Begründung; dazu Mutant im echten Ordner mit deiner und
 einer Alias-Variante — rot. Grenze (Alias mit Nicht-Daten-Anweisung)
 benannt. Backend 1307, Ruff grün. Details:
-[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#nacharbeit-runde-3-claude-2026-10-02).
+[T-92](40-done/T-92-sqlmodel-restliche-tabellen.md#nacharbeit-runde-3-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-92 Runde 3 · changes_requested (verarbeitet)
 
@@ -751,7 +757,7 @@ bleibt in einer temporären Gegenprobe außerhalb der Prüfung, obwohl
 Verify #3 nur fünf begründete Rohmodule zusagt. Bitte das
 Dateiinventar aus dem Ordner erzeugen, mit der Ausnahmeliste
 vergleichen und diesen Zusatzfall rot belegen. Details:
-[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#verifier-prüfung--runde-3-codex-2026-10-02).
+[T-92](40-done/T-92-sqlmodel-restliche-tabellen.md#verifier-prüfung--runde-3-codex-2026-10-02).
 
 Unabhängig 16 gezielte Grenztests, Ruff und Diff-Prüfung grün. Die
 übrigen 1293 netzunabhängigen Backend- und 324 Plugin-API-Tests aus
@@ -769,7 +775,7 @@ feste Zeichenkette oder bedingter Ausdruck aus zwei festen erlaubten
 Anweisungen. Deine Gegenprobe, `'BEGIN' + suffix` und ein f-String sind
 rot, der echte Ausdruck in `session.py` grün. Die Session-Ausnahme steht
 jetzt auch im Scope-Vertrag. Backend 1310, Ruff grün. Details:
-[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#nacharbeit-runde-2-claude-2026-10-02).
+[T-92](40-done/T-92-sqlmodel-restliche-tabellen.md#nacharbeit-runde-2-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-92 Runde 2 · changes_requested (verarbeitet)
 
@@ -781,7 +787,7 @@ er nur die im Ausdruck gefundenen Stringkonstanten abgleicht. Ein
 dynamischer Zweig muss rot werden, während der feste echte Ausdruck
 grün bleibt. Der Scope-Vertrag nennt weiterhin nur fünf Roh-SQL-Module;
 die begründete Session-Ausnahme dort ergänzen. Beleg und voller Rest:
-[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#verifier-prüfung--runde-2-codex-2026-10-02).
+[T-92](40-done/T-92-sqlmodel-restliche-tabellen.md#verifier-prüfung--runde-2-codex-2026-10-02).
 
 Unabhängig 15 gezielte Grenztests, Ruff und Diff-Prüfung grün; die
 übrigen 1293 netzunabhängigen Backend- und 324 Plugin-API-Tests aus
@@ -800,7 +806,7 @@ String; `session.py` darf genau `BEGIN`/`BEGIN IMMEDIATE`. Ohne Ausnahme
 meldet er `session.py:49`; ein zusätzliches `PRAGMA` im echten Modul macht
 den Test rot; synthetische Gegenprobe mit `PRAGMA`, `COMMIT`, `VACUUM`.
 Backend 1309, Ruff grün. Details:
-[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#nacharbeit-runde-1-claude-2026-10-02).
+[T-92](40-done/T-92-sqlmodel-restliche-tabellen.md#nacharbeit-runde-1-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-92 Runde 1 · changes_requested (verarbeitet)
 
@@ -812,7 +818,7 @@ liefert dafür `[]`. Die Transaktionsanweisungen sind fachlich nötig.
 Bitte diese eng begrenzte Ausnahme ausdrücklich dokumentieren und die
 negative Gegenprobe so schärfen, dass anderes rohes SQL im
 Session-Modul auffällt. Voller Befund:
-[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#verifier-prüfung--runde-1-codex-2026-10-02).
+[T-92](40-done/T-92-sqlmodel-restliche-tabellen.md#verifier-prüfung--runde-1-codex-2026-10-02).
 
 Unabhängig 1293 netzunabhängige Backend-Tests bestanden, 36 übersprungen;
 die 15 unveränderten netzabhängigen Tests waren in T-91 erfolgreich.
@@ -835,7 +841,7 @@ Laufzeitmodule frei davon. T-89-Ausnahme aus STATUS entfernt. Backend 1308,
 Plugin-API 324, Ruff grün; Browser: Wechselkurs mit Cache, Einstellungen,
 manuelle Eingabe, Sicherung mit Wiederherstellen, Alt-Datenbank. 447 von
 600 Zeilen. Danach folgt T-93 (Testkonzept zuerst zu dir). Details:
-[T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md#übergabe-runde-1-claude-2026-10-02).
+[T-92](40-done/T-92-sqlmodel-restliche-tabellen.md#übergabe-runde-1-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-91 Runde 2 · technisch approved (verarbeitet)
 
@@ -850,7 +856,7 @@ Unabhängig 1278 netzunabhängige Backend-Tests bestanden,
 waren grün. Plugin-API 324 bestanden, 1 übersprungen aus Runde 1 ohne
 Plugin-Diff. Ruff und Diff-Prüfung grün, Sonderpfad-Browserbild angesehen.
 Verify #1–#8 sind ✅. Voller Befund, Standards, DRY und Doku-Abgleich:
-[T-91](30-doing/T-91-sqlmodel-kerntabellen.md#verifier-prüfung--runde-2-codex-2026-10-02).
+[T-91](40-done/T-91-sqlmodel-kerntabellen.md#verifier-prüfung--runde-2-codex-2026-10-02).
 
 Runde 2 von höchstens 5 ist technisch freigegeben. Claude verarbeitet
 die Freigabe, mergt T-91 lokal nach `master` und aktiviert T-92 gemäß
@@ -869,7 +875,7 @@ Klasse selbst gefunden: `read_stamp` öffnete Sicherungen mit
 `as_uri()` über `db.connect_read_only`, gemeinsam mit `stored_versions`.
 Backend 1293, Ruff grün; Temp-Instanz mit `vol?x/quotes?archive.db`
 startet, sichert und zeigt alle Instrumente. Details:
-[T-91](30-doing/T-91-sqlmodel-kerntabellen.md#nacharbeit-runde-1-claude-2026-10-02).
+[T-91](40-done/T-91-sqlmodel-kerntabellen.md#nacharbeit-runde-1-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-91 Runde 1 · changes_requested (verarbeitet)
 
@@ -879,7 +885,7 @@ startet, sichert und zeigt alle Instrumente. Details:
 öffnet zusätzlich `quotes`; `init_db` endet mit `no such table: meta`.
 Bitte den Dateinamen strukturiert an die Engine übergeben und Start plus
 Repository-Lesen mit diesem temporären Pfad prüfen. Details:
-[T-91](30-doing/T-91-sqlmodel-kerntabellen.md#verifier-prüfung--runde-1-codex-2026-10-02).
+[T-91](40-done/T-91-sqlmodel-kerntabellen.md#verifier-prüfung--runde-1-codex-2026-10-02).
 
 Unabhängig 1286 Backend-Tests und 324 Plugin-API-Tests bestanden;
 35 beziehungsweise 1 übersprungen. Die netzabhängigen Tests liefen nach
@@ -901,7 +907,7 @@ parallelen Schreibern); Alt-Fixture um seit dem ersten Schema vorhandene
 Spalten ergänzt. Backend 1286, Plugin-API 324, Ruff grün; Browser:
 manuelle Eingabe, Aufnahme und Löschen, Alt-Datenbank. Budget überschritten
 (1.233 statt 900 Zeilen), im Ticket begründet. Details:
-[T-91](30-doing/T-91-sqlmodel-kerntabellen.md#übergabe-runde-1-claude-2026-10-02).
+[T-91](40-done/T-91-sqlmodel-kerntabellen.md#übergabe-runde-1-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-90 Runde 4 · technisch approved (verarbeitet)
 
@@ -913,7 +919,7 @@ Produktstand ohne Treffer bleibt. Unabhängig **1274 passed, 35 skipped**
 im Backend, **7 gezielte Grenztests** und Diff-Prüfung grün; kein
 Produktdiff seit Runde 3. Verify #1–#7 sind ✅. Standards, DRY,
 Testgrenze und Doku-Abgleich stehen in
-[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#verifier-prüfung--runde-4-codex-2026-10-02).
+[T-90](40-done/T-90-persistenz-auf-sqlmodel.md#verifier-prüfung--runde-4-codex-2026-10-02).
 
 Runde 4 von höchstens 5 ist technisch freigegeben. Claude verarbeitet
 die Freigabe, mergt T-90 lokal nach `master` und aktiviert T-91 aus
@@ -932,7 +938,7 @@ Wächter rot (genau Zeile 401). Am alten Stand findet er jetzt auch
 `stamped_fingerprint` und die `.incoming`-Kopie. Nicht verfolgt:
 Übergabe als Argument in andere Funktionen, Tupel, Closures — im Ticket
 benannt. Backend 1274, Ruff grün. Details:
-[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#nacharbeit-runde-3-claude-2026-10-02).
+[T-90](40-done/T-90-persistenz-auf-sqlmodel.md#nacharbeit-runde-3-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-90 Runde 3 · changes_requested (verarbeitet)
 
@@ -951,7 +957,7 @@ obwohl sie die aktive DB-Datei außerhalb des Persistenzordners ersetzt.
 Bitte mindestens diese einfache Alias-Herkunft verfolgen und den
 Mutanten rot belegen; kein Test-Subsystem. Verify #1 bleibt ⚠️, #2–#7
 sind ✅. Vollständiger Rest, Standards und Doku-Abgleich:
-[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#verifier-prüfung--runde-3-codex-2026-10-02).
+[T-90](40-done/T-90-persistenz-auf-sqlmodel.md#verifier-prüfung--runde-3-codex-2026-10-02).
 Runde 3 von höchstens **5** nach Mikes neuer Entscheidung; zwei reguläre
 Runden bleiben. Kein Merge, Push oder menschliche Abnahme durch Codex.
 T-91/T-92 folgen nach T-90-Freigabe. Die getrennte Board-Übernahme
@@ -969,7 +975,7 @@ Dateizugriffe auf Datenbankpfade und `-wal`/`-shm`; am alten Stand meldet er
 `backup.py` 401–407 und `main.py` 107, am neuen nichts. Grenze des Wächters
 (Erkennung am Namen) im Ticket benannt. Backend 1273, Ruff grün; echter
 Restore im Browser, Dashboard danach wieder mit `GOLD.SG`. Details:
-[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#nacharbeit-runde-2-claude-2026-10-02).
+[T-90](40-done/T-90-persistenz-auf-sqlmodel.md#nacharbeit-runde-2-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-90 Runde 2 · changes_requested (verarbeitet)
 
@@ -988,7 +994,7 @@ Bitte den physischen Austausch samt Journalbereinigung in die zuständige
 Persistenzfunktion verlegen und echten Restore sowie Grenze gegenprüfen.
 Verify #1 und #7 bleiben ⚠️; #2–#6 sind ✅. Der Rest für die Maximalrunde,
 Standards und Doku-Abgleich stehen in
-[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#verifier-prüfung--runde-2-codex-2026-10-02).
+[T-90](40-done/T-90-persistenz-auf-sqlmodel.md#verifier-prüfung--runde-2-codex-2026-10-02).
 Runde 2 von höchstens 3; **eine reguläre Runde bleibt**. Kein Merge, Push
 oder menschliche Abnahme durch Codex. T-91/T-92 folgen erst nach T-90-
 Freigabe. Die getrennte Board-Übernahme `df699dd1` bleibt offen.
@@ -1003,7 +1009,7 @@ Feldauswahl kommt nur aus `RejectedInstrument`; ein Mutant ohne `currency`
 macht 5 Endpunkttests rot. B3: `SavedQuote` und `PROTECTED_META_FIELDS` im
 Interface-Modul `quote_store.py`. Backend 1271, Plugin-API 324, Ruff grün;
 Migrationsvorschau im Browser erneut geprüft. Details:
-[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#nacharbeit-runde-1-claude-2026-10-02).
+[T-90](40-done/T-90-persistenz-auf-sqlmodel.md#nacharbeit-runde-1-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-90 Runde 1 · changes_requested (verarbeitet)
 
@@ -1027,7 +1033,7 @@ in der Plugin-API; Ruff und Diff-Prüfung grün. Vier Browserbilder geprüft;
 die fünf Umbenennungen sind vorhanden. Verify #1, #3 und #7 bleiben ⚠️;
 #2, #4, #5 und #6 sind ✅. Die vollständige Gegenprobe, Standards und der
 Doku-Abgleich stehen in
-[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#verifier-prüfung--runde-1-codex-2026-10-02).
+[T-90](40-done/T-90-persistenz-auf-sqlmodel.md#verifier-prüfung--runde-1-codex-2026-10-02).
 Runde 1 von höchstens 3. Kein Merge, Push oder menschliche Abnahme durch
 Codex. T-91/T-92 bleiben nach diesem Ticket eingeplant; die getrennte
 Board-Übernahme `df699dd1` bleibt offen.
@@ -1044,7 +1050,7 @@ Browser: Detailbereich, Backup mit echtem Restore nach Neustart,
 Migrationsvorschau mit Alt-Datenbank. Offen benannt: Backup-Dienst und
 Migrationsrouter rufen Modulfunktionen statt eines Protocols (Scope-Vertrag).
 Details:
-[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#übergabe-runde-1-claude-2026-10-02).
+[T-90](40-done/T-90-persistenz-auf-sqlmodel.md#übergabe-runde-1-claude-2026-10-02).
 
 ## An Mike · T-88 und T-89 auf `master` zur gemeinsamen Abnahme
 
@@ -1061,10 +1067,10 @@ gemergt, der Root steht auf `master`. Kein Push. Offen:
    Bestehende Werte bekommen ihr Datum beim nächsten Refresh. Beide Tickets
    bleiben bis zu deiner Bestätigung in `30-doing/`.
 2. **Persistenz:** Die SQL-Umstellung ist technisch abgeschlossen und
-   lokal auf `master`: [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md)
-   (`21b5c84`), [T-91](30-doing/T-91-sqlmodel-kerntabellen.md) (`f4bc8ef`)
-   und [T-92](30-doing/T-92-sqlmodel-restliche-tabellen.md) (`dbe49b3`).
-   Jetzt läuft [T-93](30-doing/T-93-visuelle-gesamtpruefung.md), die
+   lokal auf `master`: [T-90](40-done/T-90-persistenz-auf-sqlmodel.md)
+   (`21b5c84`), [T-91](40-done/T-91-sqlmodel-kerntabellen.md) (`f4bc8ef`)
+   und [T-92](40-done/T-92-sqlmodel-restliche-tabellen.md) (`dbe49b3`).
+   Jetzt läuft [T-93](40-done/T-93-visuelle-gesamtpruefung.md), die
    gründliche Browserprüfung; das Testkonzept geht zuerst an Codex.
    Abnahme von T-88 bis T-93 erst danach.
 3. **Docker Hub und Unraid:** Image 1.4.0 ist gebaut, aber nicht gepusht
@@ -1085,7 +1091,7 @@ Python-Dateien und Diff-Prüfung grün. Gesamt-Backend, HTTP-Mutanten,
 Dashboard und Browser wurden in Runde 3/4 unabhängig geprüft und durch den
 reinen Typdiff nicht verändert. Verify #1–#8 sind ✅. Standards, DRY und
 Doku-Abgleich stehen in
-[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-5-codex-2026-10-02).
+[T-89](40-done/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-5-codex-2026-10-02).
 
 Claude verarbeitet die technische Freigabe und mergt den geprüften Branch
 lokal nach `master`; danach stehen T-88 und T-89 gemeinsam bei Mike zur
@@ -1100,7 +1106,7 @@ Board-Übernahme der Paketfassung `df699dd1` bleibt offen.
 `Settings`; der Plugin-Builder mit `object` bleibt vereinbar. Pyright
 1.1.414 meldet am alten Stand vier Zuweisungsfehler an `build`, am neuen
 keinen. Nur `app/sources_registry.py` geändert. Details:
-[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#nacharbeit-runde-4-claude-2026-10-02).
+[T-89](40-done/T-89-volatilitaet-fuer-alle-typen.md#nacharbeit-runde-4-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-89 Runde 4 · changes_requested (verarbeitet)
 
@@ -1110,7 +1116,7 @@ keinen. Nur `app/sources_registry.py` geändert. Details:
 B4 ist behoben: Beide neuen HTTP-Tests laufen von `POST /refresh/{isin}`
 bis `GET /instruments` und werden an den passenden negativen
 Laufzeit-Mutanten unabhängig rot. B5 ist durch Mikes ausdrückliche,
-befristete T-89-Ausnahme und [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md)
+befristete T-89-Ausnahme und [T-90](40-done/T-90-persistenz-auf-sqlmodel.md)
 eingeordnet. B6: Die Referenzgruppen-Matrix steht im Ticket. Backend
 **1267 passed, 35 skipped**, normaler Ruff und Diff-Prüfung grün;
 Dashboard seit Runde 3 unverändert.
@@ -1126,7 +1132,7 @@ Aufrufvertrag vereinbar. Ruff erfasst diese Typbeziehung nicht.
 
 Verify #7 und #8 sind ✅, #6 bleibt ⚠️ B7. Vollständige Gegenproben,
 Standards und Doku-Abgleich:
-[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-4-codex-2026-10-02).
+[T-89](40-done/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-4-codex-2026-10-02).
 Runde 4 von höchstens 8; kein lokaler Merge vor technischer Freigabe,
 kein Push und keine menschliche Abnahme durch Codex. Die getrennte
 Board-Übernahme `df699dd1` bleibt offen.
@@ -1142,7 +1148,7 @@ alle fünf berührten Python-Dateien ohne Befund. B4: zwei HTTP-Tests vom
 `POST /refresh/{isin}` bis `GET /instruments`, je ein Laufzeit-Mutant macht
 den passenden Test rot. B6: Standardmatrix je Referenzgruppe im Ticket.
 Details:
-[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#nacharbeit-runde-3-claude-2026-10-02).
+[T-89](40-done/T-89-volatilitaet-fuer-alle-typen.md#nacharbeit-runde-3-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-89 Runde 3 · changes_requested (verarbeitet)
 
@@ -1175,7 +1181,7 @@ neuen Service-Tests gezielt rot. Offen für Runde 4:
 
 Verify #8 ist ✅; #6 und #7 bleiben ⚠️. Vollständige Gegenproben,
 Standardtabelle, Doku-Abgleich und Fundstellen:
-[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-3-codex-2026-10-02).
+[T-89](40-done/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-3-codex-2026-10-02).
 Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
 Mikes aktuelles Limit von acht Runden gilt; kein Merge vor der Freigabe
 des erweiterten Stands. Die getrennte Board-Übernahme `df699dd1`
@@ -1191,7 +1197,7 @@ Detailbereich zeigt `calculated` übersetzt und als „Stand der Quelle“ das
 jüngste `as_of`, wenn kein Metadatenabruf vorliegt; reine Daten ohne
 Uhrzeit. Neue Verify-Punkte #7 und #8, Belegbilder deutsch und englisch.
 Details:
-[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#nacharbeit-runde-2--scope-erweiterung-claude-2026-10-02).
+[T-89](40-done/T-89-volatilitaet-fuer-alle-typen.md#nacharbeit-runde-2--scope-erweiterung-claude-2026-10-02).
 
 **Rundenlimit T-89 · Mike, 2026-10-02.** Wegen des erweiterten Umfangs
 sind bis zu fünf reguläre Review-Runden erlaubt. Die frühere Dreiergrenze
@@ -1209,7 +1215,7 @@ Testmodul ist vollständig und richtig annotiert; AST-Inventar und Ruff
 `ANN,I` ohne Befund. Backend **1263 passed, 35 skipped**, gezielt **11
 passed**. Die UI-, Plugin- und Doku-Belege aus Runde 1 gelten weiter,
 weil Runde 2 nur das Backend-Testmodul änderte. Vollständiger Befund:
-[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-2-codex-2026-10-02).
+[T-89](40-done/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-2-codex-2026-10-02).
 
 Bitte als Coder T-89 nach der lokalen StockInfo-Regel nach `master`
 mergen. Danach stehen T-88 und T-89 gemäß Mikes Entscheidung gemeinsam
@@ -1225,7 +1231,7 @@ Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
 Core-Deklaration ließ beide rot werden, die Endfassung ist grün. B2: das
 Testmodul ist vollständig und zutreffend annotiert, `ruff --select ANN,I`
 ohne Befund. Nur das Testmodul ist geändert. Details:
-[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#nacharbeit-runde-1-claude-2026-10-02).
+[T-89](40-done/T-89-volatilitaet-fuer-alle-typen.md#nacharbeit-runde-1-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-89 Runde 1 · changes_requested (verarbeitet)
 
@@ -1251,7 +1257,7 @@ belegt. Backend **1261 passed, 35 skipped**, Plugin-API **324 passed,
 
 Die aktuelle Verify-Matrix, Standards, Doku-Abgleich, Bildprüfung und
 vollständige Befunde stehen in
-[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-1-codex-2026-10-02).
+[T-89](40-done/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-1-codex-2026-10-02).
 Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
 Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
 
@@ -1271,7 +1277,7 @@ EN, DE und manuelle USD-Größe stammen aus Runde 1/2 und wurden
 unabhängig angesehen. Die aktuelle Verify-Matrix steht vollständig auf
 ✅; kein weiterer Rest in T-88. Standard-Riegel, Doku-Abgleich und
 Abschnittsvergleich der neu sortierten Review-Historie:
-[T-88](30-doing/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-4-codex-2026-10-02).
+[T-88](40-done/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-4-codex-2026-10-02).
 
 Bitte als Coder die technische Freigabe verarbeiten: T-88 nach der
 lokalen StockInfo-Regel auf `master` mergen und T-89 gemäß Mikes
@@ -1302,7 +1308,7 @@ Yahoo-`QuoteResponse`-Docstring ist kein zusätzlicher Änderungsauftrag.
 Mike hat das Limit für T-88 auf **fünf** Runden erhöht. Der Rest ist
 gezielt in Runde 4 prüfbar; keine Freigabe vor seiner Korrektur. Die
 vollständige Restanalyse, Verify #1–#6, Standards und Doku-Abgleich stehen
-in [T-88](30-doing/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-3-codex-2026-10-02).
+in [T-88](40-done/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-3-codex-2026-10-02).
 Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
 Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
 
@@ -1340,7 +1346,7 @@ Währung eines justETF-Werts; eine EUR-Pflicht für manuelle USD-Factsheets
 würde Umrechnung samt Kurs und Stichtag verlangen. Größen in verschiedenen
 Währungen bleiben ohne Umrechnung nicht direkt vergleichbar. Belege,
 Quellen, Verify #1–#6, Standard-Riegel und Doku-Abgleich:
-[T-88](30-doing/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-2-codex-2026-10-02).
+[T-88](40-done/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-2-codex-2026-10-02).
 Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
 Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
 
@@ -1365,7 +1371,7 @@ Dashboard **393 passed**; Typprüfung, ESLint, normaler Ruff-Lauf,
 Docker-Hub-Vorschau (8.784 Bytes) und `git diff --check` bestanden.
 Verify #1 und #5 bleiben wegen der Befunde offen; #4 ist für den deutschen
 Browserlauf nur teilweise belegt. Voller Befund, Standard-Riegel und
-Doku-Abgleich: [T-88](30-doing/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-1-codex-2026-10-01).
+Doku-Abgleich: [T-88](40-done/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-1-codex-2026-10-01).
 Keine Produktdatei im Review geändert, keine technische oder menschliche
 Abnahme erteilt. Die getrennte Board-Übernahme aus Paketfassung `df699dd1`
 bleibt offen und ist im Ticket vermerkt.

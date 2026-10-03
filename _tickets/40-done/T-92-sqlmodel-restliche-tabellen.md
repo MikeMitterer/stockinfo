@@ -100,7 +100,7 @@ Ticketbranch am 2026-10-02 lokal nach `master` gemergt (`dbe49b3`); kein
 Push, kein Docker-Hub- oder Unraid-Update. Damit ist die SQL-Umstellung
 (T-90 bis T-92) technisch abgeschlossen. Folgearbeit:
 [T-93](T-93-visuelle-gesamtpruefung.md), die gründliche Browserprüfung.
-Mikes Abnahme steht aus; das Ticket bleibt bis dahin in `30-doing/`.
+Mike hat die Kette T-88 bis T-97 am 2026-10-03 abgenommen („ja, die Tickets T-88 bis T-97“); das Ticket liegt in `40-done/`.
 
 ## Review-Verlauf (neueste Runde zuerst)
 

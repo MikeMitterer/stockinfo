@@ -12,7 +12,7 @@ eines Instruments, manuelle Eingabe, Wechselkurse, Sicherung und
 Wiederherstellung, Migrationsvorschau und Einstellungen in Deutsch und
 Englisch durch und legt Screenshots ab.
 
-**Stand:** Runde 3 am 2026-10-02 technisch freigegeben. Der unabhängige
+**Stand:** Runde 3 am 2026-10-02 technisch freigegeben. Mike hat die Kette T-88 bis T-97 am 2026-10-03 abgenommen („ja, die Tickets T-88 bis T-97“); das Ticket liegt in `40-done/`. Der unabhängige
 sichtbare Browserlauf meldet 16/16; `make check` ist grün. Die Prüfung mit
 einer Kopie des vorhandenen Datenbankbestands ist gesondert in T-97 beauftragt
 und gehört vor Mikes Abnahme der SQL-Umstellung dazu. Angelegt am 2026-10-02.

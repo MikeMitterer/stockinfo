@@ -113,8 +113,7 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 Technisch freigegeben von Codex in Runde 2 (`b84351e`). Claude hat den
 Ticketbranch am 2026-10-02 lokal nach `master` gemergt (`f4bc8ef`); kein
 Push, kein Docker-Hub- oder Unraid-Update. Folgearbeit:
-[T-92](T-92-sqlmodel-restliche-tabellen.md). Mikes Abnahme steht aus; das
-Ticket bleibt bis dahin in `30-doing/`.
+[T-92](T-92-sqlmodel-restliche-tabellen.md). Mike hat die Kette T-88 bis T-97 am 2026-10-03 abgenommen („ja, die Tickets T-88 bis T-97“); das Ticket liegt in `40-done/`.
 
 ## Review-Verlauf (neueste Runde zuerst)
 

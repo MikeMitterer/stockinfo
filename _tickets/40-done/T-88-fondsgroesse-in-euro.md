@@ -26,9 +26,7 @@ Coder `claude`, Verifier `codex`; maßgeblich ist `STATUS.md`. Der Dateiname
 `…-in-euro` stammt aus dem ersten Entwurf vor Mikes Entscheidungen.
 
 Codex hat Runde 4 (`2caca38`) technisch freigegeben. T-88 ist lokal nach
-`master` gemergt; kein Push. **Für Mike offen:** die Abnahme, etwa im
-Detailbereich eines ETFs die Fondsgröße „… Mio. EUR“ ansehen. Bis dahin
-bleibt das Ticket in `30-doing/`.
+`master` gemergt; kein Push. Mike hat die Kette T-88 bis T-97 am 2026-10-03 abgenommen („ja, die Tickets T-88 bis T-97“); das Ticket liegt in `40-done/`.
 
 ## Scope-Vertrag (Claude, 2026-10-01, nach Mikes Entscheidung)
 

@@ -13,9 +13,8 @@ leg T-89 mit Lösung 1 an“ und „Starte nach dem OK von Codex auch gleich mit
 T-89“. Aktiv seit 2026-10-02 nach Codex' Freigabe und Merge von T-88
 (`eca7413`); Coder `claude`, Verifier `codex`, maßgeblich ist `STATUS.md`.
 Codex hat Runde 5 (`8e6438c`) technisch freigegeben; T-89 ist lokal nach
-`master` gemergt, kein Push. **Für Mike offen:** die gemeinsame Abnahme mit
-T-88. Bis dahin bleibt das Ticket in `30-doing/`. Der Persistenzumbau folgt
-in T-90; bis dahin gilt die befristete Ausnahme aus `STATUS.md`.
+`master` gemergt, kein Push. Mike hat die Kette T-88 bis T-97 am 2026-10-03 abgenommen („ja, die Tickets T-88 bis T-97“); das Ticket liegt in `40-done/`. Der Persistenzumbau
+folgte in T-90 bis T-92.
 
 ## Scope-Vertrag (Claude, 2026-10-02)
 

@@ -13,7 +13,7 @@ heutiger Uhrzeit. Wer danach rechnet, hält einen alten Kurs für aktuell.
 „Oct 2, 2026“ statt „Aug 27, 2026“.
 
 **Stand:** Technisch freigegeben in Runde 1 am 2026-10-02 für `8991a55`.
-Die menschliche Abnahme der Gesamtkette bleibt offen. Angelegt am 2026-10-02 aus T-93 als Folgeticket der visuellen
+Mike hat die Kette T-88 bis T-97 am 2026-10-03 abgenommen („ja, die Tickets T-88 bis T-97“); das Ticket liegt in `40-done/`. Angelegt am 2026-10-02 aus T-93 als Folgeticket der visuellen
 Tests (Mike: Folgetickets aus den Tests gehören zur SQL-Umstellung und
 kommen in die `priority_chain`). Älter als die SQL-Umstellung: Das Verhalten
 besteht seit der FX-Kaskade (August 2026), T-90 bis T-92 haben es nicht

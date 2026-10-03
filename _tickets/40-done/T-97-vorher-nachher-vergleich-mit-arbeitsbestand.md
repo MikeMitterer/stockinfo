@@ -14,8 +14,7 @@ vor T-90 `fund_size` = 1.234.000.000 EUR mit Quelle `manual`. Nach der
 Umstellung muss dieselbe Abfrage auf derselben Datenbank denselben Wert und
 dieselbe Quelle liefern.
 
-**Stand:** Technisch freigegeben in Runde 3 am 2026-10-02; Mikes Abnahme
-bleibt offen. Der sichtbare Datenbanklauf bestätigt 16 gespeicherte Assets
+**Stand:** Technisch freigegeben in Runde 3 am 2026-10-02; Mike hat die Kette T-88 bis T-97 am 2026-10-03 abgenommen („ja, die Tickets T-88 bis T-97“); das Ticket liegt in `40-done/`. Der sichtbare Datenbanklauf bestätigt 16 gespeicherte Assets
 und einen unveränderten Arbeitsbestand. Angelegt am 2026-10-02 auf Mikes Auftrag. Mike: „die visuellen
 Tests werden mit dem YAML-File gemacht obwohl massive Änderungen bei dem
 Datenbankzugriffen gemacht wurden … am aktuellen Grund vorbei“ und „Ja, leg
