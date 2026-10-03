@@ -8,8 +8,10 @@ uses `mangolila/stockinfo:latest`, port **8000** and persistent storage at
 [Project documentation](../README.md) · [Docker guide](../docker/README.md) ·
 [Docker Hub](https://hub.docker.com/r/mangolila/stockinfo)
 
-[StockPortfolio](https://github.com/MikeMitterer/stockportfolio) is a
-separate portfolio and rebalancing app that gets its prices from StockInfo.
+StockInfo runs on its own. The optional companion app
+[StockPortfolio](https://github.com/MikeMitterer/stockportfolio) manages
+portfolios and rebalancing and gets its prices from StockInfo; see
+[StockPortfolio: the companion app](../README.md#stockportfolio-the-companion-app).
 
 ## Contents
 
