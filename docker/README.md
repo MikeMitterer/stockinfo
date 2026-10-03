@@ -106,10 +106,8 @@ For a host directory instead of a named volume, use a mount such as
 `-v /srv/stockinfo:/data`. Mount a directory dedicated to StockInfo.
 
 The container starts as root only to prepare `/data`, then runs the
-application as **UID 99 / GID 100** (Unraid's `nobody:users`). Change these
-IDs with `PUID` and `PGID`, for example to the owner of an existing host
-directory. The entrypoint changes ownership only when files belong to someone
-else. Before the app starts, it checks that `/data` and an existing database
+application as **UID 99 / GID 100** (Unraid's `nobody:users`). The
+entrypoint changes ownership only when files belong to someone else. Before the app starts, it checks that `/data` and an existing database
 are writable for the target user:
 
 - If ownership cannot be changed (for example on NFS/SMB), it logs a warning
@@ -133,7 +131,6 @@ Pass settings with `docker run -e NAME=value`, an `--env-file`, or Compose's
 | Variable | Default | Purpose |
 |---|---|---|
 | `TZ` | Container default | Timezone, for example `Europe/Vienna` |
-| `PUID` / `PGID` | `99` / `100` | User and group IDs for the app and `/data`; not `0` |
 | `CACHE_TTL_HOURS` | `6` | Quote age that triggers a refresh on request |
 | `REFRESH_INTERVAL_HOURS` | `6` | Background refresh interval |
 | `METADATA_TTL_DAYS` | `7` | ETF metadata refresh interval |
@@ -141,6 +138,13 @@ Pass settings with `docker run -e NAME=value`, an `--env-file`, or Compose's
 | `STRICT_EXCHANGE` | `false` | Require that exchange during ISIN resolution |
 | `FX_TTL_HOURS` | `1` | Exchange-rate cache lifetime |
 | `OPENFIGI_API_KEY` | Empty | Optional key for a higher OpenFIGI rate limit |
+| `CORS_ORIGINS` | `["http://localhost:5173"]` | Web pages on another address that may call the API, as a JSON list |
+
+**Using StockPortfolio?** Its web app calls StockInfo directly from the
+browser. Add the exact address you open StockPortfolio at, including port, to
+`CORS_ORIGINS`, for example `CORS_ORIGINS=["http://nas:8088"]`. Write it as a
+JSON list with brackets and quotes; an empty value or a plain address stops
+the container at startup.
 
 The container listens on **port 8000**. To use a different host port, change
 only the left-hand port in the mapping, for example `127.0.0.1:8080:8000`.
