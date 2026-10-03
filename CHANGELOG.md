@@ -2,6 +2,59 @@
 
 Generated from release tags and Conventional Commits.
 
+## v1.5.0+261003.1224.04ac2 — 2026-10-03
+
+chore: bump version to 1.5.0
+
+### Documentation
+
+- Dashboard und Swagger auf Stand 1.4.0 (`1407d05`)
+- Fondsgroessen-Waehrung ueberall zutreffend beschreiben (`2caca38`)
+- Projektaufbau nennt app/persistence (`1d02a82`)
+- Projektaufbau nennt SQLModel (`880884c`)
+- Grammatik im Session-Docstring (`7d0be5e`)
+- T-95 Grenze der ISIN-Ablehnung genau benennen (`c0dd47e`)
+- /fx und /backups in der Endpunkt-Tabelle (`20d6080`)
+- Hinweis auf inoffizielle Quellen justETF und Yahoo (`23c0547`)
+- Support-Erwartung in allen drei Anleitungen (`1376375`)
+- CORS\_ORIGINS für StockPortfolio erklären, PUID/PGID nicht bewerben (`846868a`)
+- justETF und Yahoo als Voreinstellung benennen (`f720529`)
+- Release-Highlight 1.5.0, CORS-Hinweise für StockPortfolio entfernt (`ad10866`)
+
+### Fixes
+
+- Fondsgroesse durchgehend in Mio. EUR (`20b673a`)
+- Fondsgroesse in der Eingabewaehrung anzeigen, Bezeichner englisch (`12fac6c`)
+- Typvertrag von SourceSpec.build auf Settings abstimmen (`8e6438c`)
+- Datenbankpfad strukturiert an die Engine geben (`732eebe`)
+- Nur-Lese-Zugriff oeffnet Sicherungen auch in Sonderverzeichnissen (`b84351e`)
+- T-93 Runde 1 nacharbeiten (B1–B4), Node 24 als Mindestversion (`ee5d856`)
+- Zeitpunkt der Quelle als quote\_time weiterreichen (T-94) (`8991a55`)
+- vertippte ISIN als ISIN-Fehler melden (T-95) (`f200fa3`)
+- T-93 Runde 3 — W4 prüft wörtlich, Start auf dem Hauptmonitor (`fa2a29f`)
+- Runde-1-Befunde — Exit-Code, Aufräumen, keine Ausnahmen, Persistenz, sichtbares W17 (`c72cdaf`)
+- Schreibweg prüft HTTP-Status und eine echte Aktualisierung (B6) (`46f908d`)
+
+### Features
+
+- berechnete Volatilitaet fuer alle Gattungen deklarieren (`fecdad0`)
+- berechnete Werte mit Quellname und Stand anzeigen (`9b55a13`)
+- SQLModel-Session und Modelle der Kerntabellen (`c08d328`)
+- Vorher-nachher-Vergleich auf einer Kopie des Arbeitsbestands (`7e0be2c`)
+- Sicherungsliste und Quellen mit vergleichen, Laufpfade ausblenden (`780abf3`)
+
+### Other changes
+
+- Datenbankmodule nach app/persistence verschieben (`2b5f908`)
+- SQL aus Migrationsrouter und Sicherungsdienst loesen (`7018e45`)
+- Dienste haengen am Interface QuoteStore (`6c9d399`)
+- SQL-Fragmente, Berichtsfelder und Vertragstypen nachziehen (`88d54d8`)
+- Datenbankdatei nur noch im Persistenzordner anfassen (`44f72ab`)
+- Repository und Detailspeicher auf SQLModel (`2b1b50d`)
+- Modellspalten typgerecht mit col() ansprechen (`6366844`)
+- uebrige Tabellen auf SQLModel, rohes SQL nur noch begruendet (`81d9434`)
+- Tabellenname des Umzugsberichts typgerecht (`833e3cf`)
+
 ## v1.4.0+261001.2241.6c366 — 2026-10-01
 
 Datenhinweis im Dashboard, robusterer Containerstart bei Rechteproblemen, make setup und Hinweise zum Betrieb nur im Heimnetz oder per VPN
