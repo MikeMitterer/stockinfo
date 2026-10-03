@@ -8,6 +8,11 @@ and German; the REST API returns JSON for use by other applications.
 
 **GitHub:** [MikeMitterer/stockinfo — source code and documentation](https://github.com/MikeMitterer/stockinfo)
 
+**Companion app:** [StockPortfolio](https://hub.docker.com/r/mangolila/stockportfolio)
+manages portfolios, valuation and tolerance-band rebalancing and gets its
+prices from StockInfo. It runs in its own container
+([source code](https://github.com/MikeMitterer/stockportfolio)).
+
 **No login:** anyone who can reach StockInfo can change or delete its data.
 Do not put it on the internet. Use it only in your home network. From
 outside, connect to your home network with a VPN, for example WireGuard or
