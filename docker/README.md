@@ -86,6 +86,16 @@ Online sources need outbound internet access and can impose rate limits or
 return incomplete data. Source chains are configurable; a bundled YAML-file
 source also supports manually maintained data.
 
+**No official APIs.** justETF and Yahoo Finance do not offer a public API for
+this data. StockInfo reads their public web pages through the open-source
+libraries `justetf-scraping` and `yfinance`. justETF's terms of use, for
+example, forbid automated price queries and excessive load. StockInfo fetches
+no prices from justETF, only fund data: once per ETF every `METADATA_TTL_DAYS`
+(default 7), plus when you refresh a single instrument by hand. Whoever runs
+StockInfo is responsible for using these sources in line with the providers'
+terms. To avoid them, remove them from `/data/sources.yaml` or use a file-only
+source profile.
+
 ## Storage and permissions
 
 Mount persistent storage at **`/data`**. It contains the SQLite database

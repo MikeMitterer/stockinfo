@@ -82,6 +82,16 @@ The bundled `yaml-file` plugin can supply manually maintained data as a
 fallback or as a file-only profile. See [source configuration](docs/plugins.md)
 and the [plugin author guide](docs/plugin-authors.md).
 
+**No official APIs.** justETF and Yahoo Finance do not offer a public API for
+this data. StockInfo reads their public web pages through the open-source
+libraries `justetf-scraping` and `yfinance`. justETF's terms of use, for
+example, forbid automated price queries and excessive load. StockInfo fetches
+no prices from justETF, only fund data: once per ETF every `METADATA_TTL_DAYS`
+(default 7), plus when you refresh a single instrument by hand. Whoever runs
+StockInfo is responsible for using these sources in line with the providers'
+terms. To avoid them, remove them from `sources.yaml` or use the file-only
+profile.
+
 **ETFs outside Europe.** justETF is a database of European UCITS funds, so a US or
 Canadian ETF finds nothing there. For those, Yahoo supplies the fund provider —
 and deliberately nothing else: it reports the expense ratio in two fields with two
