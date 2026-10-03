@@ -19,9 +19,28 @@ ModuleNotFoundError: No module named 'app.db'
 StockPortfolio hat die zwei Importe in seinem T-81 nachgezogen. Der nächste
 Umbau trifft es wieder.
 
+**Zweites Beispiel, am selben Tag:** Seit T-94 (`8991a55`, 2026-10-02)
+erwartet StockInfo von einer Devisenquelle `FxQuote` mit Kurs und Zeitpunkt
+statt einer Zahl. StockPortfolios lokale Devisenquelle lieferte weiter die
+Zahl; `GET /fx?base=USD&quote=EUR` antwortete mit HTTP 500:
+
+```text
+File "…/StockInfo/app/services/fx_service.py", line 157, in _fetch_or_fallback
+    self._repository.save_fx_rate(base, quote, found.rate, found.quote_time, now, source)
+AttributeError: 'float' object has no attribute 'rate'
+```
+
+Ohne CORS-Header in der Fehlerantwort meldete der Browser zuerst einen
+CORS-Fehler; USD-Positionen ließen sich im Teststack nicht mehr umrechnen.
+Der Stack meldete sich trotzdem bereit, weil seine Startprüfung `/fx` nicht
+abfragte. StockPortfolio hat die Quelle in seinem T-79 auf `FxQuote`
+umgestellt und prüft `/fx` jetzt beim Start. Diesmal brach also keine
+Modulstruktur, sondern die Schnittstelle einer Quelle.
+
 **Stand:** Angelegt am 2026-10-03 aus StockPortfolio auf Mikes Auftrag
-(„ja, leg das Ticket im StockInfo-Board an“). Noch nicht eingeplant. Für
-Mike ist aktuell kein Handgriff nötig.
+(„ja, leg das Ticket im StockInfo-Board an“). Zweites Beispiel am selben Tag
+ergänzt (Mike: „ja, ergänze das in T-99“). Noch nicht eingeplant. Für Mike ist
+aktuell kein Handgriff nötig.
 
 ## Ausgangslage aus Konsumentensicht
 
@@ -33,7 +52,7 @@ eigenen Prozess und ersetzt die externen Quellen. Dafür kennt es heute:
 | `app.persistence.db.init_db`, `app.persistence.repository.QuoteRepository` | Temporäre Datenbank anlegen und mit Testinstrumenten füllen |
 | `QuoteService`, `CachedQuoteService`, `DailyHistoryService`, `DailyCloseSync`, `CachedFxService` | Dienste mit lokalen Quellen neu zusammensetzen |
 | `get_cached_quote_service`, `get_daily_history_service`, `get_fx_service` | Per `dependency_overrides` in der App austauschen |
-| `app.providers.base.RawQuote`, `SourceAnswer`, `stockinfo_plugin.types.NotFound` | Antworten der lokalen Kurs-, Verlaufs- und Devisenquelle bauen |
+| `app.providers.base.RawQuote`, `FxQuote`, `SourceAnswer`, `stockinfo_plugin.types.NotFound` | Antworten der lokalen Kurs-, Verlaufs- und Devisenquelle bauen; die Form dieser Antworten (seit T-94 `FxQuote`) ist ebenfalls Innenleben |
 | `app.detail_models.DetailDefinition`, `DetailInput` | Detailwerte (TER, Fondsgröße, Anbieter) vorbelegen |
 | `app.routers.migration.get_gate` | Migrationssperre starten |
 | `tests.boundaries.EmptyEtfEnricher` | ETF-Anreicherung abschalten — eine Klasse aus StockInfos Testordner |
@@ -62,8 +81,10 @@ Was StockPortfolio dabei erwartet:
 - StockPortfolio muss StockInfos Klassen, Konstruktoren und Testordner
   kennen. Das widerspricht der Trennung: StockPortfolio soll nur den
   HTTP-Vertrag kennen.
-- StockInfos Umbauten werden unnötig riskant: Wer dort Module verschiebt,
-  sieht nicht, dass ein anderes Repository davon abhängt.
+- StockInfos Umbauten werden unnötig riskant: Wer dort Module verschiebt
+  oder die Schnittstelle einer Quelle ändert, sieht nicht, dass ein anderes
+  Repository davon abhängt. Zwei Brüche an einem Tag (Persistenz-Umzug und
+  T-94) zeigen, dass es kein Einzelfall ist.
 
 ## Gewünschtes Ergebnis
 
