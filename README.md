@@ -96,7 +96,6 @@ how to point it at your StockInfo address.
 
 [↑ Contents](#contents)
 
-
 ---
 
 ## How quotes are fetched
