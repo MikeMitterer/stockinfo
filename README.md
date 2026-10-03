@@ -83,8 +83,8 @@ The bundled `yaml-file` plugin can supply manually maintained data as a
 fallback or as a file-only profile. See [source configuration](docs/plugins.md)
 and the [plugin author guide](docs/plugin-authors.md).
 
-**No official APIs.** justETF and Yahoo Finance do not offer a public API for
-this data. StockInfo reads their public web pages through the open-source
+**No official APIs.** The default sources justETF and Yahoo Finance do not
+offer a public API for this data. StockInfo reads their public web pages through the open-source
 libraries `justetf-scraping` and `yfinance`. justETF's terms of use, for
 example, forbid automated price queries and excessive load. StockInfo fetches
 no prices from justETF, only fund data: once per ETF every `METADATA_TTL_DAYS`

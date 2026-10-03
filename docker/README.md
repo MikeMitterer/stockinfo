@@ -1,8 +1,9 @@
 # StockInfo
 
 Stock and ETF quotes, price history and a web dashboard in one container.
-StockInfo fetches market data from Yahoo Finance and justETF, resolves ISINs
-with OpenFIGI, and caches results in SQLite. The dashboard supports English
+By default, StockInfo fetches market data from Yahoo Finance and justETF,
+resolves ISINs with OpenFIGI, and caches results in SQLite. Sources are
+configurable and can be replaced by plugins. The dashboard supports English
 and German; the REST API returns JSON for use by other applications.
 
 **GitHub:** [MikeMitterer/stockinfo — source code and documentation](https://github.com/MikeMitterer/stockinfo)
@@ -86,8 +87,8 @@ Online sources need outbound internet access and can impose rate limits or
 return incomplete data. Source chains are configurable; a bundled YAML-file
 source also supports manually maintained data.
 
-**No official APIs.** justETF and Yahoo Finance do not offer a public API for
-this data. StockInfo reads their public web pages through the open-source
+**No official APIs.** The default sources justETF and Yahoo Finance do not
+offer a public API for this data. StockInfo reads their public web pages through the open-source
 libraries `justetf-scraping` and `yfinance`. justETF's terms of use, for
 example, forbid automated price queries and excessive load. StockInfo fetches
 no prices from justETF, only fund data: once per ETF every `METADATA_TTL_DAYS`
