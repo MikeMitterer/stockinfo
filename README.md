@@ -165,9 +165,11 @@ make dev-up         # backend :8000 + dashboard :5173
 make dev-down       # stop both and free their ports   ·   make dev-logs for logs
 ```
 
-`make dev-down` also ends leftover processes on ports 5173 and 8000, for example
-after overmind crashed. It uses `dev-ports.sh` from ProjectTools with the ports
-in `.dev-ports.conf.sh` and only ends your own processes inside this project.
+`make dev-down` also cleans up after a crash: it ends leftover overmind, tmux
+and app processes of this project, removes a stale `.overmind.sock` and frees
+ports 5173 and 8000. It uses `dev-ports.sh` from ProjectTools with the ports in
+`.dev-ports.conf.sh`, only ends your own processes inside this project and can
+be run as often as you like.
 
 The server then runs at `http://localhost:8000`. Interactive API docs (Swagger UI,
 dark theme) live at `http://localhost:8000/docs` (use `http://` in the browser, not
