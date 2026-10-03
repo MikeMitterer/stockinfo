@@ -9,8 +9,12 @@ Adresse seiner StockPortfolio-Instanz ein: `http://tower:8088`. Heute bricht
 StockInfo damit beim Start ab. Gültig ist nur `["http://tower:8088"]`.
 
 **Stand:** Angelegt am 2026-10-03 auf Mikes Auftrag („leg das Ticket für die
-CORS-Codeänderung an - in doing“). Liegt in `30-doing/`; Rollen und
-Aktivierung legt `STATUS.md` fest. Noch nicht aktiviert, noch keine Umsetzung.
+CORS-Codeänderung an - in doing“). Am 2026-10-03 nach `80-iced/`
+zurückgestellt (Mike: „ja, verschieb T-100 nach iced“). Grund:
+[StockPortfolio T-82](/Volumes/DevLocal/DevWeb/Production/StockPortfolio/_tickets/10-backlog/T-82-stockinfo-ueber-eigenen-server.md)
+leitet StockInfo-Abfragen über den eigenen Server; dann braucht StockPortfolio
+kein `CORS_ORIGINS` mehr, und dieses Ticket wird voraussichtlich
+überflüssig. Wiederaufnahme nur, wenn T-82 nicht kommt. Keine Umsetzung.
 
 ## Ausgangslage
 
