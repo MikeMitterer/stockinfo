@@ -128,15 +128,24 @@ splits and dividends. Both behaviors differ from the REST artifact; see the
 - **Python 3.11+** (`make setup` creates the project `.venv`; override the
   interpreter with `PYTHON_BOOTSTRAP=python3.12 make setup`)
 - **make** (drives setup and start/stop of the services)
+- **overmind** and **tmux** for `make dev-up` (backend and dashboard together)
 - optional **Docker** (to run the container)
 - **Node.js 24+ with npm** (`make setup` installs the dashboard packages;
   the backend and prebuilt Docker image do not use Node.js on the host)
 
-The project uses shared ecosystem helpers under `.libs/` (MakeLib, BashLib,
-ProjectTools). `make setup` links them via `scripts/setup-libs.sh`; it finds the
-source repositories through `DEV_MAKE` (MakeLib), `BASH_LIBS` (BashLib `src`) and
-`PROJECT_TOOLS` (ProjectTools `src`). The Python part of ProjectTools is installed
-into `.venv` from `requirements-dev.txt`. The Docker image needs none of this.
+**You do not need anything under `.libs/` to develop.** `make setup`, the
+`dev-*` targets, `make test`, `make check` and `make up`/`down` work on a plain
+clone. Targets marked **[Maintainer]** in `make help` (`build`, `push`,
+`status`, `tag-*`, `version`) need the author's private BashLib and stop with a
+note without it. To build the image yourself, run
+`docker build -f docker/Dockerfile -t mangolila/stockinfo:latest .` instead of
+`make build`.
+
+For the maintainer, `make setup` also links the shared helpers under `.libs/`
+(MakeLib, BashLib, ProjectTools) via `scripts/setup-libs.sh`. It finds them
+through `DEV_MAKE`, `BASH_LIBS` (BashLib `src`) and `PROJECT_TOOLS`
+(ProjectTools `src`) and installs the Python part of ProjectTools from
+`requirements-maintainer.txt`. The Docker image needs none of this.
 
 [↑ Contents](#contents)
 
@@ -148,22 +157,15 @@ into `.venv` from `requirements-dev.txt`. The Docker image needs none of this.
 # 1. Create the configuration
 cp .env.example .env
 
-# 2. Install dependencies (.libs links, Python .venv, dashboard packages)
+# 2. Install dependencies (Python .venv, dashboard packages)
 make setup
 
-# 3. Start the server
-make dev            # backend only, foreground (auto-reload)
-#   or
-make start          # backend only, background   →  make stop / make logs
+# 3. Start backend :8000 and dashboard :5173 with auto-reload
+make dev-up         # stop with make dev-down · logs with make dev-logs
 ```
 
-The whole stack (backend **and** dashboard) at once — via
-[overmind](https://github.com/DarthSim/overmind):
-
-```bash
-make dev-up         # backend :8000 + dashboard :5173
-make dev-down       # stop both and free their ports   ·   make dev-logs for logs
-```
+`make dev-up` runs both in the background via
+[overmind](https://github.com/DarthSim/overmind) (needs overmind and tmux).
 
 `make dev-down` also cleans up after a crash: it ends leftover overmind, tmux
 and app processes of this project, removes a stale `.overmind.sock` and frees

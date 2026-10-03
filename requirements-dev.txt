@@ -1,8 +1,7 @@
 -r requirements.txt
-# Gemeinsame CLI-Helfer für Entwicklerskripte (`projecttools.ui.colors`).
-# Nur hier, nicht in requirements.txt: Das Docker-Image installiert jene Datei,
-# und `.libs/` gibt es dort nicht. Den Link legt `make setup` an.
--e ./.libs/ProjectTools
+# Werkzeuge für Tests und Prüfungen. Die Maintainer-Helfer aus ProjectTools
+# stehen in requirements-maintainer.txt; `make setup` installiert sie nur,
+# wenn .libs/ProjectTools verlinkt ist.
 ruff==0.15.21
 pytest==9.1.1
 pytest-asyncio==1.4.0

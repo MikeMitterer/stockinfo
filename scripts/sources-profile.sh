@@ -44,10 +44,41 @@
 #------------------------------------------------------------------------------
 set -uo pipefail
 
-BASH_LIBS="${BASH_LIBS:-$(cd "$(dirname "$0")/../.libs/BashLib/src" && pwd)}"
+BASH_LIBS="${BASH_LIBS:-$(cd "$(dirname "$0")/../.libs/BashLib/src" 2>/dev/null && pwd || true)}"
 
-if [[ "${__COLORS_LIB__:=""}" == "" ]]; then . "${BASH_LIBS}/colors.lib.sh"; fi
-if [[ "${__TOOLS_LIB__:=""}"  == "" ]]; then . "${BASH_LIBS}/tools.lib.sh";  fi
+# Das Script steht in der Unraid-Anleitung fuer Nutzer; die private BashLib
+# haben sie nicht. Ohne sie laeuft es mit einfachen Farben weiter.
+if [[ -r "${BASH_LIBS}/colors.lib.sh" && -r "${BASH_LIBS}/tools.lib.sh" ]]; then
+    # shellcheck source=/dev/null
+    if [[ "${__COLORS_LIB__:=""}" == "" ]]; then . "${BASH_LIBS}/colors.lib.sh"; fi
+    # shellcheck source=/dev/null
+    if [[ "${__TOOLS_LIB__:=""}"  == "" ]]; then . "${BASH_LIBS}/tools.lib.sh";  fi
+else
+    RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+    BLUE='\033[0;34m'; LIGHT_BLUE='\033[1;34m'; NC='\033[0m'
+
+    # Ersatz fuer usageLine aus BashLib: Option und Beschreibung in Spalten.
+    #
+    # Params:
+    #   $1 - Option(en), z.B. "-s | --show"
+    #   $2 - Beschreibung
+    usageLine() {
+        local _OPTIONS="$1"
+        _OPTIONS="${_OPTIONS%"${_OPTIONS##*[![:space:]]}"}"
+        printf '       %-22s %b\n' "${_OPTIONS}" "$2"
+    }
+
+    # Ersatz fuer logFileStatus aus BashLib: Bezeichnung, Pfad und ob er existiert.
+    #
+    # Params:
+    #   $1 - Bezeichnung
+    #   $2 - Datei oder Verzeichnis
+    logFileStatus() {
+        local _MARK="${RED}✗${NC}"
+        [[ -e "$2" ]] && _MARK="${GREEN}✓${NC}"
+        printf '    %-30s %b %s\n' "$1" "${_MARK}" "$2"
+    }
+fi
 
 readonly APPNAME="${0##*/}"
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)" || exit 1
