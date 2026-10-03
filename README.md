@@ -208,7 +208,9 @@ port unreachable.
 
 `CORS_ORIGINS` is **not** a protection. It restricts what a browser on another
 origin may do — it does nothing about `curl`, a script, or any server-to-server
-call.
+call. It does keep other web pages open in your browser from reading
+StockInfo's answers or deleting data, so list only the addresses you need
+instead of `*`.
 
 Two limits do exist, and they are about load rather than access: the global
 refresh takes a non-blocking lock so two runs cannot overlap, and justETF is
@@ -324,7 +326,7 @@ All values can be overridden via `.env` (`cp .env.example .env`):
 | `OPENFIGI_API_KEY` | optional key for a higher OpenFIGI rate limit | empty |
 | `EXTRAETF_ETF_URL` / `EXTRAETF_STOCK_URL` | profile link templates (placeholder `{isin}`) | extraetf.com/… |
 | `YAHOO_URL` | Yahoo link template (placeholder `{symbol}`) | de.finance.yahoo.com/… |
-| `CORS_ORIGINS` | allowed dashboard origin(s) | `http://localhost:5173` |
+| `CORS_ORIGINS` | web pages on another address that may call the API, as a JSON list, e.g. `["http://nas:8088"]` for StockPortfolio | `["http://localhost:5173"]` |
 
 [↑ Contents](#contents)
 
@@ -401,7 +403,7 @@ at a time.
 FastAPI serves the dashboard itself (relative API calls) — no separate web server
 required. The cache lives in the `stockinfo-data` volume (`/data` inside the
 container). The app runs as a non-root user (UID 99 / GID 100 — Unraid's
-`nobody:users`, changeable with `PUID`/`PGID`). `docker/entrypoint.sh`
+`nobody:users`). `docker/entrypoint.sh`
 prepares `/data` and stops with a clear message if it is not writable; see the
 [Docker guide](docker/README.md#storage-and-permissions).
 

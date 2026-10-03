@@ -87,6 +87,12 @@ Remove the test container and test template when finished.
 | FX rate TTL (hours) | `1` | Exchange-rate cache lifetime |
 | OpenFIGI API key | Empty | Optional key for a higher OpenFIGI rate limit |
 | Timezone | `UTC` | Log timezone, for example `Europe/Vienna` |
+| CORS origins | `["http://localhost:5173"]` | Web pages on another address that may call the API, as a JSON list |
+
+**Using StockPortfolio?** Its web app calls StockInfo directly from the
+browser. Enter the exact address you open StockPortfolio at, including port,
+under **CORS origins**, for example `["http://tower:8088"]`. Keep the brackets
+and quotes; an empty field or a plain address stops the container at startup.
 
 Some optional fields appear in Unraid's advanced view. The template uses
 bridge networking. Dashboard and API share the same port.
@@ -99,9 +105,7 @@ Keep the appdata directory when updating or replacing the container. It holds
 the SQLite database, `sources.yaml` and other application data. The entrypoint
 prepares `/data` ownership and runs the app as **UID 99 / GID 100**, matching
 Unraid's `nobody:users`; a freshly created appdata directory owned by `root`
-works without changes. If the directory belongs to another user, add the
-variables `PUID` and `PGID` to the container with that owner's IDs. When the
-directory is not writable, the container stops with a log message naming the
+works without changes. When the directory is not writable, the container stops with a log message naming the
 path and IDs.
 
 The template uses a host directory, whereas `make up` uses a named Docker
