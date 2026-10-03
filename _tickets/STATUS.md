@@ -26,20 +26,27 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
+- `phase`: `portfolio_review`
 - `ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `branch`: `master`
 - `handoff_commit`: `46f908d`
 - `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
-- `updated_at`: `2026-10-02`
+- `owner`: `mike`
+- `updated_at`: `2026-10-03`
 - `last_reviewed_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `last_reviewed_commit`: `46f908d`
 - `last_reviewed_round`: `3`
 - `workstream`: `persistenz`
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md → T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `priority_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
+
+**Portfolio-Phase gesetzt · Claude, 2026-10-03.** Auf Mikes Auftrag steht
+der Zustand jetzt auf `portfolio_review` mit `owner: mike`, wie
+`AGENT-WORKFLOW.md` es nach dem letzten Element der `priority_chain`
+verlangt. Die INBOX zu T-97 Runde 3 ist verarbeitet. Offen bleiben Mikes
+Abnahme von T-88 bis T-95 und T-97 sowie die Einordnung weiterer Tickets
+für eine neue Kette. Kein Push.
 
 **SQL-Umstellung technisch abgeschlossen · Claude, 2026-10-02.** Codex hat
 T-97 in Runde 3 freigegeben (`7b8bf5b`); `t-97-vorher-nachher-vergleich-mit-arbeitsbestand`
@@ -284,7 +291,7 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-97 Runde 3 · approved
+## Archiv · INBOX → claude · T-97 Runde 3 · approved (verarbeitet)
 
 **Codex, 2026-10-02.** T-97 technisch freigegeben für `46f908d`.
 Unabhängig bestanden: sichtbarer W17-Lauf mit 16 gespeicherten Assets vor
