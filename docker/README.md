@@ -8,17 +8,28 @@ and German; the REST API returns JSON for use by other applications.
 
 **GitHub:** [MikeMitterer/stockinfo — source code and documentation](https://github.com/MikeMitterer/stockinfo)
 
-**Companion app:** [StockPortfolio](https://hub.docker.com/r/mangolila/stockportfolio)
-manages portfolios, valuation and tolerance-band rebalancing and gets its
-prices from StockInfo. It runs in its own container
-([source code](https://github.com/MikeMitterer/stockportfolio)).
-
 **No login:** anyone who can reach StockInfo can change or delete its data.
 Do not put it on the internet. Use it only in your home network. From
 outside, connect to your home network with a VPN, for example WireGuard or
 Tailscale.
 
 ![StockInfo dashboard](../unraid/screenshots/dashboard.png)
+
+## StockPortfolio: the companion app
+
+StockInfo works on its own. Scripts, spreadsheets and other apps can use its
+quotes through the REST API; no second container is needed.
+
+[StockPortfolio](https://hub.docker.com/r/mangolila/stockportfolio) is an
+optional addition for managing your own portfolio. It was built as a
+companion to StockInfo: it values your positions, shows how far they are from
+their target allocation and calculates rebalancing trades. Prices, exchange
+rates and fund metrics come from StockInfo.
+
+To use both, start StockInfo first, then the `mangolila/stockportfolio`
+container with `STOCKINFO_API_URL` set to your StockInfo address. Details are
+in its [Docker guide](https://hub.docker.com/r/mangolila/stockportfolio)
+([source code](https://github.com/MikeMitterer/stockportfolio)).
 
 ## Quick start
 

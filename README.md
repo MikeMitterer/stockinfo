@@ -12,11 +12,6 @@ Tagged changes: [changelog](CHANGELOG.md). Curated older summaries:
 The **web dashboard** provides an asset overview, price charts, manual ETF
 metrics and source configuration, with German and English UI.
 
-**Companion app:** [StockPortfolio](https://github.com/MikeMitterer/stockportfolio)
-manages portfolios, valuation and tolerance-band rebalancing and gets its
-prices from StockInfo. It is a separate app with its own
-[Docker image](https://hub.docker.com/r/mangolila/stockportfolio).
-
 ![StockInfo dashboard](unraid/screenshots/dashboard.png)
 
 ### Release highlight: 1.5.0
@@ -37,6 +32,7 @@ prices from StockInfo. It is a separate app with its own
 ## Contents
 
 - [What can it do?](#what-can-it-do)
+- [StockPortfolio: the companion app](#stockportfolio-the-companion-app)
 - [How quotes are fetched](#how-quotes-are-fetched)
 - [Requirements](#requirements)
 - [Quick start](#quick-start)
@@ -77,6 +73,31 @@ prices from StockInfo. It is a separate app with its own
 
 - **Dashboard** — overview with column sorting, docked price chart, 8 themes,
   German/English UI, exchange legend, profile links, JSON export.
+
+[↑ Contents](#contents)
+
+---
+
+## StockPortfolio: the companion app
+
+StockInfo works on its own. Scripts, spreadsheets and other apps can use its
+quotes through the REST API; nothing else needs to be installed.
+
+[StockPortfolio](https://github.com/MikeMitterer/stockportfolio) is an
+optional addition for managing your own portfolio. It was built as a
+companion to StockInfo: it values your positions, shows how far they are from
+their target allocation and calculates rebalancing trades. Prices, exchange
+rates and fund metrics come from StockInfo.
+
+|  | StockInfo | StockPortfolio |
+|---|---|---|
+| Purpose | Quotes, price history, ETF metrics | Portfolios, valuation, rebalancing |
+| Runs without the other app | Yes | No, it needs StockInfo for prices |
+| Docker image | [`mangolila/stockinfo`](https://hub.docker.com/r/mangolila/stockinfo) | [`mangolila/stockportfolio`](https://hub.docker.com/r/mangolila/stockportfolio) |
+
+To use both, set up StockInfo first, then StockPortfolio. StockPortfolio's
+[setup guide](https://github.com/MikeMitterer/stockportfolio#setup) explains
+how to point it at your StockInfo address.
 
 [↑ Contents](#contents)
 
