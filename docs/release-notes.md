@@ -2,8 +2,17 @@
 
 [Current README](../README.md)
 
+- [1.1.0](#whats-new-in-110)
 - [1.0.0](#whats-new-in-100)
 - [0.6.0](#whats-new-in-060)
+
+## What's new in 1.1.0
+
+- `GET /instrument-types` lists the asset types declared by the configured
+  plugins, including source status and whether the catalog is complete.
+- `GET /fields` describes core and plugin fields in English, independently of
+  the dashboard language or `Accept-Language`.
+- The dashboard development proxy also forwards `/instrument-types`.
 
 ## What's new in 1.0.0
 

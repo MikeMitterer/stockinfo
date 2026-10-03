@@ -139,13 +139,6 @@ Pass settings with `docker run -e NAME=value`, an `--env-file`, or Compose's
 | `STRICT_EXCHANGE` | `false` | Require that exchange during ISIN resolution |
 | `FX_TTL_HOURS` | `1` | Exchange-rate cache lifetime |
 | `OPENFIGI_API_KEY` | Empty | Optional key for a higher OpenFIGI rate limit |
-| `CORS_ORIGINS` | `["http://localhost:5173"]` | Web pages on another address that may call the API, as a JSON list |
-
-**Using StockPortfolio?** Its web app calls StockInfo directly from the
-browser. Add the exact address you open StockPortfolio at, including port, to
-`CORS_ORIGINS`, for example `CORS_ORIGINS=["http://nas:8088"]`. Write it as a
-JSON list with brackets and quotes; an empty value or a plain address stops
-the container at startup.
 
 The container listens on **port 8000**. To use a different host port, change
 only the left-hand port in the mapping, for example `127.0.0.1:8080:8000`.

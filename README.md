@@ -14,13 +14,20 @@ metrics and source configuration, with German and English UI.
 
 ![StockInfo dashboard](unraid/screenshots/dashboard.png)
 
-### Release highlight: 1.1.0
+### Release highlight: 1.5.0
 
-- `GET /instrument-types` lists the asset types declared by the configured
-  plugins, including source status and whether the catalog is complete.
-- `GET /fields` describes core and plugin fields in English, independently of
-  the dashboard language or `Accept-Language`.
-- The dashboard development proxy also forwards `/instrument-types`.
+- **Volatility for every instrument type.** Stocks and funds now show the
+  1-year volatility computed from daily closes, with source and date in the
+  detail area. ETFs keep justETF's value when it has one.
+- **Fund size is always in millions.** Values from justETF are in EUR; values
+  you enter by hand keep the currency you entered.
+- **New storage layer on SQLModel.** Existing databases are read unchanged;
+  a comparison against a copy of a real database found no differences.
+- `GET /fx` reports the source's own timestamp in `quote_time` where the
+  source provides one, for example `as_of` in a YAML file. Yahoo has none;
+  there `quote_time` stays the fetch time.
+- A mistyped ISIN such as `DE000110253X` is rejected with `400` and
+  `code: invalid_isin_format` instead of being looked up as a symbol.
 
 ## Contents
 
@@ -326,7 +333,7 @@ All values can be overridden via `.env` (`cp .env.example .env`):
 | `OPENFIGI_API_KEY` | optional key for a higher OpenFIGI rate limit | empty |
 | `EXTRAETF_ETF_URL` / `EXTRAETF_STOCK_URL` | profile link templates (placeholder `{isin}`) | extraetf.com/… |
 | `YAHOO_URL` | Yahoo link template (placeholder `{symbol}`) | de.finance.yahoo.com/… |
-| `CORS_ORIGINS` | web pages on another address that may call the API, as a JSON list, e.g. `["http://nas:8088"]` for StockPortfolio | `["http://localhost:5173"]` |
+| `CORS_ORIGINS` | web pages on another address that may call the API, as a JSON list | `["http://localhost:5173"]` |
 
 [↑ Contents](#contents)
 
