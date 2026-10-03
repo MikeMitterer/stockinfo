@@ -177,6 +177,10 @@ See the [Unraid guide](../unraid/README.md) for installation, configuration and 
 
 ## Support and license
 
+StockInfo is built for its author's own use and shared free of charge.
+Issues and pull requests are read, but there is no promise of a reply, a fix
+or a new feature.
+
 - [Report a problem](https://github.com/MikeMitterer/stockinfo/issues)
 - [Source code and full documentation](../README.md)
 - [Release notes](../docs/release-notes.md)

@@ -37,6 +37,7 @@ metrics and source configuration, with German and English UI.
 - [Tests](#tests)
 - [Releases and changelog](#releases-and-changelog)
 - [Project layout](#project-layout)
+- [Support](#support)
 - [License](#license)
 
 ---
@@ -562,6 +563,16 @@ Current references: [REST API](docs/rest-core-contract.md),
 [source configuration](docs/plugins.md), [plugin development](docs/plugin-authors.md)
 and [contract checks](contract/README.md). Historical designs and plans live
 under [`docs/superpowers/`](docs/superpowers/).
+
+[↑ Contents](#contents)
+
+---
+
+## Support
+
+StockInfo is built for its author's own use and shared free of charge.
+[Issues](https://github.com/MikeMitterer/stockinfo/issues) and pull requests
+are read, but there is no promise of a reply, a fix or a new feature.
 
 [↑ Contents](#contents)
 

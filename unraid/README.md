@@ -140,6 +140,8 @@ and `/ready` reports whether normal requests are allowed. A pending database
 migration may need confirmation in the dashboard.
 
 [Report a problem](https://github.com/MikeMitterer/stockinfo/issues).
+StockInfo is built for its author's own use and shared free of charge. Issues
+are read, but there is no promise of a reply, a fix or a new feature.
 
 [↑ Contents](#contents)
 
