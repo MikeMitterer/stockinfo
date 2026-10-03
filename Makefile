@@ -109,10 +109,11 @@ dev-up: ## Gesamten Stack starten — Backend + Dashboard (overmind, Daemon)
 	@echo -e "  $(GREEN)✓$(RESET) Stack läuft — Backend $(BLUE)http://localhost:$(PORT)$(RESET) · Dashboard $(BLUE)http://localhost:5173$(RESET)  ($(WHITE)make dev-logs$(RESET))"
 
 .PHONY: dev-down
-dev-down: ## Gesamten Stack stoppen (overmind quit)
+dev-down: ## Gesamten Stack stoppen (overmind quit, dann Ports freigeben)
 	-@overmind quit 2>/dev/null || true
 	-@pkill -f "overmind" 2>/dev/null || true
 	-@rm -f $(CURDIR)/.overmind.sock
+	@"$(PROJECT_TOOLS)/bash/dev-ports.sh" --kill
 	@echo -e "  $(GREEN)✓$(RESET) Stack gestoppt"
 
 .PHONY: dev-logs
