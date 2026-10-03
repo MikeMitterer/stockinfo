@@ -12,6 +12,11 @@ Tagged changes: [changelog](CHANGELOG.md). Curated older summaries:
 The **web dashboard** provides an asset overview, price charts, manual ETF
 metrics and source configuration, with German and English UI.
 
+**Companion app:** [StockPortfolio](https://github.com/MikeMitterer/stockportfolio)
+manages portfolios, valuation and tolerance-band rebalancing and gets its
+prices from StockInfo. It is a separate app with its own
+[Docker image](https://hub.docker.com/r/mangolila/stockportfolio).
+
 ![StockInfo dashboard](unraid/screenshots/dashboard.png)
 
 ### Release highlight: 1.5.0
