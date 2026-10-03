@@ -11,10 +11,18 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / ".libs/ProjectTools/src/bash/dockerhub-readme.sh"
 
+# Der README-Upload ist ein Maintainer-Werkzeug aus .libs/ProjectTools. In
+# einem frischen Klon ohne .libs/ gibt es ihn nicht; dort gilt der Test als
+# übersprungen statt als Fehler.
+requires_project_tools = pytest.mark.skipif(
+    not SCRIPT.exists(), reason="ProjectTools nicht verlinkt (Maintainer-Werkzeug)"
+)
+
 
 # Netz nötig: Mit leerem `XDG_CACHE_HOME` richtet das Skript seine
 # Werkzeug-venv neu ein und lädt die Pakete aus dem Paketindex.
 @pytest.mark.integration
+@requires_project_tools
 def test_cli_ohne_aktion_zeigt_hilfe_und_vorschau_braucht_keinen_token(
     tmp_path: Path,
 ) -> None:
@@ -135,6 +143,7 @@ def test_push_startet_readme_nur_nach_erfolgreichem_hub_push(
         ]
 
 
+@requires_project_tools
 def test_uploadfehler_nach_image_push_wird_klar_gemeldet(tmp_path: Path) -> None:
     result = subprocess.run(
         [

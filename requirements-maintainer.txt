@@ -1,0 +1,6 @@
+# Gemeinsame CLI-Helfer aus ProjectTools (`projecttools.ui.colors`) für die
+# Maintainer-Werkzeuge, etwa changelog.py. Nicht in requirements.txt: Das
+# Docker-Image installiert jene Datei, und `.libs/` gibt es dort nicht.
+# Nicht in requirements-dev.txt: Ohne .libs/ProjectTools scheiterte sonst
+# `make setup` bei allen, die nur entwickeln. Den Link legt `make setup` an.
+-e ./.libs/ProjectTools
