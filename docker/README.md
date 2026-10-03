@@ -71,7 +71,11 @@ Start it with `docker compose up -d`. This is an alternative to the
 - Cached prices, automatic refreshes and historical price charts.
 - ETF metadata such as TER, provider and fund size (in millions of EUR) when the
   source supplies it.
-- Manual values for metadata that the sources do not provide.
+- Manual values for metadata that the sources do not provide, in an expandable
+  detail area per row:
+
+  ![Detail area](../unraid/screenshots/detail-area.png)
+
 - A dashboard for managing instruments, viewing charts and configuring sources.
   A short note below the asset list states the limits of the displayed data.
 - An **About** tab under Settings, also linked from the status bar, explains the

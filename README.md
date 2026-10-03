@@ -67,6 +67,9 @@ metrics and source configuration, with German and English UI.
   value fills a gap, it never overwrites. It stays stored while the source covers
   it and applies again as soon as the source goes quiet. This is the intended route
   for TER and fund size of non-European ETFs, which no free source states reliably.
+
+  ![Detail area](unraid/screenshots/detail-area.png)
+
 - **Dashboard** — overview with column sorting, docked price chart, 8 themes,
   German/English UI, exchange legend, profile links, JSON export.
 
