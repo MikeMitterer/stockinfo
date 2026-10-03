@@ -113,6 +113,7 @@ dev-down: ## Gesamten Stack stoppen (overmind quit, dann Ports freigeben)
 	-@overmind quit 2>/dev/null || true
 	@# Raeumt nach einem Absturz overmind/tmux DIESES Projekts, eine verwaiste
 	@# .overmind.sock und die Ports aus .dev-ports.conf.sh auf.
+	@test -r "$(PROJECT_TOOLS)/bash/dev-ports.sh" || { echo "ProjectTools fehlt; make setup ausführen" >&2; exit 1; }
 	@"$(PROJECT_TOOLS)/bash/dev-ports.sh" --kill
 	@echo -e "  $(GREEN)✓$(RESET) Stack gestoppt"
 
