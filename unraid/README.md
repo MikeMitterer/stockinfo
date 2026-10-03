@@ -87,12 +87,6 @@ Remove the test container and test template when finished.
 | FX rate TTL (hours) | `1` | Exchange-rate cache lifetime |
 | OpenFIGI API key | Empty | Optional key for a higher OpenFIGI rate limit |
 | Timezone | `UTC` | Log timezone, for example `Europe/Vienna` |
-| CORS origins | `["http://localhost:5173"]` | Web pages on another address that may call the API, as a JSON list |
-
-**Using StockPortfolio?** Its web app calls StockInfo directly from the
-browser. Enter the exact address you open StockPortfolio at, including port,
-under **CORS origins**, for example `["http://tower:8088"]`. Keep the brackets
-and quotes; an empty field or a plain address stops the container at startup.
 
 Some optional fields appear in Unraid's advanced view. The template uses
 bridge networking. Dashboard and API share the same port.
