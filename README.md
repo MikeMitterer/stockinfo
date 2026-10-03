@@ -224,6 +224,7 @@ forces it).
 | `GET /quote?symbol=VGWL.DE` | quote by full Yahoo symbol (suffix = exchange) |
 | `GET /quote/{isin}/history` | intraday history (collected ticks) |
 | `GET /quote/{isin}/daily?period=1w\|1m\|3m\|1y\|max` | real end-of-day closes (EOD, cached) |
+| `GET /fx?base=EUR&quote=USD` | exchange rate: 1 `base` = rate `quote`; `quote_time` is the time the source states, or the fetch time if it states none |
 | `GET /instruments` | all cached instruments with their latest quote |
 | `POST /instruments/intake` | resolve an identifier and add the instrument; optionally confirm a different exchange before saving |
 | `GET /fields` | core and plugin field descriptions, detail schema and schema versions |
@@ -234,6 +235,7 @@ forces it).
 | `PUT /instruments/by-symbol/{symbol}/isin` | add an ISIN after the fact |
 | `PATCH /instruments/by-id/{listing_id}/details` | set or remove manual detail values |
 | `DELETE /instruments/{isin}` | delete an instrument including its history |
+| `GET /backups` · `POST /backups` · `POST /backups/{name}/restore` | list backups / create one / schedule a restore (`202`; it takes effect on the next restart) |
 
 For instruments **without an ISIN**, use `GET /quote?symbol=…` for a quote.
 History, daily, refresh and delete have `…/by-symbol/{symbol}` variants.
