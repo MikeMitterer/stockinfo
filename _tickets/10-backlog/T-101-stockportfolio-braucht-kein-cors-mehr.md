@@ -17,9 +17,16 @@ StockInfo trägt er nichts ein.
 StockPortfolio T-82). Beschreibt die Lage aus Konsumentensicht; über Folgen in
 StockInfo entscheidet, wer den Dienst kennt.
 
+**Erledigt in StockInfo · 2026-10-04 (Mike: „ja, mach das“):** T-100 liegt
+mit Begründung in `90-rejected/`. In T-99 ist die CORS-Anforderung durch einen
+Hinweis auf dieses Ticket ersetzt. `README.md`, `docker/README.md` und
+`unraid/README.md` sind geprüft und brauchen keine Änderung. Code bleibt
+unverändert. Offen ist nur Mikes Bestätigung, dass das Ticket abgeschlossen
+ist.
+
 ## Was sich für StockInfo ändert
 
-- **T-100 (`80-iced/`, CORS_ORIGINS robust lesen):** Wurde zurückgestellt,
+- **T-100 (jetzt `90-rejected/`, CORS_ORIGINS robust lesen):** Wurde zurückgestellt,
   bis T-82 kommt. T-82 ist umgesetzt; StockPortfolio braucht das Feld nicht
   mehr. Ob T-100 für andere Konsumenten noch Wert hat, entscheidet StockInfo.
 - **T-99 (`10-backlog/`, Testmodus für Konsumenten):** Die Anforderung

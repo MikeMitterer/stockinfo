@@ -71,7 +71,9 @@ Was StockPortfolio dabei erwartet:
 - **Gezielte Fehlantworten:** StockPortfolio speist heute über eine eigene
   Middleware Fehler ein (zum Beispiel 503 für den Typkatalog), um seine
   Fehlermeldungen zu prüfen.
-- **CORS** für die Browser-Herkunft des Teststacks (`http://127.0.0.1:5175`).
+
+CORS für den Teststack ist nicht nötig: Seit StockPortfolio T-82 spricht der
+Browser nur mit StockPortfolio, nie direkt mit StockInfo (T-101).
 
 ## Auswirkung
 

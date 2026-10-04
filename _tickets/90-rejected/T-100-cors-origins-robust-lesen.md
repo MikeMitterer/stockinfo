@@ -16,6 +16,11 @@ leitet StockInfo-Abfragen über den eigenen Server; dann braucht StockPortfolio
 kein `CORS_ORIGINS` mehr, und dieses Ticket wird voraussichtlich
 überflüssig. Wiederaufnahme nur, wenn T-82 nicht kommt. Keine Umsetzung.
 
+> **Verworfen am 2026-10-04, Entscheidung Mike.** StockPortfolio T-82 ist
+> umgesetzt; StockPortfolio braucht `CORS_ORIGINS` nicht mehr, und das Feld
+> ist aus der Unraid-Vorlage entfernt (T-101). Ein anderer Konsument, der den
+> Wert setzt, ist nicht bekannt. `CORS_ORIGINS` bleibt als JSON-Liste gültig.
+
 ## Ausgangslage
 
 `Settings.cors_origins` ist `list[str]` (`app/config.py`). `pydantic-settings`
