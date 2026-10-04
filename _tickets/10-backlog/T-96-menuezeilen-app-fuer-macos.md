@@ -71,6 +71,23 @@ Netz; native Pakete brauchen Windows-Wheels. Daten nie im App-Ordner, der
 unter `Program Files` schreibgeschützt sein kann. Derselbe Weg löst später
 auch eine eigenständige Mac-`.app`.
 
+**Variante: venv mitliefern.** Statt `uv sync` beim ersten Start legt der
+Build die Umgebung je Zielplattform fertig an und packt sie in den
+App-Ordner: das verschiebbare Python (python-build-standalone) und eine venv
+mit `uv venv --relocatable`, gefüllt per `uv sync` aus dem Lockfile. Damit
+braucht der erste Start kein Netz, und fehlende Windows-Wheels fallen schon
+beim Bauen auf statt beim Anwender. Im Prototyp zu prüfen:
+
+- Die venv startet nach dem Verschieben in einen anderen Ordner noch; ihr
+  Verweis auf das mitgelieferte Python darf auf keinen festen Pfad zeigen.
+- pip liegt in der fertigen Umgebung, denn `app/plugin_env.py` installiert
+  Plugins mit `sys.executable -m pip install --target` in den Datenordner.
+  Ein späteres `uv sync` darf es nicht wieder entfernen.
+- Die Plugin-Installation braucht weiterhin Netz; das betrifft nur Plugins,
+  nicht den Start der App.
+
+Der Preis ist ein Build je Plattform und ein größerer App-Ordner.
+
 ### Offene Fragen vor der Aktivierung
 
 - Fester Port der Menüzeilen-App und Verhalten bei belegtem Port.
