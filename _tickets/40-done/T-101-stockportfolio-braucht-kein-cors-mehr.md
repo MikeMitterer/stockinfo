@@ -21,8 +21,7 @@ StockInfo entscheidet, wer den Dienst kennt.
 mit Begründung in `90-rejected/`. In T-99 ist die CORS-Anforderung durch einen
 Hinweis auf dieses Ticket ersetzt. `README.md`, `docker/README.md` und
 `unraid/README.md` sind geprüft und brauchen keine Änderung. Code bleibt
-unverändert. Offen ist nur Mikes Bestätigung, dass das Ticket abgeschlossen
-ist.
+unverändert. Mike hat den Abschluss am 2026-10-04 bestätigt (`40-done/`).
 
 ## Was sich für StockInfo ändert
 
