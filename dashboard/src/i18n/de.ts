@@ -353,7 +353,7 @@ export const de = {
     use: 'Prüfe wichtige Angaben vor einer Entscheidung bei der ursprünglichen Quelle. StockInfo berücksichtigt deine persönliche Situation nicht und bietet keine persönliche Anlageberatung.',
     legal: 'Die Software steht unter der EUPL 1.2. MangoLilas Erklärung für Verbraucher erläutert die geltenden Regeln zu Gewährleistung und Haftung.',
     licenseLink: 'EUPL 1.2 (Deutsch)',
-    licensingLink: 'Lizenz- und Verbraucherklärung',
+    licensingLink: 'Lizenz- und Verbrauchererklärung',
     financialContentLink: 'MangoLila: Hinweise zu Finanzinhalten',
   },
   json: {
