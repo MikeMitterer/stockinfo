@@ -2,6 +2,48 @@
 
 Generated from release tags and Conventional Commits.
 
+## v1.6.0+261015.2039.a7b4e — 2026-10-15
+
+1.6.0: justETF fund metrics fixed, third-party notices, reworked documentation, REST contract without unbuilt promises
+
+### Documentation
+
+- Dashboard, Detailbereich und Swagger auf Stand 1.5.0 (`f1048b5`)
+- Detailbereich-Screenshot in README und Docker-Anleitung (`dbbcc1f`)
+- Hinweis auf StockPortfolio (`4944adf`)
+- StockPortfolio als eigener Abschnitt (`fa33e90`)
+- StockPortfolio-Abschnitt vor die Release-Highlights (`dc050ba`)
+- doppelte Leerzeile entfernt (`6a144c1`)
+- Verbrauchererklärung auf EUPL-Ausschlüsse mit Vorbehalt umstellen (`be6f400`)
+- deutsche Fassung README.de.md und Kopf nach der Vorlage (`2b0953d`)
+- README nach dem Skill, Entwicklung in docs/development.md (`e5e237c`)
+- EUPL-Baustein des Skills, Vertragsdoku ohne geplanten Ablauf (`6e004ea`)
+- Lizenz-Kurzform in docker/README.md, Fixtures nicht als Laufzeitvertrag (`86588e9`)
+- Sprachfassungs-Regel beim Pre-Commit-Hook erklären (`4d41532`)
+- About-Punkt und Werkzeugerklärungen kürzen, Skill docs-conventions (`35d9761`)
+- Swagger-Screenshot nach Docstring-Änderung quittiert (`da653ce`)
+- Übersicht, Rücksprünge und Befehlsblöcke nach docs-conventions (T-111) (`dcd735d`)
+
+### Fixes
+
+- dev-down beendet nur overmind dieses Projekts (`c14ee87`)
+- Pre-Commit-Hook prüft den vorgemerkten Stand, Pflichtdateien mit Grund (`e57c7f4`)
+- Hook löst relativen PROJECT\_TOOLS-Pfad auf, Deno 2 als Voraussetzung (`9fc2e8e`)
+- justetf-scraping auf Fork mit Korrektur der Basistabelle pinnen (`86d0e15`)
+- justETF-Antwort ohne Kennzahlen lässt den gespeicherten Stand stehen (`558add9`)
+- Anzahl der geprüften Lizenzdokumente aus der Liste nennen (`1d3ad0b`)
+- Inter-Copyright vollständig aus der Paketlizenz (`c68c088`)
+- README-Vorlage und Unraid-Absatz korrigieren (`8e80372`)
+
+### Features
+
+- docs-check mit Config, Make-Target und Pre-Commit-Hook einrichten (`bc8e0c8`)
+- Hinweise zu Fremdkomponenten in THIRD\_PARTY\_NOTICES.md (`a3faa7f`)
+
+### Other changes
+
+- JSON-Vertragstest, Fixtures und planned entfernen (T-110) (`5b3a929`)
+
 ## v1.5.0+261003.1224.04ac2 — 2026-10-03
 
 chore: bump version to 1.5.0
