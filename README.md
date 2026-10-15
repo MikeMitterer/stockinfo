@@ -194,19 +194,18 @@ StockInfo is licensed under the **[EUPL 1.2](LICENSE)**, version 1.2 only.
 It permits personal and commercial use, changes, redistribution, sale and
 hosting without a paid license.
 
-If you change or redistribute StockInfo, keep the copyright and license
-notices, mark your changes and provide the corresponding source under the
-license's copyleft rules. This also applies when you offer StockInfo as a
-network service.
+If you redistribute StockInfo or a changed version, or offer it as a network
+service, keep the copyright and license notices, mark your changes and
+provide the corresponding source under the license's copyleft rules.
 
 The warranty and liability exclusions in EUPL Articles 7 and 8 also apply to
 consumers, as far as the law permits. Mandatory rights remain unaffected,
 including liability for intent, gross negligence, personal injury and product
 liability. No additional guarantee is given.
 
-The independent [`plugin_api/`](plugin_api/) package and its example plugin
-remain under [MIT](plugin_api/LICENSE). Third-party components retain their
-own licenses.
+The independent [`plugin_api/`](plugin_api/) package remains under
+[MIT](plugin_api/LICENSE). Third-party components retain their own
+licenses.
 
 Contact: **office@MangoLila.at**.
 

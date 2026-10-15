@@ -115,10 +115,6 @@ werden gelesen, ohne Zusage auf Antwort, Fix oder neue Funktion.
 
 ## 13. Lizenz
 
-In dieser Reihenfolge: Copyright und Lizenzgeber; EUPL 1.2 (nur diese
-Version) und was sie erlaubt; was sie verlangt (Hinweise behalten,
-Änderungen kennzeichnen, Quelltext und Copyleft, auch für Netzwerkdienste);
-Kurzfassung der Verbrauchererklärung (Artikel 7 und 8, zwingende Rechte,
-keine Garantie); MIT für `plugin_api/`; Kontakt; eine Link-Zeile auf
-`LICENSE`, `LICENSE.de.txt` und `LICENSING.md`. Quelle für jede Aussage ist
-`LICENSING.md`; der Aufbau folgt StockPortfolios README.
+Baustein `templates/license-eupl.md` aus dem Skill `readme-conventions`,
+Wortlaut unverändert. Alle Werte und Links aus `LICENSING.md` und den dort
+genannten Lizenzdateien; das bisherige README ist keine Quelle.

@@ -202,10 +202,10 @@ StockInfo steht unter der **[EUPL 1.2](LICENSE)**, nur Version 1.2. Sie
 erlaubt private und gewerbliche Nutzung, Änderungen, Weitergabe, Verkauf und
 Hosting ohne kostenpflichtige Lizenz.
 
-Wer StockInfo ändert oder weitergibt, muss die Urheber- und Lizenzhinweise
-erhalten, Änderungen kennzeichnen und den zugehörigen Quelltext nach den
-Copyleft-Regeln der Lizenz bereitstellen. Das gilt auch, wenn StockInfo als
-Netzwerkdienst angeboten wird.
+Wer StockInfo oder eine geänderte Fassung weitergibt oder als Netzwerkdienst
+anbietet, muss die Urheber- und Lizenzhinweise erhalten, Änderungen
+kennzeichnen und den zugehörigen Quelltext nach den Copyleft-Regeln der
+Lizenz bereitstellen.
 
 Die Gewährleistungs- und Haftungsausschlüsse der EUPL-Artikel 7 und 8 gelten
 auch gegenüber Verbrauchern, soweit das Gesetz es zulässt. Zwingende Rechte
@@ -213,9 +213,9 @@ bleiben unberührt, darunter die Haftung für Vorsatz, grobe Fahrlässigkeit,
 Personenschäden und nach dem Produkthaftungsgesetz. Eine zusätzliche Garantie
 wird nicht übernommen.
 
-Das unabhängige Paket [`plugin_api/`](plugin_api/) und sein Beispiel-Plugin
-stehen weiter unter [MIT](plugin_api/LICENSE). Komponenten Dritter behalten
-ihre eigenen Lizenzen.
+Das unabhängige Paket [`plugin_api/`](plugin_api/) steht weiter unter
+[MIT](plugin_api/LICENSE). Komponenten Dritter behalten ihre eigenen
+Lizenzen.
 
 Kontakt: **office@MangoLila.at**.
 
