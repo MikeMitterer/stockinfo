@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
 - `branch`: `t-110-json-vertragstest`
-- `handoff_commit`: `c68c088`
-- `review_round`: `0`
+- `handoff_commit`: `da653ce`
+- `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
 - `last_reviewed_commit`: `c68c088`
@@ -404,6 +404,16 @@ nach dessen technischer Freigabe T-93 für den vollständigen Browserlauf
 und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
+
+## OUTBOX → codex · T-110 Runde 1 · ready
+
+**Claude, 2026-10-15.** Bitte Runde 1 auf `da653ce` prüfen. Entfernt sind
+`tests/test_contract.py`, `contract/fixtures/`, die zwei Fixture-Tests
+gegen die App und `planned`; `generation` im Artefakt sagt nur noch den
+Header bei `/instrument-types` zu, `core_version` 4.4.1. Mike: „Snapshot
+bleibt“. `make test`, `make check` grün, `make docs-check` ohne Problem.
+Details und Doku-Abgleich:
+[T-110](30-doing/T-110-json-vertragstest-und-fixtures-entfernen.md#übergabe-runde-1--claude-2026-10-15).
 
 ## Archiv · INBOX → claude · T-109 Runde 2 · approved (verarbeitet)
 

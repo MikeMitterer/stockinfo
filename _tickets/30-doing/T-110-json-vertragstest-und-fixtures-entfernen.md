@@ -78,4 +78,55 @@ Problem, `git grep` findet außer Historie keinen Verweis mehr auf
 
 ## Review-Verlauf (neueste Runde zuerst)
 
-Noch keine Übergabe.
+### Übergabe Runde 1 · Claude, 2026-10-15
+
+Prüffassung `da653ce` (Umsetzung `5b3a929`, Quittung `da653ce`).
+
+**Umgesetzt nach Scope-Vertrag:**
+
+1. Entfernt: `tests/test_contract.py`, `contract/fixtures/` (15 Dateien),
+   `test_http_fixture_entspricht_der_laufenden_api` und
+   `test_die_fixture_zeigt_was_der_dienst_wirklich_antwortet`. Die
+   UUID-Prüfung des Headers aus dem ersten Test steht jetzt in
+   `test_typen_kommen_aus_plugins_ohne_instrumente`.
+2. Artefakt: `planned` entfernt; `generation` nennt nur noch Header,
+   `sent_by: ["/instrument-types"]`, `cache_control`, `id_kind` und eine Regel,
+   die dem Verhalten entspricht; der Satz zu `/generation` in
+   `contract_endpoints_note` ist weg; `core_version` 4.4.1.
+3. Docstrings in `app/contract.py`, `app/main.py`, `app/models.py`,
+   `app/persistence/repository.py`, `tests/test_contract_openapi.py`,
+   `tests/test_symbol_ambiguity.py` verweisen nicht mehr auf Fixtures.
+   Schnappschuss mit `UPDATE_CORE_SNAPSHOT=1` erneuert: nur `core_version`
+   und die Beschreibung von `AmbiguousSymbolDetail` ändern sich.
+4. Mike, 2026-10-15: „Snapshot bleibt“ — `openapi-core-snapshot.json` und
+   `tests/test_contract_openapi.py` bleiben unverändert im Umfang.
+
+**Doku-Abgleich:**
+
+- `contract/README.md`: Verzeichnisbaum, Fixture-Absätze und
+  `test_contract.py`-Aufruf entfernt; „Für dieses Repo“ beschreibt jetzt,
+  was `test_contract_openapi.py` prüft; „Wenn sich etwas ändert“ verlangt
+  Modell und Artefakteintrag statt Fixture.
+- `docs/rest-core-contract.md`: Version 4.4.1, Stand 2026-10-15; Satz zu
+  Fixtures unter dem Kopf, Auszug `core_version`, Satz unter `/fields`,
+  Fixture-Links im Typkatalog und Stufen 1–2 von „Wie man den Vertrag
+  prüft“. Der Abschnitt zur Generation stimmte schon mit dem Verhalten
+  überein und bleibt.
+- `docs/development.md`: Zeile `contract/` im Projektaufbau.
+- `README.md`, `README.de.md`, `docker/README.md`, `unraid/README.md`,
+  `docs/plugin-authors.md`: unverändert, sie nennen weder Fixtures noch
+  `/generation`; `plugin-authors.md` beschreibt den Header schon korrekt
+  nur für `/instrument-types`.
+
+**Nachweise:**
+
+- `git grep -n -E 'contract/fixtures|test_contract\.py|"planned"|generation_runtime|/generation\b'`
+  außerhalb von `_tickets/`, `docs/superpowers/` und `CHANGELOG.md`: kein
+  Treffer.
+- `make test`: 1246 passed, 1 skipped; Dashboard 399 passed.
+  `make check`: ruff und `vue-tsc` ohne Befund. `make docs-check`: keine
+  Probleme; der Swagger-Screenshot-Hinweis kam nur aus dem Docstring in
+  `app/main.py` (Oberfläche unverändert) und ist quittiert.
+- StockPortfolio: Ticket
+  `_tickets/10-backlog/T-97-stockinfo-vertragsfixtures-ohne-quelle.md`
+  angelegt, dort nicht committet (fremdes Repo, nur Ticket).
