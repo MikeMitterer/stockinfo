@@ -27,19 +27,27 @@ schaltet den Branch. Regel:
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
 - `phase`: `approved`
-- `ticket`: `T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
-- `branch`: `t-106-doku-kuerzen`
-- `handoff_commit`: `b5f641c`
+- `ticket`: `T-107-skill-namen-code-und-ux-conventions.md`
+- `branch`: `t-107-skill-namen`
+- `handoff_commit`: `862ac11`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
 - `owner`: `claude`
 - `updated_at`: `2026-10-15`
-- `last_reviewed_ticket`: `T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
-- `last_reviewed_commit`: `b5f641c`
+- `last_reviewed_ticket`: `T-107-skill-namen-code-und-ux-conventions.md`
+- `last_reviewed_commit`: `862ac11`
 - `last_reviewed_round`: `1`
 - `workstream`: `doku-pruefung`
-- `priority_chain`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md → T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
-- `priority_ticket`: `T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
+- `priority_chain`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md → T-106-container-anleitung-und-entwicklerdoku-kuerzen.md → T-107-skill-namen-code-und-ux-conventions.md`
+- `priority_ticket`: `T-107-skill-namen-code-und-ux-conventions.md`
+
+**T-106 gemergt, T-107 aktiv · Claude, 2026-10-15.** Codex hat T-106 in
+Runde 1 freigegeben (`7072f2c`); `t-106-doku-kuerzen` ist lokal nach
+`master` gemergt (`e2bc7fe`), kein Push. T-105 und T-106 bleiben bis zu
+Mikes Abnahme in `30-doing/`. Mikes Folgeauftrag
+[T-107](30-doing/T-107-skill-namen-code-und-ux-conventions.md) ist aktiv auf
+`t-107-skill-namen` (von `master`), Coder `claude`, Verifier `codex`.
+`handoff_commit` und `last_reviewed_*` beschreiben noch T-106.
 
 **T-105 gemergt, T-106 aktiv · Claude, 2026-10-15.** Codex hat T-105 in
 Runde 1 freigegeben (`dec2a75`); `t-105-sprachfassungs-regel` ist lokal
@@ -367,6 +375,15 @@ nach dessen technischer Freigabe T-93 für den vollständigen Browserlauf
 und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
+
+## Archiv · INBOX → claude · T-107 Runde 1 · approved (verarbeitet)
+
+**Codex, 2026-10-15.** `862ac11` ist technisch freigegeben. Alle acht
+aktiven Verweise nennen die vorhandenen Skills `code-conventions` und
+`ux-conventions`; historische Dateien bleiben unverändert.
+`make docs-check` und `git diff --check` waren unabhängig grün. Keine
+menschliche Abnahme und kein Push durch dieses Review. Nachweise:
+[T-107](30-doing/T-107-skill-namen-code-und-ux-conventions.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-106 Runde 1 · approved (verarbeitet)
 
@@ -2626,7 +2643,11 @@ T-70 ist keine zweite fortgeschriebene Fassung des Haupttickets.
 
 Die [Aufnahmeregel](.agents/AGENT-WORKFLOW.md#ticketgrenzen) erlaubt höchstens
 zwei zusätzliche Tickets bei begründetem Bedarf. Andere Ordner haben kein Limit.
-Aktuelle Ausnahmen: keine. Bei einer Überschreitung hier Ordner, betroffene
+Aktuelle Ausnahmen: `30-doing` mit drei Tickets (T-105, T-106, T-107), eins
+über der Zielgrenze, unter der harten Obergrenze. Bedarf: T-105 und T-106
+sind technisch freigegeben und gemergt und warten nur auf Mikes Abnahme;
+T-107 ist ein kleiner Folgeauftrag (Mike, 2026-10-15). Bei einer
+Überschreitung hier Ordner, betroffene
 Tickets und konkreten Bedarf nennen; nach Rückkehr zur Zielgrenze entfernen.
 Der Bestand wird aus den Ticketdateien ermittelt, nicht als Zähler gepflegt.
 
