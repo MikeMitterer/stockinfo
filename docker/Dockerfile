@@ -41,7 +41,7 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 # pyproject.toml ist die Versions-Quelle — app/__init__.py liest sie zur Laufzeit.
 # Die Lizenz begleitet auch das ausgelieferte Image.
 COPY pyproject.toml .
-COPY LICENSE LICENSE.de.txt LICENSING.md ./
+COPY LICENSE LICENSE.de.txt LICENSING.md THIRD_PARTY_NOTICES.md ./
 COPY app ./app
 
 # Alle im Repository mitgelieferten Lizenztexte müssen im fertigen Image liegen.
@@ -49,6 +49,7 @@ COPY app ./app
 RUN test -s /app/LICENSE \
     && test -s /app/LICENSE.de.txt \
     && test -s /app/LICENSING.md \
+    && test -s /app/THIRD_PARTY_NOTICES.md \
     && test -s /app/plugin_api/LICENSE \
     && test -s /app/plugin_api/examples/us-example/LICENSE
 

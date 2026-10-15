@@ -220,4 +220,5 @@ Lizenzen.
 Kontakt: **office@MangoLila.at**.
 
 Details: [LICENSE](LICENSE) · [Deutscher Lizenztext](LICENSE.de.txt) ·
-[Anbieter- und Verbrauchererklärung](LICENSING.md)
+[Anbieter- und Verbrauchererklärung](LICENSING.md) · [Hinweise zu
+Fremdkomponenten](THIRD_PARTY_NOTICES.md)

@@ -26,6 +26,7 @@ DOCS=(
     "contract/README.md"
     "docs"
     "LICENSING.md"
+    "THIRD_PARTY_NOTICES.md"
 )
 
 # Interne Doku: nur tote Links und Anker prüfen; Ticketnummern und
@@ -161,6 +162,7 @@ REQUIRED=(
     "./LICENSE|EUPL 1.2, englischer Lizenztext"
     "./LICENSE.de.txt|EUPL 1.2, amtlicher deutscher Lizenztext"
     "./LICENSING.md|Anbieter- und Verbrauchererklärung"
+    "./THIRD_PARTY_NOTICES.md|Hinweise zu Fremdkomponenten, liegt im Image unter /app"
 
     # Projektregeln für Agenten
     "./AGENTS.md|Projektregeln"

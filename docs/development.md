@@ -294,6 +294,7 @@ TARGET=ghcr make push        # push to the same target used for the build
 
 `make build` copies the [EUPL license](../LICENSE), its [German text](../LICENSE.de.txt),
 [licensing and provider declaration](../LICENSING.md), the
+[third-party notices](../THIRD_PARTY_NOTICES.md), the
 [`plugin_api` MIT license](../plugin_api/LICENSE), and the example plugin's MIT
 license into the image. It checks the files, their SHA-256 hashes, the target
 architecture, and the OCI license and source labels before recording a build as

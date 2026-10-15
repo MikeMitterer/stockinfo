@@ -27,19 +27,23 @@ schaltet den Branch. Regel:
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
 - `phase`: `portfolio_review`
-- `ticket`: `T-108-lokale-vorschau-ausnahme-streichen.md`
+- `ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
 - `branch`: `master`
-- `handoff_commit`: `5d4f429`
-- `review_round`: `1`
+- `handoff_commit`: `c68c088`
+- `review_round`: `2`
 - `max_review_rounds`: `5`
 - `owner`: `mike`
 - `updated_at`: `2026-10-15`
-- `last_reviewed_ticket`: `T-108-lokale-vorschau-ausnahme-streichen.md`
-- `last_reviewed_commit`: `5d4f429`
-- `last_reviewed_round`: `1`
+- `last_reviewed_ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
+- `last_reviewed_commit`: `c68c088`
+- `last_reviewed_round`: `2`
 - `workstream`: `doku-pruefung`
-- `priority_chain`: `T-108-lokale-vorschau-ausnahme-streichen.md`
-- `priority_ticket`: `T-108-lokale-vorschau-ausnahme-streichen.md`
+- `priority_chain`: `T-109-hinweise-zu-fremdkomponenten.md`
+- `priority_ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
+
+**T-109 gemergt · Claude, 2026-10-15.** Codex hat T-109 in Runde 2 freigegeben (`ccec057`); `t-109-fremdkomponenten` ist lokal nach `master` gemergt, noch nicht gepusht. Zustand `portfolio_review`, `owner: mike`. Offen bei Mike: Abnahme von T-108 und T-109, Push von `master`, Image-Push, Aktivierung von T-110 (in `20-ready/`).
+
+**T-109 aktiv · Claude, 2026-10-15.** Mikes Auftrag („5 - ja“, „erledige erst T-109“): neue Kette mit [T-109](30-doing/T-109-hinweise-zu-fremdkomponenten.md) auf `t-109-fremdkomponenten` (von `master`), Coder `claude`, Verifier `codex`. T-108 bleibt bis zu Mikes Abnahme in `30-doing/`; `master` ist gepusht (`c822dcf`). Image-Build und -Push folgen nach T-109.
 
 **T-105 bis T-107 abgenommen, T-108 gemergt · 2026-10-15.** Mike: „T-105
 bis T-107 sind abgenommen“; die drei Tickets liegen in `40-done/`, die
@@ -398,6 +402,28 @@ nach dessen technischer Freigabe T-93 für den vollständigen Browserlauf
 und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
+
+## Archiv · INBOX → claude · T-109 Runde 2 · approved (verarbeitet)
+
+**Codex, 2026-10-15.** `c68c088` ist technisch freigegeben. Der
+vollständige Inter-Copyright-Kopf und der OFL-Text wurden unabhängig
+gegen die installierten Paketlizenzen verglichen. Die lokale Image-Datei
+ist bytegleich zur Repository-Datei; `make docs-check` ist grün. Keine
+menschliche Abnahme und kein Push durch dieses Review. Nachweise:
+[T-109](30-doing/T-109-hinweise-zu-fremdkomponenten.md#verifier-prüfung--runde-2--codex-2026-10-15).
+
+## Archiv · INBOX → claude · T-109 Runde 1 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-15.** `9d4f4b1` ist noch nicht technisch freigegeben.
+Die Inter-Paketlizenz enthält in der Copyright-Zeile einen zusätzlichen
+Hinweis auf `Inter-Italic[opsz,wght].ttf`, der in
+`THIRD_PARTY_NOTICES.md` fehlt. Der Vergleich ab Zeile 3 hat diese
+Abweichung nicht erfasst. Bitte den vollständigen Kopf beider
+Schriftlizenzen gegen die installierten Paketdateien prüfen und den
+Inter-Hinweis ergänzen. `make docs-check` und `bash -n` sind grün;
+der Docker-Build wurde in diesem Review wegen des Inhaltsbefunds nicht
+wiederholt. Fundstellen und Nachweise:
+[T-109](30-doing/T-109-hinweise-zu-fremdkomponenten.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-108 Runde 1 · approved (verarbeitet)
 

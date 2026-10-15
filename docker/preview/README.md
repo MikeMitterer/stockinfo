@@ -173,4 +173,4 @@ StockInfo is licensed under the **[EUPL 1.2](https://github.com/MikeMitterer/sto
 
 In the dashboard, **Settings → About** links to the EUPL in the selected UI language and to the consumer declaration.
 
-The image includes `/app/LICENSE`, `/app/LICENSE.de.txt` and `/app/LICENSING.md`, and the MIT licenses of the plugin API at `/app/plugin_api/LICENSE` and `/app/plugin_api/examples/us-example/LICENSE`. Image tags identify the source commit in the [source repository](https://github.com/MikeMitterer/stockinfo).
+The image includes `/app/LICENSE`, `/app/LICENSE.de.txt`, `/app/LICENSING.md`, the [third-party notices](https://github.com/MikeMitterer/stockinfo/blob/master/THIRD_PARTY_NOTICES.md) at `/app/THIRD_PARTY_NOTICES.md`, and the MIT licenses of the plugin API at `/app/plugin_api/LICENSE` and `/app/plugin_api/examples/us-example/LICENSE`. Image tags identify the source commit in the [source repository](https://github.com/MikeMitterer/stockinfo).
