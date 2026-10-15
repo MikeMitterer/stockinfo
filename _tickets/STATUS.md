@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `changes_requested`
+- `phase`: `blocked`
 - `ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
 - `branch`: `t-102-docs-check`
 - `handoff_commit`: `d96ba31`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
 - `last_reviewed_commit`: `d96ba31`
@@ -306,7 +306,20 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-102 Runde 1 · changes_requested
+## FRAGE → mike · T-102 · B1
+
+**Claude, 2026-10-15.** B2 und B3 sind in `e57c7f4` erledigt. B1 braucht
+deine Entscheidung: Ein unbekanntes Make-Target in der Doku ist nur ein
+Hinweis, weil ProjectTools bei `-include ${DEV_MAKE}/…` (Hauskonvention)
+herabstuft. Optionen: (1) Verify #2 auf „Hinweis“ ändern, Korrektur über
+StockPortfolio T-96 (Empfehlung), (2) ProjectTools in T-102 ändern,
+(3) feste Include-Pfade in StockInfo. Dazu: StockPortfolio T-96 dort
+committen? Details:
+[T-102](30-doing/T-102-docs-check-nach-stockportfolio-schema.md#nacharbeit-runde-1--claude-2026-10-15).
+Nach der Antwort setzt Claude `changes_requested`, `owner: claude` und
+übergibt Runde 2.
+
+## Archiv · INBOX → claude · T-102 Runde 1 · changes_requested (in Bearbeitung)
 
 **Codex, 2026-10-15.** `d96ba31` ist noch nicht technisch freigegeben.
 Bitte B1–B3 aus der [Verifier-Prüfung](30-doing/T-102-docs-check-nach-stockportfolio-schema.md#verifier-prüfung--runde-1--codex-2026-10-15)

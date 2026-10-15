@@ -182,6 +182,47 @@ menschliche Abnahme.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Nacharbeit Runde 1 · Claude, 2026-10-15
+
+**Stand:** `e57c7f4`, noch nicht übergeben. B2 und B3 erledigt, B1 wartet
+auf Mike.
+
+**B2 · Hook prüft den vorgemerkten Stand.** `.githooks/pre-commit`
+schreibt den Index mit `git checkout-index` in ein temporäres Verzeichnis
+und ruft dort `make docs-check` auf, mit `GIT_DIR` und `GIT_WORK_TREE` auf
+Repository und Snapshot; ein relativer `GIT_INDEX_FILE` (`commit -a`) wird
+absolut gemacht. `bash -n` und ShellCheck grün; kein Snapshot bleibt liegen.
+
+| Fall | Exit |
+|---|---|
+| Fehler in `docker/README.md` vorgemerkt, Arbeitsbaum korrigiert (Codex' Fall) | `git commit` 1, HEAD unverändert, Befund „gehört in denselben Commit“ |
+| Arbeitsbaum fehlerhaft, Index sauber | Hook 0 (`make docs-check` auf dem Arbeitsbaum zum Vergleich 2) |
+| nur Hinweis vorgemerkt | Hook 0 |
+| ProjectTools fehlt | Hook 0, Warnung sichtbar (vorher vom Filter verschluckt, mitkorrigiert) |
+| sauber | Hook 0 |
+
+**B3 · Gründe.** Die fünf Board-Einträge unter `REQUIRED` haben einen
+Grund. Inventar über alle Listen mit Grundfeld (`REQUIRED`, `FORBIDDEN`,
+`KNOWN_VARIABLES`, `INTERNAL_VARIABLES`, `SCREENSHOTS`, `DEPENDS`,
+`DEPENDS_HINT`) durch Sourcen der Config und Zählen der `|`-Felder: kein
+Eintrag ohne Grund. Gegenprobe mit zwei eingebauten Einträgen ohne Grund:
+beide gemeldet. `DOCS`, `LINKS_ONLY`, `EXCLUDE` und `CODE_VARIABLES` kennen
+kein Grundfeld; ihre Gründe stehen im Kommentar über der Liste.
+
+**B1 · Entscheidung Mike.** Ein unbekanntes Make-Target bleibt ein Hinweis.
+Die Herabstufung kommt aus ProjectTools (`readMakefile`, `checkCommand`),
+ausgelöst durch `-include ${DEV_MAKE}/…`. Das ist die Hauskonvention aus
+`makefile-conventions`, `DEV_MAKE` ist in Mikes Shell gesetzt. Möglich:
+
+1. Verify #2 auf „Hinweis mit Zeile und Target“ ändern, Werkzeug über
+   StockPortfolio T-96 korrigieren (Empfehlung: bleibt im Ticketumfang).
+2. ProjectTools in T-102 ändern (hebt die Abgrenzung auf, zweites Repo).
+3. Feste Include-Pfade in StockInfos Makefile (weicht von der Konvention
+   und von StockPortfolio ab).
+
+Außerdem offen: StockPortfolio T-96 dort committen? StockPortfolios Hook hat
+dieselbe Lücke wie B2; nicht angefasst.
+
 ### Verifier-Prüfung · Runde 1 · Codex, 2026-10-15
 
 **Ergebnis: `changes_requested` für `d96ba31`.** Geprüft wurde die
