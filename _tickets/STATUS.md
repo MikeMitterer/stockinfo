@@ -48,6 +48,10 @@ auch von mir“) zum Vorschlag der StockPortfolio-Sitzung: neue Kette mit
 `codex`. Die übrigen offenen Punkte aus dem folgenden Vermerk bleiben bei
 Mike.
 
+**T-103 und T-104 abgenommen · Mike, 2026-10-15.** „T-103 und T-104 sind
+somit abgenommen“. Beide liegen in `40-done/`; die Verweise hier zeigen
+dorthin.
+
 **T-104 gemergt, Kette abgeschlossen · Claude, 2026-10-15.** Codex hat
 T-104 in Runde 3 freigegeben (`d71c5ee`); `t-104-readme-nach-skill` ist
 lokal nach `master` gemergt (`1d44c9e`), kein Push. Mike hat auch den
@@ -64,7 +68,7 @@ in `30-doing/`. Mikes Auftrag „Bevor du das Image baust - Geh nochmal das
 Readme-Skill durch, überprüfe ob alle Dokus und READMEs den Anforderungen
 entsprechen“ und seine Entscheidung „Wie StockPortfolio“ für den
 README-Umbau ergeben die neue Kette mit
-[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md) auf
+[T-104](40-done/T-104-readme-nach-skill-wie-stockportfolio.md) auf
 `t-104-readme-nach-skill` (von `master`), Coder `claude`, Verifier `codex`.
 Der Image-Build folgt danach mit eigenem Auftrag. `handoff_commit` und
 `last_reviewed_*` beschreiben noch T-103.
@@ -79,13 +83,13 @@ kommt mit dessen Merge nach `master`. T-103 bleibt unverändert aktiv.
 **T-102 gemergt, T-103 aktiv · Claude, 2026-10-15.** Codex hat T-102 in
 Runde 3 freigegeben (`7b2e56b`); `t-102-docs-check` ist lokal nach `master`
 gemergt (`c337fc4`), kein Push. T-102 bleibt bis zu Mikes Abnahme in
-`30-doing/`. [T-103](30-doing/T-103-justetf-liefert-keine-kennzahlen-mehr.md)
+`30-doing/`. [T-103](40-done/T-103-justetf-liefert-keine-kennzahlen-mehr.md)
 ist aktiv auf `t-103-justetf-kennzahlen` (von `master`), Coder `claude`,
 Verifier `codex`. `handoff_commit` und `last_reviewed_*` beschreiben noch
 T-102.
 
 **T-103 in der Kette · Mike, 2026-10-15.** „Nimm T-103 in die Kette nach
-T-102“. [T-103](30-doing/T-103-justetf-liefert-keine-kennzahlen-mehr.md)
+T-102“. [T-103](40-done/T-103-justetf-liefert-keine-kennzahlen-mehr.md)
 liegt in `20-ready/` (Verschiebung von Claude, mitcommittet in `38e693f`)
 und folgt T-102 in `priority_chain`. Aktiviert wird es erst nach der
 technischen Freigabe von T-102. Coder `claude`, Verifier `codex`.
@@ -367,7 +371,7 @@ sichtbar. Keine menschliche Abnahme, kein Push und kein Image-Build durch
 dieses Review.
 
 Nachweise:
-[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md#verifier-prüfung--runde-3--codex-2026-10-15).
+[T-104](40-done/T-104-readme-nach-skill-wie-stockportfolio.md#verifier-prüfung--runde-3--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-104 Runde 2 · changes_requested (verarbeitet)
 
@@ -385,7 +389,7 @@ Die Root-Lizenzabschnitte, Vorlage und Unraid-Kurzform sind korrigiert;
   Docker-Hub-Vorschau danach neu erzeugen.
 
 Fundstellen und Nachweise:
-[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md#verifier-prüfung--runde-2--codex-2026-10-15).
+[T-104](40-done/T-104-readme-nach-skill-wie-stockportfolio.md#verifier-prüfung--runde-2--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-104 Runde 1 · changes_requested (verarbeitet)
 
@@ -395,7 +399,7 @@ folgen (B1); `contract/README.md` beschreibt weiterhin den nicht
 verfügbaren Generation-Ablauf (B2). Den zusätzlichen Umfang habe ich
 einmalig bis 2.800 Diff-Zeilen einschließlich `docs/release-notes.md`
 freigegeben. Nachweise und genaue Korrektur:
-[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md#verifier-prüfung--runde-1--codex-2026-10-15).
+[T-104](40-done/T-104-readme-nach-skill-wie-stockportfolio.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-103 Runde 1 · approved (verarbeitet)
 
@@ -405,7 +409,7 @@ Fork-Commit und PR-Kopf stimmen überein; die zwei Online-Tests und
 ist durch Provider- und Refresh-Test belegt. Der zweite Scope-Nachtrag
 ist als mechanische Restanpassung samt Prozessabweichung im Review
 eingeordnet. Voller Nachweis:
-[T-103](30-doing/T-103-justetf-liefert-keine-kennzahlen-mehr.md#verifier-prüfung--runde-1--codex-2026-10-15).
+[T-103](40-done/T-103-justetf-liefert-keine-kennzahlen-mehr.md#verifier-prüfung--runde-1--codex-2026-10-15).
 Bitte die Freigabe nach dem Board-Workflow verarbeiten; kein Push und
 keine menschliche Abnahme durch Codex.
 
@@ -415,7 +419,7 @@ keine menschliche Abnahme durch Codex.
 Kennzahlen bei leerer justETF-Antwort ist für T-103 freigegeben. Bitte den
 Provider und den gezielten Test umsetzen und danach die vollständige
 Prüffassung übergeben. Entscheidung und Prüfpunkte:
-[T-103](30-doing/T-103-justetf-liefert-keine-kennzahlen-mehr.md#scope-checkpoint-runde-0--codex-2026-10-15).
+[T-103](40-done/T-103-justetf-liefert-keine-kennzahlen-mehr.md#scope-checkpoint-runde-0--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-102 Runde 3 · approved (verarbeitet)
 
@@ -2593,11 +2597,7 @@ T-70 ist keine zweite fortgeschriebene Fassung des Haupttickets.
 
 Die [Aufnahmeregel](.agents/AGENT-WORKFLOW.md#ticketgrenzen) erlaubt höchstens
 zwei zusätzliche Tickets bei begründetem Bedarf. Andere Ordner haben kein Limit.
-Aktuelle Ausnahmen: `30-doing` mit drei Tickets (T-103, T-104, T-105), eins
-über der Zielgrenze, unter der harten Obergrenze. Bedarf: T-103 und T-104
-sind technisch freigegeben und gemergt und warten nur auf Mikes Abnahme;
-T-105 ist ein kleiner Folgeauftrag zu T-104 (Mike, 2026-10-15). Bei einer
-Überschreitung hier Ordner, betroffene
+Aktuelle Ausnahmen: keine. Bei einer Überschreitung hier Ordner, betroffene
 Tickets und konkreten Bedarf nennen; nach Rückkehr zur Zielgrenze entfernen.
 Der Bestand wird aus den Ticketdateien ermittelt, nicht als Zähler gepflegt.
 
