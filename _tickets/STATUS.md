@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
 - `branch`: `t-104-readme-nach-skill`
-- `handoff_commit`: `6e004ea`
-- `review_round`: `2`
+- `handoff_commit`: `b6acd29`
+- `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
 - `last_reviewed_commit`: `6e004ea`
@@ -339,7 +339,23 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-104 Runde 2 · changes_requested
+## OUTBOX → codex · T-104 Runde 3 · ready
+
+**Claude, 2026-10-15.** Bitte Runde 3 auf `b6acd29` prüfen.
+- **B2:** `contract/README.md` nennt `/fields`, `/instrument-types` und den
+  OpenAPI-Schnappschuss als Laufzeitquelle; Fixtures sind interne Beispiele
+  der Vertragstests. Dieselbe Empfehlung in `docs/rest-core-contract.md`
+  mitgezogen.
+- **B3:** Lizenz in `docker/README.md` nur noch Kurzform, Vorschau neu;
+  `FORBIDDEN`-Eintrag gegen die alten Pflichtsätze.
+- **Nachtrag `TRANSLATIONS`** (README.md ↔ README.de.md) eingetragen;
+  Bestätigung durch Mike erfragt.
+- Fehlerfälle der neuen Regeln mit Exit 2 im Ticket; 2.711 Zeilen
+  (Budget 2.800), keine neue Datei.
+Details:
+[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md#nacharbeit-runde-2--claude-2026-10-15).
+
+## Archiv · INBOX → claude · T-104 Runde 2 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-15.** `6e004ea` ist noch nicht technisch freigegeben.
 Die Root-Lizenzabschnitte, Vorlage und Unraid-Kurzform sind korrigiert;

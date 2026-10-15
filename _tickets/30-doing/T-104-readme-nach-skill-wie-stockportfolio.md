@@ -195,6 +195,34 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Nacharbeit Runde 2 · Claude, 2026-10-15
+
+**Prüfstand:** `b6acd29` (Produkt `86588e9`, Quittung `b6acd29`), als
+Runde 3 übergeben. Umfang gesamt 15 Dateien, +1.093/−1.618 = 2.711 Zeilen
+(Budget 2.800); keine neue Datei.
+
+| Befund / Nachtrag | Umsetzung |
+|---|---|
+| B2 | `contract/README.md` „Für Konsumenten“: Laufzeitverhalten aus `GET /fields`, `GET /instrument-types` und `openapi-core-snapshot.json` (von `tests/test_contract_openapi.py` gegen die App geprüft); „Die Fixtures sind keine Beispielantworten der laufenden App“, sie sind interne Beispiele der Vertragstests. Strukturbeispiel und `contract_compliant`-Erklärung stehen unter „Für dieses Repo“. Dieselbe Empfehlung stand in `docs/rest-core-contract.md` („Beispiele für Offline-Konsumententests“, Stufe 2 „StockPortfolio prüft seine Mapper gegen dieselben veröffentlichten Fixtures“) und ist dort passend umformuliert; StockPortfolio arbeitet tatsächlich mit eigenen Kopien (`frontend/tests/fixtures/stockinfo/README.md`) |
+| B3 Docker | `docker/README.md` Lizenzteil nur Kurzform: Copyright und Lizenzgeber, „EUPL 1.2, version 1.2 only“, Verweis auf `../README.md#license`; About-Reiter in einem Satz; `/app/LICENSE*`, MIT-Pfade der Plugin-API, Image-Tags und Source-Repo bleiben. Vorschau neu: 11.963 Bytes |
+| B3 FORBIDDEN | Eintrag wie im Nachtrag |
+| Nachtrag `TRANSLATIONS` (übermittelt von `stockportfolio-97`, ProjectTools `792ade2`; Bestätigung durch Mike erfragt) | `TRANSLATIONS=("README.md\|README.de.md\|deutsche Fassung")` |
+| Hinweis `docker/README.md` → `unraid/README.md` | quittiert: Unraid führt die Lizenz schon als Kurzform |
+
+**Fehlerfälle der neuen Regeln** (eingebaut, `make docs-check`, danach
+zurückgesetzt):
+
+| Fall | Meldung | Exit |
+|---|---|---|
+| „If you change or redistribute …“ in `README.md`, „Wer StockInfo ändert oder weitergibt …“ in `README.de.md` | 2 × „Verbotener Text“ mit Grund | 2 |
+| „Preserve the required notices.“ in `docker/README.md` | „Verbotener Text“ | 2 |
+| Link nur in `README.md` | „README.md ↔ README.de.md … Link nur in README.md: CHANGELOG.md“ | 2 |
+| Überschrift nur in `README.de.md` | „Gliederung weicht ab“ | 2 |
+
+**Nachweise:** `make docs-check` ohne Probleme und Hinweise (18 Dokumente,
+25 Pflichtdateien, 12 Abhängigkeiten, 1 Sprachfassung); Hook bei beiden
+Commits grün.
+
 ### Verifier-Prüfung · Runde 2 · Codex, 2026-10-15
 
 **Ergebnis: `changes_requested` für `6e004ea`.** B1 ist in den beiden
