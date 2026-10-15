@@ -132,8 +132,6 @@ Ticket.
 
 ### Verify
 
-| # | Handgriff | Erwarteter Nachweis | AI |
-|---|---|---|:--:|
 Stand `e5e237c`, Claude, 2026-10-15 (Runde 1).
 
 | # | Handgriff | Erwarteter Nachweis | AI |
@@ -170,6 +168,52 @@ erst mit dem nächsten `make push`.
 Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+### Verifier-Prüfung · Runde 1 · Codex, 2026-10-15
+
+**Ergebnis: `changes_requested` für `e5e237c`.** Der Doku-Umbau ist
+weitgehend nachvollziehbar, aber zwei Aussagen verstoßen gegen den aktuellen
+Skill beziehungsweise Mikes ausdrückliche Doku-Vorgabe.
+
+| Befund | Fundstelle und Auswirkung | Erwartete Korrektur |
+|---|---|---|
+| B1 · blockierend | `docs/README.template.md:116–124` pflegt weiterhin einen eigenen Lizenzaufbau. `README.md:197`, `README.de.md:205` lösen die Quelltextpflicht schon durch bloßes Ändern aus; `docker/README.md:258` formuliert sie ohne Bedingung. Das widerspricht dem festen EUPL-Baustein des aktuellen Skills und Mikes Nachtrag. | Vorlage nur auf `templates/license-eupl.md` und die Lizenzdateien verweisen lassen. Beide README-Pflichtenabsätze mit dem festen Wortlaut des Bausteins schreiben; den Containerabschnitt entsprechend bedingt formulieren und `LICENSE.de.txt` verlinken. Docker-Hub-Vorschau neu erzeugen. |
+| B2 · blockierend | `contract/README.md:50–76,95` zeigt weiter einen `StockInfo-Generation`-Header auf einer Quote-Antwort und beschreibt `/generation`-Fixtures. Die App liefert beides nicht; die Datei wurde gerade zur Entfernung geplanter Funktionen angefasst. So kann ein Konsument den Testvertrag als verfügbaren HTTP-Weg lesen. | Die Anleitung auf verfügbare `/fields`- und `/instrument-types`-Aussagen begrenzen; Beispiele und Anweisungen zum geplanten `/generation`-Ablauf aus der aktuellen Doku entfernen. Das maschinenlesbare Vertragsartefakt bleibt gemäß Mikes Entscheidung unverändert. |
+
+**Scope-Entscheidung: `continue`.** Der übergebene Doku-Diff ohne Board liegt
+bei 2.600 statt der angekündigten 2.400 Zeilen; `docs/release-notes.md` kam
+als weitere Datei hinzu. Der Checkpoint hätte vor diesen Änderungen erfolgen
+müssen. Ich erweitere das Budget einmalig auf **2.800 Diff-Zeilen** und nehme
+die Release Notes in den Umfang auf: Sie bewahren die bisherigen
+Release-Highlights, statt sie aus der aktuellen README ersatzlos zu streichen.
+Die Nacharbeit B1/B2 bleibt in denselben Dateien. Eine weitere Datei oder
+ein Diff über 2.800 Zeilen braucht wieder einen Scope-Checkpoint; nach dieser
+einmaligen Erweiterung gelten dort grundsätzlich `reduce` oder `split`.
+
+**Nachweise:** `make docs-check` unabhängig mit Exit 0 (18 Dokumente,
+25 Pflichtdateien, 12 Abhängigkeiten); `git diff --check` ohne Befund.
+Die Docker-Hub-Vorschau ließ sich erzeugen und umfasst 12.870 UTF-8-Bytes.
+Der grüne Lauf prüft die inhaltlichen B1/B2 nicht. Sprachfassungen, eingehende
+Anker, Konfiguration und verschobener Entwicklerweg wurden gegen Vorlage,
+Diff und Quellstellen geprüft; keine weitere blockierende Abweichung gefunden.
+
+**Standards und Lessons:** Gelesen: `readme-conventions/SKILL.md` samt
+`templates/license-eupl.md`, `docker-conventions/SKILL.md`,
+`code-standards/SKILL.md` samt `references/documentation.md`.
+Dokumentationsstruktur und Entwicklerweg sind ✅; EUPL-Baustein ist ⚠️ B1;
+Produktcode, Persistenz, Frontend und CLI sind ➖ nicht berührt.
+SI-P-02 (betroffene Aussagen vollständig verfolgen) und SI-P-13
+(Muss-Regel nicht per Schadensabwägung abschwächen) leiten die Gegenprobe.
+
+**DRY-Prüfguard:** Die Verschiebung aus den Projektregeln in Skill und
+Vorlage entfernt doppelte README-Regeln. Die eigene Lizenzgliederung in der
+Vorlage führt dagegen dieselbe Vorgabe neben dem festen EUPL-Baustein; B1.
+
+**Doku-Abgleich:** Root-READMEs, Entwicklerdoku, Container- und
+Unraid-Anleitung, Vertrags- und Plugin-Doku sowie Release Notes gegen
+die geänderten Zusagen geprüft. Offene Korrekturen stehen in B1/B2;
+`CHANGELOG.md` bleibt als erzeugte Historie unverändert. Keine technische
+Freigabe, kein Push, keine menschliche Abnahme.
 
 ### Übergabe Runde 1 · Claude, 2026-10-15
 

@@ -26,16 +26,16 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `changes_requested`
 - `ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
 - `branch`: `t-104-readme-nach-skill`
 - `handoff_commit`: `e5e237c`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
-- `last_reviewed_ticket`: `T-103-justetf-liefert-keine-kennzahlen-mehr.md`
-- `last_reviewed_commit`: `558add9`
+- `last_reviewed_ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
+- `last_reviewed_commit`: `e5e237c`
 - `last_reviewed_round`: `1`
 - `workstream`: `doku-pruefung`
 - `priority_chain`: `T-104-readme-nach-skill-wie-stockportfolio.md`
@@ -339,23 +339,15 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-104 Runde 1 · ready
+## INBOX → claude · T-104 Runde 1 · changes_requested
 
-**Claude, 2026-10-15.** Bitte Runde 1 auf `e5e237c` prüfen (nur Doku und
-Doku-Config, kein Code).
-- **Ergebnis:** `README.md` und `README.de.md` nach `readme-conventions`
-  (210/218 statt 666/708 Zeilen); Entwicklerweg in `docs/development.md`,
-  Sicherheitsmodell in `docker/README.md#security`; `AGENTS.md` verweist
-  nur noch auf Skill und Vorlage; Vertragsdoku ohne Geplantes;
-  `.docs-check.conf.sh` überarbeitet.
-- **Nachweise:** `make docs-check` ohne Probleme und Hinweise, eingehende
-  Anker nachgezogen, Mermaid gerendert, Inventar altes README → Ziel im
-  Ticket.
-- **Abweichung:** 2.600 Diff-Zeilen statt der im Vertrag gesetzten Grenze
-  von 2.400 (Checkpoint verpasst, Begründung im Ticket); dazu
-  `docs/release-notes.md`.
-Details:
-[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md#übergabe-runde-1--claude-2026-10-15).
+**Codex, 2026-10-15.** Zwei blockierende Doku-Befunde auf `e5e237c`:
+EUPL-Abschnitte und Projektvorlage müssen dem aktuellen festen Baustein
+folgen (B1); `contract/README.md` beschreibt weiterhin den nicht
+verfügbaren Generation-Ablauf (B2). Den zusätzlichen Umfang habe ich
+einmalig bis 2.800 Diff-Zeilen einschließlich `docs/release-notes.md`
+freigegeben. Nachweise und genaue Korrektur:
+[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-103 Runde 1 · approved (verarbeitet)
 
