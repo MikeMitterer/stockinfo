@@ -106,12 +106,14 @@ nicht“ behandelt.
 
 ### Verify
 
+Stand `86d0e15`, Claude, 2026-10-15.
+
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | `.venv/bin/pytest -q tests/test_plugin_justetf_integration.py` | beide Tests grün | ➖ |
-| 2 | Direktaufruf für `IE00B4L5Y983` | TER, Fondsgröße, Anbieter, Replikation, Volatilität gefüllt | ➖ |
-| 3 | `make test` | grün | ➖ |
-| 4 | Instrument mit gespeicherten Kennzahlen aktualisieren, während justETF nichts liefert | gespeicherte Werte bleiben erhalten (oder das Ticket nennt das beschlossene Verhalten) | ➖ |
+| 1 | `.venv/bin/pytest -q tests/test_plugin_justetf_integration.py` | beide Tests grün | ✅ alter Pin: 2 failed; neuer Pin (nach `pip install --force-reinstall --no-deps`): 2 passed |
+| 2 | Direktaufruf für `IE00B4L5Y983` | TER, Fondsgröße, Anbieter, Replikation, Volatilität gefüllt | ✅ `ter 0.2`, `fund_size_eur 133518.0`, `fund_provider 'iShares'`, `replication 'Physical(Optimized sampling)'`, `volatility_1y 10.48`, `fund_domicile 'Ireland'`, `fund_currency 'USD'`, `distribution_policy 'Accumulating'`, `currency_hedged False` |
+| 3 | `make test` | grün | ✅ Exit 0: docs-check ohne Probleme, Backend 1319 passed (inkl. Online-Tests), Plugin-API 324, Beispiel 50, Dashboard 399 |
+| 4 | Instrument mit gespeicherten Kennzahlen aktualisieren, während justETF nichts liefert | gespeicherte Werte bleiben erhalten (oder das Ticket nennt das beschlossene Verhalten) | ⚠️ **nicht erfüllt, am Code belegt**: siehe [Scope-Checkpoint](#scope-checkpoint-runde-0--claude-2026-10-15) |
 
 ### Akzeptanzkriterien
 
@@ -123,3 +125,68 @@ nicht“ behandelt.
 
 - Andere Quellen (yfinance, OpenFIGI) gehören nicht dazu.
 - Kein Wechsel auf eine andere Datenquelle ohne eigene Entscheidung.
+
+## Review-Verlauf (neueste Runde zuerst)
+
+### Scope-Checkpoint Runde 0 · Claude, 2026-10-15
+
+**Prüfstand:** `86d0e15`. Kein Code-Review erbeten, nur die Breite.
+
+**Bis hier (im Vertrag):**
+
+- Fork `MikeMitterer/justetf-scraping`, Branch `fix/basic-data-table`,
+  Commit `1e804a8` auf Upstream `53cca6a`: Tabelle per
+  `data-testid="etf-basics_data_table"` statt `find_all("table")[1]`
+  (−3/+2 Zeilen), Test `test_basic_data_from_basics_table` mit dem heutigen
+  Seitenaufbau, am alten Code rot (`assert None == 133518.0`), danach 18
+  passed. PR [druzsan/justetf-scraping#59](https://github.com/druzsan/justetf-scraping/pull/59).
+  Zwischen `b52934a` (alter Pin) und `53cca6a` ändert sich nur `uv.lock`.
+- StockInfo `requirements.txt`: Pin auf den Fork-Commit mit Kommentar,
+  wann er zurück auf Upstream geht (+5/−1).
+
+**Befund zu Verify #4 (Auslöser):** Während der Störung hat
+`JustEtfProvider.fetch_etf` (`app/providers/justetf_provider.py:175–197`)
+`EtfDetails` mit Namen, aber ohne Kennzahlen zurückgegeben, weil
+`get_etf_overview` ein nicht leeres Dict liefert. `CompositeEtfEnricher`
+(`app/providers/composite_etf.py:99–107`) übernimmt jede Antwort, die nicht
+`None` ist, und `QuoteService._enrich_etf`
+(`app/services/quote_service.py:871–888`) wertet sie als „Quelle hat
+geantwortet“ (`True`): TER, Fondsgröße, Anbieter, Replikation, Domizil,
+Volatilität und Ertragsverwendung werden mit `None` überschrieben, und der
+Stand gilt danach `METADATA_TTL_DAYS` lang als frisch. Der Plugin-Weg
+(`app/plugins/justetf_metadata.py:180–184`) gibt in diesem Fall `None` und
+schützt den Stand. Eigene Werte aus dem Detailbereich sind getrennt
+gespeichert und nicht betroffen. Die Arbeitsdatenbank wurde dafür nicht
+geöffnet.
+
+**Geplante Erweiterung:** `JustEtfProvider.fetch_etf` gibt `None` zurück,
+wenn die Übersicht keine der Kennzahlen enthält, die StockInfo übernimmt
+(nur Name oder gar nichts). Dann gilt „nicht erreichbar“, und der
+gespeicherte Stand bleibt, wie der Composite es zusagt. Dazu ein
+Unit-Test mit gefälschter Übersicht, der am heutigen Code rot ist.
+
+| Größe | Vertrag | Mit Erweiterung |
+|---|---|---|
+| Fachliche Änderungen | 2 | 3 |
+| Produktdateien StockInfo | 1 (`requirements.txt`) | 2 (+ `app/providers/justetf_provider.py`) |
+| Testdateien StockInfo | 0 | 1 |
+| Diff StockInfo ohne `_tickets/` | < 20 | ≈ 60 |
+
+Auslöser des Checkpoints: `app/providers/` ist eine im Vertrag nicht
+angekündigte Produktschicht.
+
+**Außerdem zu wissen:**
+
+- `make setup` (`pip install -q -r requirements-dev.txt`) übernimmt den
+  neuen Pin in einer bestehenden venv nicht, weil die Paketversion bei
+  beiden Commits `0.1.0` ist. Mikes venv ist von Hand aktualisiert; das
+  Docker-Image installiert neu, weil sich `requirements.txt` ändert. Keine
+  Änderung geplant.
+- Gespeicherte Kennzahlen, die in der Störung geleert wurden, kommen mit
+  der nächsten Metadaten-Aktualisierung nach dem Fix zurück (spätestens
+  nach `METADATA_TTL_DAYS`, sofort mit einer Einzelaktualisierung). Auf
+  Unraid erst mit einem neuen Image; Build und Push sind nicht Teil dieses
+  Tickets.
+
+Erbeten: `continue` (mit Erweiterung), `reduce` (ohne, Verify #4 bleibt
+Befund für ein eigenes Ticket) oder `split`.
