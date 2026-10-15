@@ -16,8 +16,8 @@ Wähle unter **Settings → Languages & Frameworks → Markdown → Custom CSS �
 Load from** die Datei [orange-compact.css](orange-compact.css).
 
 Die [Testseite](preview.md) zeigt Überschriften, Listen, Tabellen und Code.
-Zum Lesen eines echten Dokuments eignet sich das
-[Ticket T-56](../../_tickets/40-done/T-56-was-mike-im-ui-pruefen-soll.md).
+Zum Lesen eines echten Dokuments eignet sich der
+[REST-Core-Vertrag](../rest-core-contract.md).
 
 ## Farben und Abstände anpassen
 

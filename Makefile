@@ -122,12 +122,13 @@ hints: ## Nützliche URLs und Hinweise anzeigen
 
 # Idempotent: vorhandene Links und .venv bleiben, pip und npm gleichen nur ab.
 .PHONY: setup
-setup: ## .libs-Symlinks, Python-.venv und Dashboard-Pakete einrichten
+setup: ## .libs-Symlinks, Git-Hooks, Python-.venv und Dashboard-Pakete einrichten
 	@if [[ -r "$(BASH_LIBS)/tools.lib.sh" ]]; then \
 		./scripts/setup-libs.sh --install; \
 	else \
 		echo -e "  $(YELLOW)⚠$(RESET) BashLib nicht verfügbar — .libs-Verlinkung übersprungen (nur Maintainer-Targets brauchen sie)"; \
 	fi
+	@git config core.hooksPath .githooks
 	@$(PYTHON_BOOTSTRAP) -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "Python 3.11 oder neuer erforderlich")'
 	@test -x $(VENV)/bin/python || $(PYTHON_BOOTSTRAP) -m venv $(VENV)
 	@$(VENV)/bin/python -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "Bestehende .venv benötigt Python 3.11 oder neuer")'
@@ -165,13 +166,13 @@ dev-logs: ## Logs des Stacks folgen (overmind echo)
 ##@ Tests
 
 .PHONY: test
-test: test-backend test-plugin-api test-example test-dashboard ## Alle Tests — Backend + Plugin-API + Beispielpaket + Dashboard
+test: docs-check test-backend test-plugin-api test-example test-dashboard ## Alle Tests — Doku, Backend, Plugin-API, Beispielpaket, Dashboard
 
 # Wie `test`, aber ohne Netz: Die mit `integration` markierten Tests fragen
 # echte Online-Anbieter und bleiben bei `test`. Dazu Ruff und die Typprüfung
 # des Dashboards, die `test` nicht enthält.
 .PHONY: check
-check: test-plugin-api test-example test-dashboard ## Alle netzfreien Prüfungen — Backend ohne Online-Tests, Plugin-API, Beispiel, Dashboard, Ruff, Typen
+check: docs-check test-plugin-api test-example test-dashboard ## Alle netzfreien Prüfungen — Doku, Backend ohne Online-Tests, Plugin-API, Beispiel, Dashboard, Ruff, Typen
 	$(PYTEST) -q -m "not integration"
 	$(VENV)/bin/ruff check app tests scripts
 	cd dashboard && npx vue-tsc -b
@@ -206,6 +207,16 @@ lint-dashboard: ## Dashboard prüfen (ESLint und Foundation-Speicherregeln)
 .PHONY: test-dashboard
 test-dashboard: lint-dashboard ## Dashboard prüfen und testen (ESLint + Vitest)
 	npm --prefix dashboard test
+
+# Regeln in .docs-check.conf.sh. Ohne ProjectTools nur ein Hinweis, damit
+# die übrigen Tests trotzdem laufen.
+.PHONY: docs-check
+docs-check: ## Nutzerdoku gegen das Projekt prüfen (Links, Befehle, Variablen, Abhängigkeiten)
+	@if [[ -r "$(PROJECT_TOOLS)/bash/docs-check.sh" ]]; then \
+		"$(PROJECT_TOOLS)/bash/docs-check.sh" --run; \
+	else \
+		echo -e "  $(YELLOW)⚠$(RESET) ProjectTools nicht verfügbar — Doku nicht geprüft (make setup)"; \
+	fi
 
 # ─── Docker ───────────────────────────────────────────────────────────────────
 

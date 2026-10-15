@@ -26,20 +26,35 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `portfolio_review`
-- `ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
-- `branch`: `master`
-- `handoff_commit`: `46f908d`
+- `phase`: `approved`
+- `ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
+- `branch`: `t-102-docs-check`
+- `handoff_commit`: `a2615a9`
 - `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `mike`
-- `updated_at`: `2026-10-03`
-- `last_reviewed_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
-- `last_reviewed_commit`: `46f908d`
+- `owner`: `claude`
+- `updated_at`: `2026-10-15`
+- `last_reviewed_ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
+- `last_reviewed_commit`: `a2615a9`
 - `last_reviewed_round`: `3`
-- `workstream`: `persistenz`
-- `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md → T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
-- `priority_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
+- `workstream`: `doku-pruefung`
+- `priority_chain`: `T-102-docs-check-nach-stockportfolio-schema.md → T-103-justetf-liefert-keine-kennzahlen-mehr.md`
+- `priority_ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
+
+**T-103 in der Kette · Mike, 2026-10-15.** „Nimm T-103 in die Kette nach
+T-102“. [T-103](20-ready/T-103-justetf-liefert-keine-kennzahlen-mehr.md)
+liegt in `20-ready/` (Verschiebung von Claude, mitcommittet in `38e693f`)
+und folgt T-102 in `priority_chain`. Aktiviert wird es erst nach der
+technischen Freigabe von T-102. Coder `claude`, Verifier `codex`.
+
+**Aktivierung T-102 · Claude, 2026-10-15.** Auf Mikes Auftrag aus der
+StockPortfolio-Sitzung („Leg in StockInfo als ein Ticket nach doing dass dort
+nach dem Schema von StockPortfolio docs-check nachgezogen wird …“) liegt
+[T-102](30-doing/T-102-docs-check-nach-stockportfolio-schema.md) in
+`30-doing/`. Neue Kette mit diesem einen Ticket, Coder `claude`, Verifier
+`codex`. Der Coder hat beim Start `t-102-docs-check` von `master`
+angelegt; `handoff_commit` und `last_reviewed_*` beschreiben noch T-97.
+Kein Push.
 
 **SQL-Umstellung abgenommen · Mike, 2026-10-03.** „ja, die Tickets T-88
 bis T-97“. T-88 bis T-95 und T-97 liegen samt Begleitdateien in
@@ -296,6 +311,67 @@ nach dessen technischer Freigabe T-93 für den vollständigen Browserlauf
 und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
+
+## Archiv · INBOX → claude · T-102 Runde 3 · approved (verarbeitet)
+
+**Codex, 2026-10-15.** T-102 ist für `a2615a9` technisch freigegeben.
+B4/B5 sind unabhängig nachgeprüft; `make docs-check`, der Hook mit
+relativem ProjectTools-Pfad und `make check` sind grün. Voller Nachweis:
+[T-102](30-doing/T-102-docs-check-nach-stockportfolio-schema.md#verifier-prüfung--runde-3--codex-2026-10-15).
+`make test` bleibt wegen der zwei justETF-Online-Tests rot; Mike hat deren
+Reparatur als T-103 nach T-102 eingeplant. Bitte die Freigabe und den
+lokalen Merge verarbeiten, T-103 danach atomar aktivieren. Mikes
+menschliche Abnahme von T-102 bleibt offen; kein Push.
+
+## Archiv · INBOX → claude · T-102 Runde 2 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-15.** `e57c7f4` ist noch nicht technisch freigegeben.
+B1 ist durch Mikes Entscheidung aufgelöst, B2/B3 sind für den normalen
+Aufruf nachgearbeitet. Bitte B4/B5 aus der
+[Verifier-Prüfung](30-doing/T-102-docs-check-nach-stockportfolio-schema.md#verifier-prüfung--runde-2--codex-2026-10-15)
+bearbeiten: Ein gültiger relativer `PROJECT_TOOLS`-Pfad lässt den Hook die
+Prüfung mit Exit 0 überspringen; die nötige Deno-2-Voraussetzung fehlt in
+beiden READMEs und der Vorlage. Die justETF-Online-Grenze bleibt in T-103
+sichtbar. Keine menschliche Abnahme.
+
+**Commit-Zuordnung:** Beim Review-Commit `38e693f` lag die von anderer
+Instanz vorgemerkte Verschiebung von T-103 nach `20-ready/` bereits im
+gemeinsamen Git-Index und wurde mitcommittet. Codex hat T-103 weder
+eingeplant noch fachlich geprüft. Die Verschiebung bleibt erhalten; Claude
+ordnet sie bei der Verarbeitung der INBOX dem eigenen Auftrag zu.
+
+## Archiv · FRAGE → mike · T-102 · B1 (beantwortet: „1, und T-96 in StockPortfolio committen“)
+
+**Claude, 2026-10-15.** B2 und B3 sind in `e57c7f4` erledigt. B1 braucht
+deine Entscheidung: Ein unbekanntes Make-Target in der Doku ist nur ein
+Hinweis, weil ProjectTools bei `-include ${DEV_MAKE}/…` (Hauskonvention)
+herabstuft. Optionen: (1) Verify #2 auf „Hinweis“ ändern, Korrektur über
+StockPortfolio T-96 (Empfehlung), (2) ProjectTools in T-102 ändern,
+(3) feste Include-Pfade in StockInfo. Dazu: StockPortfolio T-96 dort
+committen? Details:
+[T-102](30-doing/T-102-docs-check-nach-stockportfolio-schema.md#nacharbeit-runde-1--claude-2026-10-15).
+Nach der Antwort setzt Claude `changes_requested`, `owner: claude` und
+übergibt Runde 2.
+
+## Archiv · INBOX → claude · T-102 Runde 1 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-15.** `d96ba31` ist noch nicht technisch freigegeben.
+Bitte B1–B3 aus der [Verifier-Prüfung](30-doing/T-102-docs-check-nach-stockportfolio-schema.md#verifier-prüfung--runde-1--codex-2026-10-15)
+bearbeiten: die vereinbarte Make-Target-Gegenprobe endet mit Exit 0, der
+Hook prüft bei getrenntem Index und Arbeitsbaum nicht den Commit-Inhalt,
+und fünf Pflichtdatei-Einträge haben keinen eigenen Grund. Die rote
+justETF-Online-Suite bleibt als getrennte Testgrenze sichtbar. `make check`
+und `make docs-check` sind unabhängig grün; keine menschliche Abnahme.
+
+## Archiv · INBOX → claude · T-102 · scope_checkpoint · continue (verarbeitet)
+
+**Codex, 2026-10-15.** Der Umfang zu `2cdc039` ist für die angekündigte
+Übersetzung und die Sprachlinks freigegeben (`continue`). Der Diff ohne
+Boarddateien liegt bei +625/−13 Zeilen; erwartet sind insgesamt rund 1.290
+und höchstens 1.600 Zeilen. Drei fachliche Änderungen und die vorgesehenen
+Dateiflächen bleiben bestehen. Dies ist keine technische Freigabe der
+Implementierung. Entscheidung und Grenze stehen in
+[T-102](30-doing/T-102-docs-check-nach-stockportfolio-schema.md#scope-checkpoint--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-97 Runde 3 · approved (verarbeitet)
 

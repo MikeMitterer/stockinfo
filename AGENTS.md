@@ -179,6 +179,41 @@ Das Script prüft die Grenze und schneidet nichts ab. Längere Details in
 verlinkte Dokumente auslagern. Bildpfade relativ zu `docker/README.md` angeben
 (z. B. `../unraid/screenshots/dashboard.png`); der Uploader wandelt sie in
 Raw-GitHub-URLs um. Die Größenbeschränkung gilt für die Docker-Hub-Beschreibung.
+Die Vorschau `docker/preview/README.md` ist versioniert und gehört in
+denselben Commit wie die Änderung an `docker/README.md`.
+
+**`make docs-check` prüft die Nutzerdoku** (läuft auch in `make test`,
+`make check` und vor jedem Commit): tote Links und Anker, unbekannte
+Make-Targets und Variablen, Pflichtdateien und die verbotenen Begriffe.
+Welche Dokumente, Begriffe und Pflichtdateien gelten, steht mit Grund in
+[`.docs-check.conf.sh`](.docs-check.conf.sh); eine neue Doku-Regel dieser
+Art kommt dort hinein. Diese Datei und `CLAUDE.md` prüft es nur auf tote
+Links und Anker; Verweise auf andere Dokumente deshalb als Link schreiben.
+
+- **Abhängigkeiten:** Unter `DEPENDS` stehen Dateien, die einer Basis folgen
+  müssen: die Vorschau folgt `docker/README.md` (Frist 0, also im selben
+  Commit), `README.de.md` folgt `README.md`, die Lizenzabschnitte der
+  READMEs folgen `LICENSING.md`. Ändert sich die Basis danach, meldet die Prüfung einen
+  Hinweis und nach der Frist ein Problem. Zeiten kommen aus git, nicht vom
+  Dateidatum.
+- **Screenshots:** `SCREENSHOTS` meldet Bilder unter `unraid/screenshots/`,
+  deren Dashboard- oder API-Code sich nach der Aufnahme geändert hat. Dann
+  prüfen, ob das Bild die Oberfläche noch richtig zeigt, sonst neu aufnehmen.
+- **Quittung:** Verlangt eine gemeldete Änderung nach dem Prüfen nichts,
+  `./.libs/ProjectTools/src/bash/docs-check.sh --ack <datei>` ausführen und
+  `.docs-check.ack` mitcommitten. Ungesehen quittieren ist kein Weg, eine
+  Meldung loszuwerden.
+- **Hook:** `make setup` aktiviert `.githooks/pre-commit`. Er prüft den
+  vorgemerkten Stand, bricht einen Commit mit Problemen ab und lässt
+  Hinweise durch. `--no-verify` nur im
+  Notfall und mit Begründung im Bericht.
+- **Grenze:** Einstellungen der Settings-Klasse in `app/config.py` erkennt
+  die Prüfung nicht; neue Einstellungen von Hand in `README.md` und
+  `docker/README.md` eintragen.
+
+Das README entsteht nach [`docs/README.template.md`](docs/README.template.md)
+(Skill `readme-conventions`); `README.md` ist englisch, `README.de.md` die
+deutsche Fassung mit derselben Gliederung.
 
 - Der Bearbeiter ermittelt über das Datei- und Überschrifteninventar die
   betroffenen Anleitungen, Referenzen, Beispiele und Specs; dazu gehören auch

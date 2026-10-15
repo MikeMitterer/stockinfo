@@ -26,10 +26,10 @@ Definitionen für Bedeutung, Typ, Beschriftung und Einheit benötigt.
 | `GET /instruments` | Instruments-Store, InstrumentsView, Hinzufügen-Dialog und Dashboard | Metadaten werden zusätzlich über den Katalog verwendet |
 | Tages-/Intraday-Historie und `/health` | History- und Status-Store | Eigenständige Antwortverträge, keine dynamische Quote-Projektion erforderlich |
 
-[Client](/Volumes/DevLocal/DevWeb/Production/StockPortfolio/src/api/client.ts),
-[Mapper](/Volumes/DevLocal/DevWeb/Production/StockPortfolio/src/api/mappers.ts),
-[Quote-Store](/Volumes/DevLocal/DevWeb/Production/StockPortfolio/src/stores/quotes.ts),
-[API-Typen](/Volumes/DevLocal/DevWeb/Production/StockPortfolio/src/api/types.ts).
+[Client](/Volumes/DevLocal/DevWeb/Production/StockPortfolio/frontend/src/api/stockinfo/client.ts),
+[Mapper](/Volumes/DevLocal/DevWeb/Production/StockPortfolio/frontend/src/api/stockinfo/mappers.ts),
+[Quote-Store](/Volumes/DevLocal/DevWeb/Production/StockPortfolio/frontend/src/stores/quotes.ts),
+[API-Typen](/Volumes/DevLocal/DevWeb/Production/StockPortfolio/frontend/src/api/stockinfo/types.ts).
 
 Der Quote-Mapper übernimmt Identifikator, Symbol, Preis, Währung, Typ, Name,
 `ter`, `volatility`, `accumulating` sowie Zeit- und Cacheangaben. Weitere
