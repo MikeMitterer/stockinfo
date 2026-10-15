@@ -157,6 +157,8 @@ Prüffassung `da653ce` (Umsetzung `5b3a929`, Quittung `da653ce`).
   `make check`: ruff und `vue-tsc` ohne Befund. `make docs-check`: keine
   Probleme; der Swagger-Screenshot-Hinweis kam nur aus dem Docstring in
   `app/main.py` (Oberfläche unverändert) und ist quittiert.
-- StockPortfolio: Ticket
-  `_tickets/10-backlog/T-97-stockinfo-vertragsfixtures-ohne-quelle.md`
-  angelegt, dort nicht committet (fremdes Repo, nur Ticket).
+- StockPortfolio: Das hier zuerst angelegte Ticket T-97 ist auf Mikes
+  Entscheidung wieder gelöscht. Stattdessen trägt StockPortfolios T-35
+  („StockInfo-Generation erkennen“) einen Hinweis, dass StockInfo
+  `/generation` und den Header auf jeder Antwort nicht mehr zusagt
+  (StockPortfolio `f9f736d`, auf Mikes Auftrag committet und gepusht).
