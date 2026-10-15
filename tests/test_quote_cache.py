@@ -5,10 +5,12 @@ from pathlib import Path
 
 import pytest
 
+import app.providers.justetf_provider as justetf_module
 from app.models import ListedIdentityOut, QuoteResponse
 from app.persistence.db import init_db
 from app.persistence.repository import QuoteRepository
 from app.providers.base import SourceAnswer
+from app.providers.justetf_provider import JustEtfProvider
 from app.services.daily_sync import DailyCloseSync
 from app.services.quote_cache import CachedQuoteService, RefreshInProgressError
 from app.services.quote_service import (
@@ -16,8 +18,9 @@ from app.services.quote_service import (
     QuoteUnavailableError,
     annualized_volatility,
 )
-from tests.boundaries import empty_daily_sync
+from tests.boundaries import empty_daily_sync, wire_real_chain
 from tests.raw_database import raw_database
+from tests.test_quote_service import FakeQuoteProvider, FakeResolver, _etf_quote, _resolved
 
 
 class FakeQuoteService:
@@ -1036,6 +1039,36 @@ def test_auch_der_refresh_haelt_den_gespeicherten_stand(
     assert result.price == 170.0
     assert result.ter == 0.2
     assert result.provider == "Vanguard"
+
+
+def test_justetf_ohne_kennzahlen_leert_den_gespeicherten_stand_nicht(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Die echte Kette, ersetzt ist nur die justETF-Bibliothek.
+
+    justETF lädt, liefert aber keine Kennzahl — wie nach der Umstellung der
+    Profilseite. Der Refresh fragt justETF ausdrücklich; danach müssen TER und
+    Anbieter in Antwort und Datenbank noch stehen.
+    """
+    monkeypatch.setattr(
+        justetf_module.justetf_scraping,
+        "get_etf_overview",
+        lambda isin, **kw: {"isin": isin, "name": "VGWL", "ter": None, "currency_hedged": True},
+    )
+    service, repository = wire_real_chain(
+        str(tmp_path / "justetf.db"),
+        FakeQuoteProvider(_etf_quote()),
+        FakeResolver(_resolved("VGWL.DE", isin="IE00B3RBWM25", type="etf")),
+        etf_source=JustEtfProvider(),
+    )
+    repository.save_quote(_maintained_etf(_hours_ago(10)))
+
+    result = service.refresh_one("IE00B3RBWM25")
+
+    stored = repository.get_instrument_by_isin("IE00B3RBWM25")
+    assert result.ter == 0.2
+    assert stored["ter"] == 0.2
+    assert stored["provider"] == "Vanguard"
 
 
 # ─── Eine lokale Quelle kennt keine Frist ─────────────────────────────────────

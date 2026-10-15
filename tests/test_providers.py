@@ -184,6 +184,30 @@ def test_justetf_fehler_gibt_none(monkeypatch) -> None:
     assert JustEtfProvider().fetch_etf("IE00B3RBWM25") is None
 
 
+def test_justetf_ohne_kennzahlen_gilt_als_keine_antwort(monkeypatch) -> None:
+    """Seite geladen, aber keine Kennzahl gelesen: Das ist kein Messwert.
+
+    So sah die Antwort aus, als justETF die Stammdaten in eine andere Tabelle
+    verschob: Name, Bestände und Länder kamen, TER und Fondsgröße nicht, und
+    `currency_hedged` stand falsch auf ``True``. Als Antwort gewertet, hätte sie
+    den gespeicherten Stand mit lauter leeren Werten überschrieben.
+    """
+    overview = {
+        "isin": "IE00B4L5Y983",
+        "name": "iShares Core MSCI World UCITS ETF USD (Acc)",
+        "ter": None,
+        "fund_size_eur": None,
+        "fund_provider": None,
+        "currency_hedged": True,
+        "top_holdings": [{"name": "NVIDIA Corp.", "percentage": 5.53, "isin": None}],
+    }
+    monkeypatch.setattr(
+        justetf_module.justetf_scraping, "get_etf_overview", lambda isin, **kw: overview
+    )
+
+    assert JustEtfProvider().fetch_etf("IE00B4L5Y983") is None
+
+
 def test_justetf_liefert_domizil_und_fondswaehrung(monkeypatch) -> None:
     overview = {
         "name": "iShares Core MSCI World",
@@ -394,10 +418,12 @@ def test_unbekannte_ausschuettungspolitik_bleibt_unbekannt(monkeypatch) -> None:
     falsches `False` sieht wie eine gesicherte Angabe aus.
     """
     for policy in ("Thesaurierend", "unbekannt", "n/a", "Acc.", "-", "   "):
+        # Mit einer Kennzahl daneben: Eine Übersicht ganz ohne Kennzahl gilt
+        # nicht als Antwort (`test_justetf_ohne_kennzahlen_gilt_als_keine_antwort`).
         monkeypatch.setattr(
             justetf_module.justetf_scraping,
             "get_etf_overview",
-            lambda isin, **kw: {"distribution_policy": policy},
+            lambda isin, **kw: {"distribution_policy": policy, "ter": 0.2},
         )
 
         details = JustEtfProvider().fetch_etf("IE00B3RBWM25")
