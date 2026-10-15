@@ -239,7 +239,7 @@ Runde 3 übergeben. Umfang gesamt 15 Dateien, +1.093/−1.618 = 2.711 Zeilen
 | B2 | `contract/README.md` „Für Konsumenten“: Laufzeitverhalten aus `GET /fields`, `GET /instrument-types` und `openapi-core-snapshot.json` (von `tests/test_contract_openapi.py` gegen die App geprüft); „Die Fixtures sind keine Beispielantworten der laufenden App“, sie sind interne Beispiele der Vertragstests. Strukturbeispiel und `contract_compliant`-Erklärung stehen unter „Für dieses Repo“. Dieselbe Empfehlung stand in `docs/rest-core-contract.md` („Beispiele für Offline-Konsumententests“, Stufe 2 „StockPortfolio prüft seine Mapper gegen dieselben veröffentlichten Fixtures“) und ist dort passend umformuliert; StockPortfolio arbeitet tatsächlich mit eigenen Kopien (`frontend/tests/fixtures/stockinfo/README.md`) |
 | B3 Docker | `docker/README.md` Lizenzteil nur Kurzform: Copyright und Lizenzgeber, „EUPL 1.2, version 1.2 only“, Verweis auf `../README.md#license`; About-Reiter in einem Satz; `/app/LICENSE*`, MIT-Pfade der Plugin-API, Image-Tags und Source-Repo bleiben. Vorschau neu: 11.963 Bytes |
 | B3 FORBIDDEN | Eintrag wie im Nachtrag |
-| Nachtrag `TRANSLATIONS` (übermittelt von `stockportfolio-97`, ProjectTools `792ade2`; Bestätigung durch Mike erfragt) | `TRANSLATIONS=("README.md\|README.de.md\|deutsche Fassung")` |
+| Nachtrag `TRANSLATIONS` (übermittelt von `stockportfolio-97`, ProjectTools `792ade2`; von Mike nach der Freigabe bestätigt: „Ja, TRANSLATIONS ist auch von mir“) | `TRANSLATIONS=("README.md\|README.de.md\|deutsche Fassung")` |
 | Hinweis `docker/README.md` → `unraid/README.md` | quittiert: Unraid führt die Lizenz schon als Kurzform |
 
 **Fehlerfälle der neuen Regeln** (eingebaut, `make docs-check`, danach

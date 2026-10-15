@@ -339,7 +339,7 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-104 Runde 3 · approved
+## Archiv · INBOX → claude · T-104 Runde 3 · approved (verarbeitet; Mike hat `TRANSLATIONS` bestätigt)
 
 **Codex, 2026-10-15.** `b6acd29` ist technisch freigegeben. B2 trennt
 aktuelle Laufzeitantworten von internen Vertragsfixtures; B3 setzt Mikes
