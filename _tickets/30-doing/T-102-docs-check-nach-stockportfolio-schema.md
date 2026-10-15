@@ -7,7 +7,8 @@ Werkzeug dafür ist `docs-check.sh` aus ProjectTools; es liegt über
 
 **Beispiel:** Ein Make-Target wird umbenannt, `README.md` nennt noch den alten
 Namen. Heute fällt das erst auf, wenn jemand das README liest. Mit
-`docs-check` scheitert `make test` mit Zeile, gefundenem Namen und Rat. Ebenso
+`docs-check` meldet `make test` Zeile, gefundenen Namen und Rat; bei
+Make-Targets vorerst als Hinweis statt als Fehler (siehe Verify #2). Ebenso
 fallen tote Links und Anker auf, Umgebungsvariablen, die der Code liest, aber
 keine Doku nennt, eine Docker-Hub-Vorschau, die nicht zu `docker/README.md`
 passt, und Screenshots, deren Oberfläche sich seit der Aufnahme geändert hat.
@@ -133,14 +134,14 @@ Docker-Hub-Update.
 ### Verify
 
 Legende: ✅ belegt · ⚠️ belegt mit Abweichung · ➖ noch keine
-Live-Verifikation. Stand `d96ba31`, Claude, 2026-10-15.
+Live-Verifikation. Stand `e57c7f4`, Claude, 2026-10-15 (Runde 2).
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
 | 1 | `make docs-check` im Projekt-Root | Ergebniszeile ohne Probleme; jeder verbliebene Hinweis ist im Ticket begründet | ✅ „17 Dokumente, 24 Pflichtdateien, 3 Screenshots, 6 Abhängigkeiten und 1 Code-Variable geprüft · keine Probleme“, keine Hinweise, Exit 0 |
-| 2 | Gegenprobe: im README ein nicht vorhandenes Make-Target nennen, `make docs-check` | Problem mit Zeile und Target; danach zurücksetzen | ⚠️ `make no-such-target` in `README.md`: nur **Hinweis** mit Zeile und Target, Exit 0. Ursache in ProjectTools: Das Makefile bindet MakeLib über `${DEV_MAKE}` ein, das Werkzeug stuft dann unbekannte Targets herab. StockPortfolio verhält sich gleich. `DEV_MAKE` ist ein dokumentierter Override, deshalb kein Umbau hier; Werkzeugticket StockPortfolio T-96 |
+| 2 | Gegenprobe: im README ein nicht vorhandenes Make-Target nennen, `make docs-check` | **Hinweis** mit Zeile und Target; danach zurücksetzen. *Geändert auf Mikes Entscheidung vom 2026-10-15 („1“, Option „Hinweis genügt vorerst“); ursprünglich „Problem“. Das Problem folgt mit StockPortfolio T-96.* | ✅ `make no-such-target` in `README.md`: „Hinweis Zeile 663 · `make no-such-target`: Das Target steht nicht im Makefile in der Wurzel …“, Exit 0. Ursache: ProjectTools stuft bei `-include ${DEV_MAKE}/…` herab; Werkzeugticket StockPortfolio T-96 (`14f1cb3`) |
 | 3 | Gegenprobe: `docker/README.md` ändern, ohne die Vorschau neu zu erzeugen | Problem „gehört in denselben Commit“; danach zurücksetzen | ✅ „docker/README.md → docker/preview/README.md … gehört in denselben Commit“, 1 Problem, `make` Exit 2; zurückgesetzt |
-| 4 | `make setup`, dann ein Commit mit Problem | Hook bricht den Commit ab und zeigt die Befunde | ✅ `core.hooksPath` vorher leer, nach `make setup` `.githooks`. Commit mit geänderter `docker/README.md`: Befund und „Commit abgebrochen“, `git commit` Exit 1, HEAD unverändert. Gegenfall nur mit Hinweis: Hook Exit 0 |
+| 4 | `make setup`, dann ein Commit mit Problem | Hook bricht den Commit ab und zeigt die Befunde | ✅ `core.hooksPath` vorher leer, nach `make setup` `.githooks`. Commit mit geänderter `docker/README.md`: Befund und „Commit abgebrochen“, `git commit` Exit 1, HEAD unverändert. Gegenfall nur mit Hinweis: Hook Exit 0. Runde 2: Fehler vorgemerkt, Arbeitsbaum korrigiert → `git commit` Exit 1, HEAD unverändert; Fälle siehe [Nacharbeit Runde 1](#nacharbeit-runde-1--claude-2026-10-15) |
 | 5 | `make test` und `make check` | Beide grün, `docs-check` läuft mit | ⚠️ `make check` Exit 0: docs-check ohne Probleme, Plugin-API 324, Beispiel 50, Dashboard 399 Tests, Backend 1310 passed, Ruff „All checks passed“. `make test` Exit 2: docs-check läuft zuerst und ist grün; rot sind zwei Online-Tests `tests/test_plugin_justetf_integration.py` (justETF liefert für den bekannten Fonds nichts), reproduzierbar im Einzellauf. Der Branch ändert nichts unter `app/`, `tests/`, `plugin_api/`, `dashboard/src/`; Befund außerhalb dieses Tickets |
 | 6 | Lauf ohne `.libs/ProjectTools` (Symlink kurz entfernt oder `PROJECT_TOOLS` auf leeren Pfad) | Verständliche Meldung, übrige Tests laufen | ✅ `PROJECT_TOOLS=/nonexistent make docs-check`: „⚠ ProjectTools nicht verfügbar — Doku nicht geprüft (make setup)“, Exit 0. `PROJECT_TOOLS=/nonexistent make check`: dieselbe Meldung, alle übrigen Läufe grün, Exit 0 |
 | 7 | `README.md` und `README.de.md` nebeneinander | Gleiche Gliederung und Aussagen, Sprachlinks im Kopf | ✅ 23 Überschriften paarweise gleich, je 24 Codeblöcke, 49 Tabellenzeilen, 74 Links, 3 Bilder; Kopf „English · [Deutsch]“ bzw. „[English] · Deutsch“. `DEPENDS` README.md → README.de.md „nachgezogen“ |
@@ -177,15 +178,15 @@ Auftrag.
 
 ### Auflösung
 
-Offen. Runde 1 mit Nacharbeit bei Claude; keine technische Freigabe, keine
-menschliche Abnahme.
+Offen. Runde 2 beim Verifier; keine technische Freigabe, keine menschliche
+Abnahme.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
 ### Nacharbeit Runde 1 · Claude, 2026-10-15
 
-**Stand:** `e57c7f4`, noch nicht übergeben. B2 und B3 erledigt, B1 wartet
-auf Mike.
+**Stand:** `e57c7f4`, als Runde 2 übergeben. B2 und B3 erledigt, B1 durch
+Mikes Entscheidung aufgelöst (unten).
 
 **B2 · Hook prüft den vorgemerkten Stand.** `.githooks/pre-commit`
 schreibt den Index mit `git checkout-index` in ein temporäres Verzeichnis
@@ -222,6 +223,12 @@ ausgelöst durch `-include ${DEV_MAKE}/…`. Das ist die Hauskonvention aus
 
 Außerdem offen: StockPortfolio T-96 dort committen? StockPortfolios Hook hat
 dieselbe Lücke wie B2; nicht angefasst.
+
+**Antwort Mike, 2026-10-15:** „1, und T-96 in StockPortfolio committen“.
+Verify #2 erwartet damit einen Hinweis; die Matrixzeile nennt die Änderung.
+T-96 ist in StockPortfolio auf `master` committet (`14f1cb3`, kein Push),
+mit dem Hook-Nebenbefund und dieser Entscheidung. B1 ist damit kein offener
+Befund dieses Tickets mehr.
 
 ### Verifier-Prüfung · Runde 1 · Codex, 2026-10-15
 
