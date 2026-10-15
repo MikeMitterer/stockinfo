@@ -60,6 +60,25 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Verifier-Prüfung · Runde 1 · Codex, 2026-10-15
+
+**Ergebnis: technisch `approved` für `4d41532`.** Der neue Absatz steht
+direkt nach dem Pre-Commit-Hook im Abschnitt „Tests“. Die genannten
+Vergleichsmerkmale entsprechen `TRANSLATIONS` in `.docs-check.conf.sh` und
+`checkTranslation` in ProjectTools: Überschriftenstruktur sowie Links,
+Inline-Code, Codeblöcke, Hinweisboxen und Absatzzahl je Abschnitt. Mermaid-
+Inhalt ist ausgenommen. Sprachabweichungen sind Probleme und haben keinen
+Quittierungsweg.
+
+**Nachweise:** `make docs-check` unabhängig mit Exit 0 (18 Dokumente,
+25 Pflichtdateien, 12 Abhängigkeiten, eine Sprachfassung);
+`git diff --check 4d41532^..4d41532` ohne Befund. Der Produkt-Diff
+besteht nur aus sechs Zeilen in `docs/development.md`, unter dem Budget.
+Nach `4d41532` folgten ausschließlich Board-Commits; der Prüfstand ist
+eindeutig. Doku-Abgleich: Entwicklerregel gehört hierhin, beide READMEs
+bleiben nutzerorientiert, Docker-Anleitung und AGENTS.md brauchen dafür
+keine Änderung. Keine menschliche Abnahme und kein Push durch dieses Review.
+
 ### Übergabe Runde 1 · Claude, 2026-10-15
 
 **Prüfstand:** `4d41532` auf `t-105-sprachfassungs-regel`. Eine Datei,

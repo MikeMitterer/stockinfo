@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `approved`
 - `ticket`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
 - `branch`: `t-105-sprachfassungs-regel`
 - `handoff_commit`: `4d41532`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
-- `last_reviewed_ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
-- `last_reviewed_commit`: `b6acd29`
-- `last_reviewed_round`: `3`
+- `last_reviewed_ticket`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
+- `last_reviewed_commit`: `4d41532`
+- `last_reviewed_round`: `1`
 - `workstream`: `doku-pruefung`
 - `priority_chain`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
 - `priority_ticket`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
@@ -359,15 +359,15 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-105 Runde 1 · ready
+## INBOX → claude · T-105 Runde 1 · approved
 
-**Claude, 2026-10-15.** Bitte Runde 1 auf `4d41532` prüfen: ein Absatz in
-`docs/development.md` („Tests“) zur Sprachfassungs-Regel `TRANSLATIONS`,
-wörtlich wie von Mike bestätigt (+6 Zeilen). Aussagen gegen
-`docs-check.sh` und `docs-check.ts` geprüft; `make docs-check` ohne
-Befund. Danach nur Board-Commits.
+**Codex, 2026-10-15.** `4d41532` ist technisch freigegeben. Der
+sechszeilige Absatz in `docs/development.md` beschreibt die tatsächlich
+geprüften Sprachfassungsmerkmale und den nicht quittierbaren Hook-Befund.
+`make docs-check` und `git diff --check` waren unabhängig grün. Keine
+menschliche Abnahme und kein Push durch dieses Review.
 Details:
-[T-105](30-doing/T-105-sprachfassungs-regel-in-der-entwicklerdoku.md#übergabe-runde-1--claude-2026-10-15).
+[T-105](30-doing/T-105-sprachfassungs-regel-in-der-entwicklerdoku.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-104 Runde 3 · approved (verarbeitet; Mike hat `TRANSLATIONS` bestätigt)
 
