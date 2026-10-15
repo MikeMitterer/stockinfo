@@ -1,6 +1,6 @@
 # Der REST-Core von StockInfo — was zugesagt ist
 
-**Vertragsversion 4.4.0** · Stand 2026-09-26
+**Vertragsversion 4.4.1** · Stand 2026-10-15
 
 `GET /fields` liefert den Feldvertrag und das aktuelle Detailschema.
 `GET /instrument-types` liefert die Typen der konfigurierten Plugins.
@@ -9,7 +9,7 @@ dauerhaft referenziert. Bekannte Vertragsabweichungen stehen unten.
 
 Die maschinenlesbaren Zusagen stehen in
 [`contract/core-contract.json`](../contract/core-contract.json).
-Die Fixtures werden gegen dieses Artefakt geprüft.
+Tests halten die laufende App gegen dieses Artefakt.
 
 ## Übersicht
 
@@ -237,7 +237,7 @@ Gekürzter Auszug; `core` und `endpoints` enthalten hier jeweils nur einen Eintr
 
 ```json
 {
-  "core_version": "4.4.0",
+  "core_version": "4.4.1",
   "core": { "quote": [ {"name": "price", "kind": "number", "required": true, "meaning": "Latest known price in the trading currency. Never guessed or converted."} ] },
   "endpoints": { "quote": [ {"path": "/quote/{isin}", "method": "GET", "query": []} ] },
   "generation_id": "550e8400-e29b-41d4-a716-446655440000",
@@ -246,7 +246,7 @@ Gekürzter Auszug; `core` und `endpoints` enthalten hier jeweils nur einen Eintr
 }
 ```
 
-Der Core kommt aus **derselben Datei**, gegen die die Fixtures geprüft werden.
+Der Core kommt aus **derselben Datei**, gegen die die Tests die App prüfen.
 Der Plugin-Vertrag wird aus den Plugin-Typen abgeleitet. Detailschema,
 `details_version` und `generation_id` stammen aus der Datenbank; das beim
 Start aus den konfigurierten Plugins ermittelte Detailschema wird dort gespeichert.
@@ -305,27 +305,20 @@ derselben Datenbank wie `generation_id` von `GET /fields` und ist keine Katalogv
 Clients laden die Auskunft beim Öffnen ihrer Filter neu. Während einer
 gesperrten Migration gilt wie für andere Fachendpunkte der HTTP-503-Riegel.
 
-Die Vertragstests verwenden dafür
-[`contract/fixtures/instrument-types-200.json`](../contract/fixtures/instrument-types-200.json),
-[`…-200-empty.json`](../contract/fixtures/instrument-types-200-empty.json) und
-[`…-200-incomplete.json`](../contract/fixtures/instrument-types-200-incomplete.json).
-
 [↑ Übersicht](#übersicht)
 
 ## Wie man den Vertrag prüft
 
 Ohne Cross-Repo-CI, in drei Stufen:
 
-1. **StockInfo** prüft Artefakt und Fixtures statisch gegeneinander
-   (`tests/test_contract.py`) und die App gegen einen
-   OpenAPI-Schnappschuss (`tests/test_contract_openapi.py`) — der schlägt an,
-   sobald sich ein erfasstes Modell, ein Core-Pfad, `/fields` oder
-   `/instrument-types` gegenüber dem gespeicherten Stand ändert.
-2. **StockPortfolio** prüft seine Mapper gegen eigene Kopien einzelner
-   Fixtures. Was die laufende App liefert, beschreiben `/fields`,
-   `/instrument-types` und der OpenAPI-Schnappschuss; die Fixtures unter
-   [`contract/fixtures/`](../contract/fixtures) sind Beispiele der
-   Vertragstests ([`contract/README.md`](../contract/README.md#für-konsumenten)).
+1. **StockInfo** prüft die App gegen einen OpenAPI-Schnappschuss und die
+   Pflichtfelder des Artefakts (`tests/test_contract_openapi.py`). Der Test
+   schlägt an, sobald sich ein erfasstes Modell, ein Core-Pfad, `/fields`
+   oder `/instrument-types` gegenüber dem gespeicherten Stand ändert.
+2. **StockPortfolio** prüft seine Mapper gegen eigene Beispielantworten.
+   Was die laufende App liefert, beschreiben `/fields`, `/instrument-types`
+   und der OpenAPI-Schnappschuss
+   ([`contract/README.md`](../contract/README.md#für-konsumenten)).
 3. **Vor Releases** ein kleiner Lauf: eine bestehende Position gegen eine
    frische Profil-Datenbank.
 

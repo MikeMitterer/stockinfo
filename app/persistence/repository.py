@@ -337,9 +337,9 @@ class QuoteRepository:
         """
         return fetch_one(session, select(_INSTRUMENTS).where(identity_condition(identity)))
 
-    # Was ein Kandidat im `409` über sich verrät. Genau die Felder der Fixture
-    # `contract/fixtures/quote-409-ambiguous-symbol.json` — der Rumpf ist seit
-    # T-24 zugesagt und wird hier nicht neu erfunden.
+    # Was ein Kandidat im `409` über sich verrät. Genau die Felder von
+    # `ListingCandidate` in `app/models.py` — der Rumpf ist seit T-24
+    # zugesagt und wird hier nicht neu erfunden.
     _CANDIDATE_COLUMNS = ("listing_id", "symbol", "mic", "exchange", "isin")
 
     @staticmethod

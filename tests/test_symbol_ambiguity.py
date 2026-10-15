@@ -18,7 +18,6 @@ Geprüft wird über die **echte** Kette mit echter SQLite-Datei; ersetzt sind
 allein die Außengrenzen.
 """
 
-import json
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -126,9 +125,9 @@ def test_der_rumpf_nennt_die_kandidaten_samt_listing_id(client_and_repo) -> None
 
     Der Aufrufer hat nur das mehrdeutige Symbol; erst die `listing_id` je
     Kandidat gibt ihm etwas Eindeutiges in die Hand. Die Form steht seit T-24
-    in `contract/fixtures/quote-409-ambiguous-symbol.json` fest — geprüft wird
-    deshalb gegen genau diese Feldmenge und nicht gegen das, was gerade
-    herauskommt.
+    fest und ist im OpenAPI-Schnappschuss `contract/openapi-core-snapshot.json`
+    festgehalten — geprüft wird deshalb gegen genau diese Feldmenge und nicht
+    gegen das, was gerade herauskommt.
     """
     client, repository = client_and_repo
     _two_listings(repository)
@@ -192,52 +191,6 @@ def test_auch_das_nachtragen_einer_isin_trifft_nicht_die_aeltere(
             for row in connection.execute("SELECT isin FROM instruments ORDER BY id")
         ]
     assert isins == [None, None], "keine Zeile darf die ISIN bekommen haben"
-
-
-def test_die_fixture_zeigt_was_der_dienst_wirklich_antwortet(client_and_repo) -> None:
-    """Die Fixture ist eine Zusage nach außen — und war eine zweite Wahrheit.
-
-    `contract/fixtures/` wird von StockPortfolio gelesen, **ohne** StockInfo zu
-    starten. Eine Fixture, die niemand gegen die Laufzeit hält, beschreibt
-    darum irgendwann einen Dienst, den es nicht gibt. Genau das war der Fall:
-    Sie zeigte zwei Kandidaten mit **derselben** ISIN — einen Zustand, den
-    `isin TEXT UNIQUE` verbietet.
-
-    Der Test stellt den Bestand der Fixture nach und vergleicht ihren Rumpf
-    Feld für Feld mit dem, was herauskommt.
-    """
-    client, repository = client_and_repo
-    fixture = json.loads(
-        (
-            Path(__file__).resolve().parent.parent
-            / "contract"
-            / "fixtures"
-            / "quote-409-ambiguous-symbol.json"
-        ).read_text(encoding="utf-8")
-    )
-    expected = fixture["response"]["body"]
-    with raw_database(repository) as connection:
-        connection.executemany(
-            "INSERT INTO instruments (isin, symbol, first_seen, listing_id, "
-            "ticker, mic, exchange) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [
-                (
-                    candidate["isin"],
-                    candidate["symbol"],
-                    _SEEN,
-                    candidate["listing_id"],
-                    candidate["symbol"],
-                    candidate["mic"],
-                    candidate["exchange"],
-                )
-                for candidate in expected["candidates"]
-            ],
-        )
-
-    response = client.get("/quote", params={"symbol": expected["params"]["symbol"]})
-
-    assert response.status_code == fixture["response"]["status"]
-    assert response.json() == expected, "Fixture und Laufzeit sagen Verschiedenes zu"
 
 
 def test_ein_eindeutiges_symbol_bleibt_unberuehrt(client_and_repo) -> None:

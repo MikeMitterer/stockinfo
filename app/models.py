@@ -991,10 +991,8 @@ class ListingCandidate(BaseModel):
 class AmbiguousSymbolDetail(BaseModel):
     """Der `409`, wenn mehrere Listings dasselbe Symbol tragen.
 
-    **Die Form kommt aus T-24**, nicht aus diesem Ticket:
-    `contract/fixtures/quote-409-ambiguous-symbol.json` zeigt `detail` und
-    `candidates`, und die Fixture ist von außen benutzbar — StockPortfolio
-    liest sie, ohne StockInfo zu starten.
+    **`detail` und `candidates` kommen aus T-24.** Konsumenten wie
+    StockPortfolio lesen diese beiden Felder.
 
     `code` und `params` kommen additiv dazu, damit dieser `409` dieselbe
     maschinenlesbare Kennung trägt wie jede andere Ablehnung: Ein deutscher

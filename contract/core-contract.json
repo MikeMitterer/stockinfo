@@ -1,14 +1,14 @@
 {
-  "core_version": "4.4.0",
+  "core_version": "4.4.1",
   "details_version": 0,
   "generation": {
-    "endpoint": "/generation",
     "header": "StockInfo-Generation",
+    "sent_by": [
+      "/instrument-types"
+    ],
     "cache_control": "no-store",
     "id_kind": "opaque-uuid",
-    "required_on_every_response": true,
-    "expose_headers_required": true,
-    "rule": "Header und Rumpf einer Antwort stammen aus derselben Generation. Der Header ist das Signal, /generation ist die Wahrheit: Weicht der Header ab, wird die Antwort verworfen und erst nach Bestätigung durch /generation umgeschaltet."
+    "rule": "Die Kennung des Detailkatalogs. GET /instrument-types sendet sie im Header, GET /fields im Rumpf als generation_id. Ändert sie sich, gilt ein zwischengespeicherter Katalog nicht mehr."
   },
   "identity": {
     "listing_id": "Opake UUID je Listing, bei Anlage einmal erzeugt und nicht aus ticker, mic, ISIN oder dem lokalen Schlüssel abgeleitet. Konsumenten behandeln sie als undurchsichtigen String und zerlegen sie nie.",
@@ -115,7 +115,7 @@
       "query": []
     }
   ],
-  "contract_endpoints_note": "Endpunkte, die den Vertrag selbst ausliefern statt Kursdaten. Sie tragen kein Core-Modell, gehören aber in den Schnappschuss: Ein Konsument hängt auch an ihrer Form. /generation kommt mit T-25 dazu.",
+  "contract_endpoints_note": "Endpunkte, die den Vertrag selbst ausliefern statt Kursdaten. Sie tragen kein Core-Modell, gehören aber in den Schnappschuss: Ein Konsument hängt auch an ihrer Form.",
   "query_notes": {
     "period": "Zeitfenster der Tagesreihe: '1w', '1m', '3m', '1y' oder 'max'. Vorgabe '1m'. Es gibt keine Stückzahlbegrenzung — wer weniger Punkte will, wählt ein kürzeres Fenster.",
     "from": "Untere Grenze der Historie (einschließlich), ISO 8601.",
@@ -553,13 +553,6 @@
       "patch": "Klarstellung ohne Änderung am JSON-Vertrag."
     },
     "consumer_rule": "Unbekannte Felder werden ignoriert, nicht als Fehler behandelt. Nur so bleibt eine additive Erweiterung wirklich additiv."
-  },
-  "planned": {
-    "note": "Entschieden, aber noch nicht zugesagt; diese Laufzeitfunktionen sind weiterhin offen.",
-    "generation_runtime": {
-      "ticket": "T-25",
-      "effect": "Route /generation, Header-Middleware, expose_headers, persistierte UUID"
-    }
   },
   "instrument_type_catalog": {
     "cache_control": "no-store",

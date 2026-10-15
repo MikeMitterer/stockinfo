@@ -1,6 +1,5 @@
 """Plugin-Datei und aktive Konfiguration bestimmen den REST-Typkatalog."""
 
-import json
 from pathlib import Path
 from uuid import UUID
 
@@ -103,7 +102,7 @@ def test_typen_kommen_aus_plugins_ohne_instrumente(volume: Path) -> None:
             source["status"] == "available" for source in response.json()["sources"]
         )
         assert response.headers["Cache-Control"] == "no-store"
-        assert response.headers["StockInfo-Generation"]
+        assert UUID(response.headers["StockInfo-Generation"])
         assert client.get("/instrument-types").json() == response.json()
         assert (volume / "builds").read_text() == builds
         assert not (volume / "fetches").exists()
@@ -228,32 +227,3 @@ def test_leere_und_ungueltige_typdeklarationen(
         assert body["instrument_types"] == []
         assert body["complete"] is (expected_status == "available")
         assert body["sources"][0]["status"] == expected_status
-
-
-@pytest.mark.parametrize(
-    "variant, names",
-    [("200", ["catalog-quote"]), ("200-empty", []), ("200-incomplete", ["missing"])],
-)
-def test_http_fixture_entspricht_der_laufenden_api(
-    volume: Path, variant: str, names: list[str]
-) -> None:
-    """Veröffentlichte Konsumentenbeispiele entsprechen den echten HTTP-Antworten."""
-    fixture = json.loads(
-        (
-            Path(__file__).parents[1]
-            / "contract"
-            / "fixtures"
-            / f"instrument-types-{variant}.json"
-        ).read_text()
-    )
-    configure(volume, quotes=names)
-    with restart() as client:
-        response = client.request(
-            fixture["request"]["method"], fixture["request"]["path"]
-        )
-        assert response.status_code == fixture["response"]["status"]
-        assert response.json() == fixture["response"]["body"]
-        for name in ("Content-Type", "Cache-Control"):
-            assert response.headers[name] == fixture["response"]["headers"][name]
-        assert UUID(response.headers["StockInfo-Generation"])
-        assert UUID(fixture["response"]["headers"]["StockInfo-Generation"])
