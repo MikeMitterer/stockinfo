@@ -131,6 +131,63 @@ Selbstprüfung des Coders; die Freigabe gibt der Verifier.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Verifier-Prüfung · Runde 1 · Codex, 2026-10-15
+
+**Ergebnis: `approved` für `558add9`.** Der Fork-Commit
+[`1e804a8`](https://github.com/MikeMitterer/justetf-scraping/commit/1e804a89ecc37df4d4cf63f507695a7dcc28aa28)
+ist der Kopf von [Upstream-PR #59](https://github.com/druzsan/justetf-scraping/pull/59).
+Der PR ändert den Parser auf `data-testid="etf-basics_data_table"` und
+enthält einen Test für die versetzte Tabelle. StockInfo pinnt exakt diesen
+Commit. Der installierte Stand aus `pip freeze` stimmt mit dem Pin überein.
+
+| Verify | Unabhängiger Befund |
+|---|---|
+| #1 | Beide justETF-Online-Tests mit Netzwerkzugriff grün (2 passed). Ein erster Lauf in der Sandbox scheiterte an DNS, bevor justETF antworten konnte. |
+| #2 | Der Fork-Test prüft TER, Fondsgröße, Anbieter, Replikation, Volatilität, Domizil, Fondswährung, Ertragsverwendung und `currency_hedged=False`; die Online-Tests bestätigen gelieferte deklarierte Felder und einen Betrag mit Währung. Die konkreten Live-Zahlen aus Claudes Direktaufruf habe ich nicht erneut gemessen. |
+| #3 | `make test` unabhängig mit Exit 0. `git diff --check` ohne Befund; nach `558add9` wurden nur Ticket und STATUS geändert. |
+| #4 | Provider-Test mit leerer Übersicht und Refresh-Test über `CachedQuoteService` → `QuoteService` → `JustEtfProvider` grün. Der Refresh-Test liest TER und Anbieter nachher aus Antwort und temporärer Datenbank. Die Quelle und Kurs-/Resolver-Grenzen sind ersetzt; der Composite wird darin nicht verdrahtet. Für europäische ISINs ist die Yahoo-ETF-Quelle laut `is_responsible` unzuständig. |
+| #5 | `make setup` vergleicht Git-Pins aus `requirements.txt` mit `pip freeze` und installiert einen abweichenden Pin gezielt neu. Den von Claude belegten Wechsel alt → neu habe ich nicht nochmals in Mikes `.venv` vorgenommen; Pin, Vergleichszeile und aktueller Installationsstand sind unabhängig geprüft. |
+
+**Scope:** Die zusätzlichen sieben Makefile-Zeilen sichern mechanisch, dass
+der beschlossene Fork-Pin in der bestehenden Entwicklungsumgebung tatsächlich
+wirkt. Ich werte sie als die im Workflow erlaubte eindeutige Restanpassung
+nach der einmaligen Umfangserweiterung im Checkpoint. Die zusätzlichen
+Testdateien belegen den bereits vereinbarten Datenverlustfall über den
+öffentlichen Refresh-Einstieg und nutzen die vorhandene Verdrahtung. Es
+entsteht kein unabhängiges Produktergebnis. Der Coder hätte die Überschreitung
+vor dem Edit melden müssen; diese Prozessabweichung ist hier festgehalten.
+
+**Code-Standards:** Gelesen:
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md`,
+`references/architecture.md`, `references/python.md`, `references/quality.md`
+und `makefile-conventions/SKILL.md`. Die berührten Python-Dateien wurden per
+AST nach `Name`, Argumenten, Funktions- und Klassennamen inventarisiert;
+die neuen Bezeichner sind englisch. Ergebnis je Gruppe:
+
+| Gruppe | Ergebnis |
+|---|---|
+| Projektstruktur | ➖ keine Strukturänderung |
+| Architektur, DRY, Namen | ✅ Schutzregel einmal im Provider; die Feldmenge leitet sich aus `EtfDetails` ab; Testverdrahtung nutzt `wire_real_chain` |
+| Shell/Makefile | ✅ `PIN` groß, `read -r`, Pin zitiert; Git-Pins werden aus `requirements.txt` gelesen |
+| Python | ✅ Typen, abgefangener Quellfehler und `structlog`-Kennung vorhanden |
+| Qualität | ✅ Provider- und Refresh-Test treffen den leeren Antwortfall; Online- und Gesamtlauf grün |
+| Persistenz | ➖ kein Produkt-Datenbankcode geändert; temporäre Testdatenbank durch `tmp_path` |
+| Frontend, CLI | ➖ nicht berührt |
+
+**DRY-Prüfguard:** `get_etf_overview`, Kennzahlenschutz, Git-Pin-Vergleich
+und `wire_real_chain` im Projekt einschließlich `.libs/ProjectTools` gesucht.
+Keine zweite Implementierung der neuen Schutzregel oder zweite Pin-Liste
+gefunden. Die zwei Tests haben unterschiedliche Orakel (Provider-Antwort und
+gespeicherter Refresh-Stand).
+
+**Doku-Abgleich:** `README.md`, `README.de.md`, `docker/README.md` und
+`unraid/README.md` geprüft. Sie nennen die Bibliothek ohne Herkunft oder
+Commit und beschreiben `make setup` weiterhin zutreffend als Einrichtung
+der Entwicklungsumgebung. Für das aktuelle Verhalten ist dort keine
+Anpassung nötig. Der Fork-Pin und die Rückkehrbedingung stehen in
+`requirements.txt`; Betrieb mit neuem Image und Rückkehr nach Upstream-Merge
+bleiben gesonderte Schritte. Keine menschliche Abnahme und kein Push.
+
 ### Übergabe Runde 1 · Claude, 2026-10-15
 
 **Prüfstand:** `558add9` auf `t-103-justetf-kennzahlen`. Produkt-Commits
