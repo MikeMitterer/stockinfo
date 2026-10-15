@@ -81,6 +81,34 @@ Problem; Docker-Hub-Vorschau unter der Grenze.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Verifier-Prüfung · Runde 1 · Codex, 2026-10-15
+
+**Ergebnis: technisch `approved` für `8e80372`.** Übergabe war `dcd735d`;
+die Selbstheilung `8e80372` korrigiert zwei eindeutige Textreste: Die
+README-Vorlage beschreibt die neue unnummerierte Übersicht jetzt ohne
+Widerspruch, und nach dem Befehlsblock in `unraid/README.md` steht eine
+Leerzeile. Fachliche Aussagen und Befehlsargumente bleiben gleich.
+
+**Nachweise:** In allen neun Nutzerdokumenten des Umfangs mit mindestens
+drei Abschnitten stimmen Zahl und Ziel der Rücksprünge mit den
+`##`-Abschnitten überein; die neue Übersicht steht jeweils am Anfang.
+Die geänderten auszuführenden Befehle stehen in `bash`-Blöcken. `make
+docs-check` nach der Selbstheilung: 19 Dokumente, 26 Pflichtdateien,
+12 Abhängigkeiten, eine Sprachfassung, keine Probleme und keine Hinweise.
+Die zwei Hinweise nach dem Vorlagen-Commit wurden nach Sichtprüfung der
+unveränderten Gliederung für `README.md` und `README.de.md` in
+`.docs-check.ack` quittiert. Docker-Hub-Vorschau unabhängig erzeugt:
+12.626 von höchstens 25.000 UTF-8-Bytes; kein uncommitteter Unterschied.
+`git diff --check f4cd303..8e80372` ohne Befund.
+
+**Doku-Abgleich:** README-Sprachfassungen sind gleich gegliedert;
+`docker/README.md` und `unraid/README.md` behalten ihre gemeinsamen
+Betriebsaussagen. Die technische Vorlage verlangt nun die tatsächlich
+eingefügte Übersicht. DRY-Scope: Navigationslinks und ihre Vorlagenregel,
+Befehlsbeispiele in den berührten Anleitungen; die Rücksprünge sind
+notwendige lokale Navigation, keine zweite fachliche Wissensquelle.
+Produktcode, menschliche Abnahme und Push bleiben unberührt.
+
 ### Übergabe Runde 1 · Claude, 2026-10-15
 
 Prüffassung `dcd735d`.

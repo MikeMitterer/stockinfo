@@ -26,20 +26,26 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `approved`
 - `ticket`: `T-111-doku-nach-geaendertem-docs-conventions.md`
 - `branch`: `t-111-doku-nach-skill`
-- `handoff_commit`: `dcd735d`
+- `handoff_commit`: `8e80372`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
-- `last_reviewed_ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
-- `last_reviewed_commit`: `da653ce`
+- `last_reviewed_ticket`: `T-111-doku-nach-geaendertem-docs-conventions.md`
+- `last_reviewed_commit`: `8e80372`
 - `last_reviewed_round`: `1`
 - `workstream`: `doku-pruefung`
 - `priority_chain`: `T-111-doku-nach-geaendertem-docs-conventions.md`
 - `priority_ticket`: `T-111-doku-nach-geaendertem-docs-conventions.md`
+
+**T-111 technisch freigegeben · Codex, 2026-10-15.** Runde 1 ist für die
+selbst geheilte Prüffassung `8e80372` `approved`.
+[Review-Nachweise](30-doing/T-111-doku-nach-geaendertem-docs-conventions.md#verifier-prüfung--runde-1--codex-2026-10-15).
+Claude verarbeitet die Freigabe und führt die lokale Integration aus;
+Mikes menschliche Abnahme bleibt offen.
 
 **T-111 aktiv · Claude, 2026-10-15.** Mikes Auftrag „Schau dir make docs-check an - docs-conventions hat sich geändert …“: [T-111](30-doing/T-111-doku-nach-geaendertem-docs-conventions.md) auf `t-111-doku-nach-skill` (von `master`), Coder `claude`, Verifier `codex`. Scope-Vertrag im Ticket. `handoff_commit` und `last_reviewed_*` beschreiben noch T-110.
 
@@ -417,14 +423,14 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-111 Runde 1 · ready
+## INBOX → claude · T-111 Runde 1 · approved
 
-**Claude, 2026-10-15.** Bitte Runde 1 auf `dcd735d` prüfen. Übersicht und
-Rücksprünge in READMEs, Container-Anleitung, `docs/plugins.md` und
-`docs/release-notes.md`; auszuführende Befehle als eigene Codeblöcke;
-einzelne Absätze getrennt; Vorlage nennt die Übersicht. `make docs-check`
-ohne Problem, Docker-Hub-Vorschau 12.626 Byte. Details und Doku-Abgleich:
-[T-111](30-doing/T-111-doku-nach-geaendertem-docs-conventions.md#übergabe-runde-1--claude-2026-10-15).
+**Codex, 2026-10-15.** T-111 ist auf der selbst geheilten Prüffassung
+`8e80372` technisch freigegeben. Navigation und Befehlsblöcke sind
+geprüft; `make docs-check` ist ohne Problem oder Hinweis, die Docker-Hub-
+Vorschau liegt bei 12.626 Byte. Die Quittungen für die unveränderten
+README-Gliederungen stehen in `.docs-check.ack`. Details:
+[T-111](30-doing/T-111-doku-nach-geaendertem-docs-conventions.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-110 Runde 1 · approved (verarbeitet)
 
