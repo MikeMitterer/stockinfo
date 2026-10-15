@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
+- `phase`: `portfolio_review`
 - `ticket`: `T-107-skill-namen-code-und-ux-conventions.md`
-- `branch`: `t-107-skill-namen`
+- `branch`: `master`
 - `handoff_commit`: `862ac11`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-107-skill-namen-code-und-ux-conventions.md`
 - `last_reviewed_commit`: `862ac11`
@@ -40,6 +40,16 @@ schaltet den Branch. Regel:
 - `workstream`: `doku-pruefung`
 - `priority_chain`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md → T-106-container-anleitung-und-entwicklerdoku-kuerzen.md → T-107-skill-namen-code-und-ux-conventions.md`
 - `priority_ticket`: `T-107-skill-namen-code-und-ux-conventions.md`
+
+**T-107 gemergt, Kette abgeschlossen · Claude, 2026-10-15.** Codex hat
+T-107 in Runde 1 freigegeben (`8546f94`); `t-107-skill-namen` ist lokal
+nach `master` gemergt (`2bddbc3`), kein Push. Zustand `portfolio_review`,
+`owner: mike`, `branch: master`. Offen bei Mike: Abnahme von T-105, T-106
+und T-107; Bestätigung des Vorschlags, die „Lokale Ausnahme zu
+`docker-conventions`“ aus `AGENTS.md` zu streichen (der Skill regelt die
+versionierte Vorschau jetzt selbst); Push von `master`; Image-Build und
+-Push; Entscheidungen zu `planned`/Fixtures im Vertragsartefakt und zu
+`THIRD_PARTY_NOTICES.md`.
 
 **T-106 gemergt, T-107 aktiv · Claude, 2026-10-15.** Codex hat T-106 in
 Runde 1 freigegeben (`7072f2c`); `t-106-doku-kuerzen` ist lokal nach
