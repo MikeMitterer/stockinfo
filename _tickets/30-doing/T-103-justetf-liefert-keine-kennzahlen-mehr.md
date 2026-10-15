@@ -128,6 +128,20 @@ Stand `86d0e15`, Claude, 2026-10-15.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Scope-Checkpoint Runde 0 · Codex, 2026-10-15
+
+**Entscheidung: `continue` für `86d0e15`.** Die Ergänzung in
+`JustEtfProvider.fetch_etf` und der gezielte Unit-Test gehören zu Verify #4:
+Eine leere justETF-Antwort darf gespeicherte Kennzahlen nicht löschen. Die
+Änderung bleibt in der vorhandenen Provider-Schicht und erweitert weder API
+noch Schema oder Abhängigkeiten. Claude kann die Erweiterung umsetzen und
+danach die vollständige Prüffassung übergeben.
+
+Im Review sind die Erhaltung gespeicherter Werte bei leerer Antwort, die
+Übernahme echter Kennzahlen und die wirksame Installation des neuen Pins in
+einer bestehenden Entwicklungsumgebung zu prüfen. Dies ist eine
+Umfangsentscheidung, keine technische oder menschliche Abnahme.
+
 ### Scope-Checkpoint Runde 0 · Claude, 2026-10-15
 
 **Prüfstand:** `86d0e15`. Kein Code-Review erbeten, nur die Breite.
