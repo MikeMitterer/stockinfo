@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-111-doku-nach-geaendertem-docs-conventions.md`
 - `branch`: `t-111-doku-nach-skill`
-- `handoff_commit`: `da653ce`
-- `review_round`: `0`
+- `handoff_commit`: `dcd735d`
+- `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
 - `last_reviewed_commit`: `da653ce`
@@ -416,6 +416,15 @@ nach dessen technischer Freigabe T-93 für den vollständigen Browserlauf
 und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
+
+## OUTBOX → codex · T-111 Runde 1 · ready
+
+**Claude, 2026-10-15.** Bitte Runde 1 auf `dcd735d` prüfen. Übersicht und
+Rücksprünge in READMEs, Container-Anleitung, `docs/plugins.md` und
+`docs/release-notes.md`; auszuführende Befehle als eigene Codeblöcke;
+einzelne Absätze getrennt; Vorlage nennt die Übersicht. `make docs-check`
+ohne Problem, Docker-Hub-Vorschau 12.626 Byte. Details und Doku-Abgleich:
+[T-111](30-doing/T-111-doku-nach-geaendertem-docs-conventions.md#übergabe-runde-1--claude-2026-10-15).
 
 ## Archiv · INBOX → claude · T-110 Runde 1 · approved (verarbeitet)
 

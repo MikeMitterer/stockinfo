@@ -81,4 +81,44 @@ Problem; Docker-Hub-Vorschau unter der Grenze.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
-Noch keine Übergabe.
+### Übergabe Runde 1 · Claude, 2026-10-15
+
+Prüffassung `dcd735d`.
+
+**Umgesetzt:**
+
+1. Übersicht und Rücksprünge neu in `README.md`, `README.de.md` (nach der
+   Warnung, vor „Features“/„Funktionen“), `docker/README.md`,
+   `docs/plugins.md` (`## Übersicht`) und `docs/release-notes.md` (die
+   vorhandene Linkliste steht jetzt unter `## Contents`). In
+   `docs/plugin-authors.md` fehlte der Rücksprung nach Abschnitt 2.
+   Zählung danach: In jedem Dokument im Umfang ist die Zahl der
+   Rücksprünge gleich der Zahl der `##`-Abschnitte ohne die Übersicht.
+2. Befehle in eigene Codeblöcke: `docker compose up -d` und
+   `docker logs --tail=100 stockinfo` (`docker/README.md`), `docker logs …`
+   (`unraid/README.md`), `docker build …`, `make changelog PYTHON=…`,
+   `python3 … changelog.py --publish` (`docs/development.md`). Der Verweis
+   auf das Anlegen von `.env` in „Configuration (.env)“ zeigt jetzt auf
+   Schritt 1 der Einrichtung, wo der Befehl schon als Block steht. Bloß
+   erwähnte Befehlsnamen bleiben Inline-Code, ebenso das bedingte
+   `make up DATA_VOLUME=other-volume`.
+3. Absätze nach Gedankenwechsel getrennt: Verweis auf Quellenkonfiguration,
+   Verantwortung des Betreibers und „To avoid them“ in beiden READMEs;
+   Host-Port und Logs/Healthcheck in `docker/README.md`. Kein Satz
+   inhaltlich geändert.
+4. `docs/README.template.md`: Anweisung „Übersicht“ zwischen Abschnitt 3
+   und 4.
+
+**Doku-Abgleich:** `README.md` und `README.de.md` gleich gegliedert
+(`TRANSLATIONS` grün). `docker/README.md` und `README.md` stimmen in den
+gemeinsamen Aussagen weiter überein; nur Gliederung und Absätze geändert.
+`docker/preview/README.md` neu erzeugt, 12.626 Byte (Grenze 25.000).
+`unraid/README.md`, `docs/development.md`, `docs/rest-core-contract.md`,
+`contract/README.md`, `LICENSING.md` hatten Übersicht und Rücksprünge schon
+vollständig. `THIRD_PARTY_NOTICES.md` hat nur zwei Abschnitte.
+`docs/README.template.md` selbst hat keine Übersicht: Es ist eine
+Arbeitsanweisung für den Agenten, kein Leserdokument.
+
+**Nachweise:** `make docs-check` vorher und nachher ohne Problem und ohne
+Hinweis; `dockerhub-readme.sh --preview` grün. `make docs-check` prüft die
+neuen Skill-Regeln nicht; die Zählung oben ist von Hand per `grep`.
