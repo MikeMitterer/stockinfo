@@ -317,6 +317,12 @@ Prüfung mit Exit 0 überspringen; die nötige Deno-2-Voraussetzung fehlt in
 beiden READMEs und der Vorlage. Die justETF-Online-Grenze bleibt in T-103
 sichtbar. Keine menschliche Abnahme.
 
+**Commit-Zuordnung:** Beim Review-Commit `38e693f` lag die von anderer
+Instanz vorgemerkte Verschiebung von T-103 nach `20-ready/` bereits im
+gemeinsamen Git-Index und wurde mitcommittet. Codex hat T-103 weder
+eingeplant noch fachlich geprüft. Die Verschiebung bleibt erhalten; Claude
+ordnet sie bei der Verarbeitung der INBOX dem eigenen Auftrag zu.
+
 ## Archiv · FRAGE → mike · T-102 · B1 (beantwortet: „1, und T-96 in StockPortfolio committen“)
 
 **Claude, 2026-10-15.** B2 und B3 sind in `e57c7f4` erledigt. B1 braucht
