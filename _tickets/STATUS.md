@@ -26,20 +26,26 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `portfolio_review`
-- `ticket`: `T-107-skill-namen-code-und-ux-conventions.md`
-- `branch`: `master`
+- `phase`: `claude_working`
+- `ticket`: `T-108-lokale-vorschau-ausnahme-streichen.md`
+- `branch`: `t-108-vorschau-ausnahme`
 - `handoff_commit`: `862ac11`
-- `review_round`: `1`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
-- `owner`: `mike`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-107-skill-namen-code-und-ux-conventions.md`
 - `last_reviewed_commit`: `862ac11`
 - `last_reviewed_round`: `1`
 - `workstream`: `doku-pruefung`
-- `priority_chain`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md → T-106-container-anleitung-und-entwicklerdoku-kuerzen.md → T-107-skill-namen-code-und-ux-conventions.md`
-- `priority_ticket`: `T-107-skill-namen-code-und-ux-conventions.md`
+- `priority_chain`: `T-108-lokale-vorschau-ausnahme-streichen.md`
+- `priority_ticket`: `T-108-lokale-vorschau-ausnahme-streichen.md`
+
+**T-108 aktiv · Claude, 2026-10-15.** Auf Mikes Bestätigung („Ja, der ist
+auch von mir“) neue Kette mit
+[T-108](30-doing/T-108-lokale-vorschau-ausnahme-streichen.md) auf
+`t-108-vorschau-ausnahme` (von `master`), Coder `claude`, Verifier `codex`.
+Die übrigen offenen Punkte aus dem folgenden Vermerk bleiben bei Mike.
 
 **T-107 gemergt, Kette abgeschlossen · Claude, 2026-10-15.** Codex hat
 T-107 in Runde 1 freigegeben (`8546f94`); `t-107-skill-namen` ist lokal
@@ -2653,10 +2659,11 @@ T-70 ist keine zweite fortgeschriebene Fassung des Haupttickets.
 
 Die [Aufnahmeregel](.agents/AGENT-WORKFLOW.md#ticketgrenzen) erlaubt höchstens
 zwei zusätzliche Tickets bei begründetem Bedarf. Andere Ordner haben kein Limit.
-Aktuelle Ausnahmen: `30-doing` mit drei Tickets (T-105, T-106, T-107), eins
-über der Zielgrenze, unter der harten Obergrenze. Bedarf: T-105 und T-106
-sind technisch freigegeben und gemergt und warten nur auf Mikes Abnahme;
-T-107 ist ein kleiner Folgeauftrag (Mike, 2026-10-15). Bei einer
+Aktuelle Ausnahmen: `30-doing` mit vier Tickets (T-105, T-106, T-107,
+T-108), zwei über der Zielgrenze und genau an der harten Obergrenze. Bedarf:
+T-105 bis T-107 sind technisch freigegeben und gemergt und warten nur auf
+Mikes Abnahme; T-108 ist ein kleiner Folgeauftrag (Mike, 2026-10-15). Kein
+weiteres Ticket nach `30-doing/` vor einer Abnahme. Bei einer
 Überschreitung hier Ordner, betroffene
 Tickets und konkreten Bedarf nennen; nach Rückkehr zur Zielgrenze entfernen.
 Der Bestand wird aus den Ticketdateien ermittelt, nicht als Zähler gepflegt.
