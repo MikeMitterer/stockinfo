@@ -15,6 +15,19 @@ Tailscale.
 
 ![StockInfo dashboard](../unraid/screenshots/dashboard.png)
 
+## Contents
+
+- [StockPortfolio: the companion app](#stockportfolio-the-companion-app)
+- [Quick start](#quick-start)
+- [Docker Compose](#docker-compose)
+- [What you get](#what-you-get)
+- [Storage and permissions](#storage-and-permissions)
+- [Configuration](#configuration)
+- [Security](#security)
+- [Updates, backups and troubleshooting](#updates-backups-and-troubleshooting)
+- [Unraid](#unraid)
+- [Support and license](#support-and-license)
+
 ## StockPortfolio: the companion app
 
 StockInfo works on its own. Scripts, spreadsheets and other apps can use its
@@ -31,6 +44,8 @@ container with `STOCKINFO_API_URL` set to your StockInfo address.
 
 Details are in its [Docker guide](https://hub.docker.com/r/mangolila/stockportfolio)
 ([source code](https://github.com/MikeMitterer/stockportfolio)).
+
+[↑ Contents](#contents)
 
 ## Quick start
 
@@ -56,6 +71,8 @@ The example exposes the service only on the Docker host. To reach it from
 your home network, replace `127.0.0.1:8000:8000` with `8000:8000` and use the
 host's address in your browser. Keep that port inside your home network.
 
+[↑ Contents](#contents)
+
 ## Docker Compose
 
 Save this as `compose.yaml` in a directory of your choice:
@@ -79,8 +96,16 @@ volumes:
   stockinfo-data:
 ```
 
-Start it with `docker compose up -d`. This is an alternative to the
-`docker run` example; Compose creates its own project-scoped data volume.
+Start it from that directory:
+
+```bash
+docker compose up -d
+```
+
+This is an alternative to the `docker run` example; Compose creates its own
+project-scoped data volume.
+
+[↑ Contents](#contents)
 
 ## What you get
 
@@ -115,6 +140,8 @@ StockInfo is responsible for using these sources in line with the providers'
 terms. To avoid them, remove them from `/data/sources.yaml` or use a file-only
 source profile.
 
+[↑ Contents](#contents)
+
 ## Storage and permissions
 
 Mount persistent storage at **`/data`**. It contains the SQLite database
@@ -142,6 +169,8 @@ the container after editing them. See the [source configuration guide](../docs/p
 for file-based sources and plugins; paths described there beside the database
 belong under `/data` in the container.
 
+[↑ Contents](#contents)
+
 ## Configuration
 
 Pass settings with `docker run -e NAME=value`, an `--env-file`, or Compose's
@@ -159,9 +188,13 @@ Pass settings with `docker run -e NAME=value`, an `--env-file`, or Compose's
 | `OPENFIGI_API_KEY` | Empty | Optional key for a higher OpenFIGI rate limit |
 | `CORS_ORIGINS` | `["http://localhost:5173"]` | Web pages on another address that may call the API, as a JSON list; see [Security](#security) |
 
-The container listens on **port 8000**. To use a different host port, change
-only the left-hand port in the mapping, for example `127.0.0.1:8080:8000`.
-Dashboard and API share an origin; no separate frontend container is needed.
+The container listens on **port 8000**. Dashboard and API share an origin;
+no separate frontend container is needed.
+
+To use a different host port, change only the left-hand port in the mapping,
+for example `127.0.0.1:8080:8000`.
+
+[↑ Contents](#contents)
 
 ## Security
 
@@ -199,6 +232,8 @@ refresh takes a non-blocking lock so two runs cannot overlap, and justETF is
 only scraped once every `METADATA_TTL_DAYS` (an explicit single refresh still
 forces it).
 
+[↑ Contents](#contents)
+
 ## Updates, backups and troubleshooting
 
 For Compose installations:
@@ -218,15 +253,25 @@ Back up the whole `/data` volume before updating. For a filesystem copy, stop
 the container first so that the SQLite database and its journal files stay
 consistent. Keep the backup outside the container and its data volume.
 
-For the `docker run` example, view logs with `docker logs --tail=100 stockinfo`.
+For the `docker run` example, view the logs with:
+
+```bash
+docker logs --tail=100 stockinfo
+```
+
 The image includes a healthcheck against `/operational`; `/health` checks that
 the process is running, and `/ready` reports whether normal requests are allowed.
+
 If the service waits for a migration or reports a source error, inspect the
 logs and dashboard before restarting repeatedly.
+
+[↑ Contents](#contents)
 
 ## Unraid
 
 See the [Unraid guide](../unraid/README.md) for installation, configuration and operation.
+
+[↑ Contents](#contents)
 
 ## Support and license
 
@@ -255,3 +300,5 @@ the [third-party notices](../THIRD_PARTY_NOTICES.md) at
 `/app/plugin_api/LICENSE` and
 `/app/plugin_api/examples/us-example/LICENSE`. Image tags identify the source
 commit in the [source repository](https://github.com/MikeMitterer/stockinfo).
+
+[↑ Contents](#contents)

@@ -214,6 +214,8 @@ Migrations run before business requests and scheduled refreshes. An outstanding
 identity-migration confirmation comes first. There is no additional migration
 dialog; `/ready` and `/operational` report a failed start as degraded.
 
+[↑ Contents](#contents)
+
 ---
 
 ## 3. The smallest package that works
