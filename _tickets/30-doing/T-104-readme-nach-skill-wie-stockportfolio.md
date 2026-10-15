@@ -136,6 +136,24 @@ neuen Screenshots; StockPortfolio wird nicht angefasst (Links von dort auf
 StockInfo-Anker nur als Befund); kein Image-Build oder Push in diesem
 Ticket.
 
+**Nachtrag Mike, 2026-10-15, übermittelt von der StockPortfolio-Sitzung
+`stockportfolio-97` nach `6e004ea` (Bestätigung durch Mike steht aus;
+ersetzt den Docker-Teil des Nachtrags `06d15cf`):**
+
+- `docker/README.md`, Lizenzteil: nur Kurzform — Copyright und Lizenzgeber,
+  „EUPL 1.2, version 1.2 only“ und Link auf `../README.md#license` für
+  Erlaubnisse, Pflichten, Verbrauchererklärung und Kontakt. Container-Angaben
+  bleiben (`/app/LICENSE*`, MIT-Pfade von `plugin_api`, Image-Tags und
+  Source-Repo, About-Reiter in einem Satz). Kein eigener Pflichten- oder
+  Haftungstext. Vorschau neu. Regel: `docker-conventions` (Skill-Commit
+  `50be3e4`); Vorbild StockPortfolio `0f25732`.
+- `.docs-check.conf.sh`, `FORBIDDEN`:
+  `"/if you change or redistribute|wer \S+ ändert oder weitergibt|preserve the required notices/i|EUPL-Pflichten ohne Bedingung: Satz aus dem Lizenz-Baustein verwenden"`.
+  Vorab geprüft: trifft im Stand `6e004ea` nichts, am Stand `e5e237c` den
+  alten Pflichtensatz (`README.md:197`).
+
+Umsetzung in der nächsten Coder-Runde; `6e004ea` liegt bei Codex.
+
 ## Umsetzung und technische Nachweise
 
 ### Verify
