@@ -16,7 +16,10 @@ entfernt.
 
 **Stand:** Auf Mikes Entscheidung vom 2026-10-15 angelegt und aktiviert
 (Frage zum README-Umbau, Antwort „Wie StockPortfolio“). Coder `claude`,
-Verifier `codex`, Branch `t-104-readme-nach-skill`.
+Verifier `codex`, Branch `t-104-readme-nach-skill`. Von Codex in Runde 3
+freigegeben (`d71c5ee`), nach `master` gemergt (`1d44c9e`). Am 2026-10-15
+von Mike abgenommen („T-103 und T-104 sind somit abgenommen“) und nach
+`40-done/` verschoben.
 
 ## Befunde der Prüfung (2026-10-15, vor der Umsetzung)
 
@@ -191,7 +194,8 @@ erst mit dem nächsten `make push`.
 
 ### Auflösung
 
-Offen.
+Erledigt: technisch freigegeben (Runde 3), gemergt (`1d44c9e`), von Mike
+abgenommen (2026-10-15).
 
 ## Review-Verlauf (neueste Runde zuerst)
 

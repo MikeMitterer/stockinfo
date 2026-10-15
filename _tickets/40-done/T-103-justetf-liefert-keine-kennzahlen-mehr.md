@@ -23,8 +23,11 @@ gefunden beim Gesamtlauf von `make test` in T-102. Auf Mikes Auftrag
 („Nimm T-103 in die Kette nach T-102“) in `20-ready/` und in
 `priority_chain` nach T-102. Nach der Freigabe von T-102 aktiviert
 (2026-10-15) auf `t-103-justetf-kennzahlen`, Coder `claude`, Verifier
-`codex`. Zuerst Ursache klären, dann Scope-Vertrag, dann Umsetzung. `make check` ist nicht betroffen, weil es die
-`integration`-Tests auslässt.
+`codex`. Von Codex in Runde 1 freigegeben (`07f5684`), nach `master`
+gemergt (`8668849`). Am 2026-10-15 von Mike abgenommen („T-103 und T-104
+sind somit abgenommen“) und nach `40-done/` verschoben. Offen außerhalb des
+Tickets: Rückkehr des Pins auf Upstream nach Merge von
+druzsan/justetf-scraping#59 und ein neues Image für Unraid.
 
 ## Befund
 

@@ -363,6 +363,12 @@ without ProjectTools, the target prints a note and the other tests still run.
 `make setup` also installs a Git pre-commit hook that runs the check on the
 staged files and stops a commit when it reports problems.
 
+`README.md` and `README.de.md` must keep the same structure (`TRANSLATIONS` in
+`.docs-check.conf.sh`): the same headings and, per section, the same links,
+images, code, alerts and number of paragraphs. Only the text and Mermaid
+labels are translated. Any difference is a problem that stops the pre-commit
+hook and cannot be acknowledged; change both versions in the same commit.
+
 The normal backend run includes tests marked `integration` that call real
 external APIs or the package index. `make check` leaves them out and adds
 `ruff` and the dashboard type check (`vue-tsc`). To exclude only the online
