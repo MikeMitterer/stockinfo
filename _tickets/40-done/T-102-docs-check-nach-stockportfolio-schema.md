@@ -20,8 +20,8 @@ passendem config-File, Makefile-Target, README.template.md usw.“). In
 `30-doing/` aktiviert, Coder `claude`, Verifier `codex`. Umsetzung auf
 `t-102-docs-check` in Runde 3 für `a2615a9` technisch freigegeben. B1 ist
 durch Mikes Entscheidung aufgelöst; B2–B5 sind nachgearbeitet. Die
-justETF-Online-Tests bleiben als T-103 offen. Mikes menschliche Abnahme
-steht aus.
+justETF-Online-Tests bleiben als T-103 offen. Von Mike am 2026-10-15
+abgenommen („T-102 nach done verschieben“) und nach `40-done/` verschoben.
 
 ## Ausgangslage
 
@@ -182,7 +182,9 @@ Auftrag.
 ### Auflösung
 
 Technisch freigegeben für `a2615a9` in Runde 3. Der Coder verarbeitet die
-Freigabe und den lokalen Merge. Mikes menschliche Abnahme bleibt offen.
+Freigabe und den lokalen Merge (`c337fc4`, zu `origin` gepusht).
+
+**Abgenommen · Mike, 2026-10-15.** „T-102 nach done verschieben“.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
