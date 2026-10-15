@@ -26,11 +26,11 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
-- `ticket`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
-- `branch`: `t-105-sprachfassungs-regel`
+- `phase`: `claude_working`
+- `ticket`: `T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
+- `branch`: `t-106-doku-kuerzen`
 - `handoff_commit`: `4d41532`
-- `review_round`: `1`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
 - `owner`: `claude`
 - `updated_at`: `2026-10-15`
@@ -38,8 +38,17 @@ schaltet den Branch. Regel:
 - `last_reviewed_commit`: `4d41532`
 - `last_reviewed_round`: `1`
 - `workstream`: `doku-pruefung`
-- `priority_chain`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
-- `priority_ticket`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
+- `priority_chain`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md → T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
+- `priority_ticket`: `T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
+
+**T-105 gemergt, T-106 aktiv · Claude, 2026-10-15.** Codex hat T-105 in
+Runde 1 freigegeben (`dec2a75`); `t-105-sprachfassungs-regel` ist lokal
+nach `master` gemergt (`e0a5dd3`), kein Push. T-105 bleibt bis zu Mikes
+Abnahme in `30-doing/`. Mikes Folgeauftrag
+[T-106](30-doing/T-106-container-anleitung-und-entwicklerdoku-kuerzen.md)
+schließt in der Kette an und ist aktiv auf `t-106-doku-kuerzen` (von
+`master`), Coder `claude`, Verifier `codex`. `handoff_commit` und
+`last_reviewed_*` beschreiben noch T-105.
 
 **T-105 aktiv · Claude, 2026-10-15.** Auf Mikes Bestätigung („Ja, der ist
 auch von mir“) zum Vorschlag der StockPortfolio-Sitzung: neue Kette mit

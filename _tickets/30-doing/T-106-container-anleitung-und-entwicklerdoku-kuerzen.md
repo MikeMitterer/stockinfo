@@ -13,7 +13,8 @@ verlinkt die Lizenzdokumente.
 **Stand:** Auf Mikes Auftrag vom 2026-10-15 in `20-ready/` angelegt
 (Vorschlag der StockPortfolio-Sitzung `stockportfolio-97`, von Mike
 bestätigt: „Ja, der ist auch von mir“). Vorbild: StockPortfolio `ad3458b`,
-`330f00d`. Aktiviert wird es nach T-105.
+`330f00d`. Nach der Freigabe von T-105 aktiviert (2026-10-15) auf
+`t-106-doku-kuerzen`, Coder `claude`, Verifier `codex`.
 
 ## Scope-Vertrag
 
@@ -48,6 +49,14 @@ T-106“):
 
 Befehle, die das Projekt nutzt (`dockerhub-readme.sh`, `changelog.py`),
 bleiben.
+
+**Mechanische Folge, beim Aktivieren ergänzt (Claude, 2026-10-15):** Der
+Skill `readme-conventions` heißt jetzt `docs-conventions`
+(`~/.claude/skills/docs-conventions`, Baustein unverändert unter
+`templates/license-eupl.md`). Vier Verweise ziehen mit: `AGENTS.md:145`,
+`docs/README.template.md:15` und `:118`, `.docs-check.conf.sh:158`. Damit
+kommen diese drei Dateien in den Umfang (6 statt 3); reine Umbenennung,
+keine neue Regel. Budget bleibt unter 40 Zeilen.
 
 **Nicht-Ziele:** keine Änderung an READMEs oder Oberfläche. Fehlt der
 Nutzerdoku danach etwas aus der gestrichenen Beschreibung, wird es dort
