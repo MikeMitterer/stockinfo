@@ -26,7 +26,7 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
 - `branch`: `t-102-docs-check`
 - `handoff_commit`: `d96ba31`
