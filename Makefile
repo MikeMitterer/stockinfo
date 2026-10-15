@@ -133,6 +133,13 @@ setup: ## .libs-Symlinks, Git-Hooks, Python-.venv und Dashboard-Pakete einrichte
 	@test -x $(VENV)/bin/python || $(PYTHON_BOOTSTRAP) -m venv $(VENV)
 	@$(VENV)/bin/python -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "Bestehende .venv benötigt Python 3.11 oder neuer")'
 	@$(VENV)/bin/python -m pip install -q -r requirements-dev.txt
+	@# Git-gepinnte Pakete behalten bei einem neuen Commit oft ihre Version;
+	@# pip hält den alten Stand dann für erfüllt. Weicht der installierte Stand
+	@# vom Pin ab, wird genau dieses Paket neu installiert.
+	@grep -E '^[A-Za-z0-9_.-]+ @ git\+' requirements.txt | while read -r PIN; do \
+		$(VENV)/bin/python -m pip freeze | grep -qxF "$$PIN" || \
+			$(VENV)/bin/python -m pip install -q --no-deps --force-reinstall "$$PIN"; \
+	done
 	@if [[ -d .libs/ProjectTools ]]; then $(VENV)/bin/python -m pip install -q -r requirements-maintainer.txt; fi
 	@npm ci --prefix dashboard --no-audit --no-fund
 

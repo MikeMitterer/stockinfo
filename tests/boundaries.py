@@ -96,7 +96,10 @@ class EmptyEtfEnricher:
 
 
 def wire_real_chain(
-    db_path: str, quote_source: object, resolver: object
+    db_path: str,
+    quote_source: object,
+    resolver: object,
+    etf_source: object | None = None,
 ) -> tuple[CachedQuoteService, QuoteRepository]:
     """Verdrahtet die echte Kette über einer frischen Datei.
 
@@ -113,6 +116,7 @@ def wire_real_chain(
         db_path: Pfad der Datei; das Schema wird hier angelegt.
         quote_source: Die Außengrenze zur Kursquelle.
         resolver: Die Außengrenze zur ISIN-Auflösung.
+        etf_source: Die ETF-Quelle; ohne Angabe eine, die nie zuständig ist.
 
     Returns:
         Der fertige Dienst und das Repository darunter — beide echt.
@@ -120,7 +124,7 @@ def wire_real_chain(
     init_db(db_path)
     repository = QuoteRepository(db_path)
     service = CachedQuoteService(
-        QuoteService(quote_source, EmptyEtfEnricher(), resolver),
+        QuoteService(quote_source, etf_source or EmptyEtfEnricher(), resolver),
         repository,
         ttl_hours=0,
         daily_sync=empty_daily_sync(repository),

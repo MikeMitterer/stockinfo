@@ -6,6 +6,7 @@ ETF-Extras.
 """
 
 import re
+from dataclasses import fields
 from typing import Any
 
 import justetf_scraping
@@ -98,6 +99,23 @@ def is_european_listing(
     return False
 
 
+# Felder von `EtfDetails`, die die Antwort beschreiben, aber keine Kennzahl sind.
+_NOT_METRICS = frozenset({"detail_readings", "name", "source"})
+
+
+def _has_metrics(details: EtfDetails) -> bool:
+    """Trägt die Antwort mindestens eine Kennzahl?
+
+    Die Kennzahlen ergeben sich aus den Feldern von `EtfDetails`; eine neue
+    Kennzahl dort zählt damit ohne zweite Liste mit.
+    """
+    return any(
+        getattr(details, field.name) is not None
+        for field in fields(details)
+        if field.name not in _NOT_METRICS
+    )
+
+
 class JustEtfProvider:
     """Reichert ETF-Daten anhand der ISIN über justETF (Scraping) an."""
 
@@ -181,7 +199,7 @@ class JustEtfProvider:
             return None
 
         # get_etf_overview liefert ein TypedDict → Zugriff per dict.get().
-        return EtfDetails(
+        details = EtfDetails(
             ter=self._as_float(overview.get("ter")),
             provider=overview.get("fund_provider"),
             replication=self._as_replication(overview.get("replication")),
@@ -195,6 +213,14 @@ class JustEtfProvider:
             accumulating=self._as_accumulating(overview.get("distribution_policy")),
             source="yfinance+justetf",
         )
+        if not _has_metrics(details):
+            # Seite geladen, aber keine Kennzahl gelesen — etwa wenn justETF
+            # den Seitenaufbau ändert. Als Antwort gewertet, überschriebe sie
+            # den gespeicherten Stand mit leeren Werten; ``None`` lässt ihn
+            # stehen.
+            logger.warning("justetf_no_metrics", isin=isin)
+            return None
+        return details
 
     @staticmethod
     def _as_accumulating(policy: Any) -> bool | None:
