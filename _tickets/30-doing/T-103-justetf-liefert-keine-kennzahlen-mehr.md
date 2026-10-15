@@ -54,9 +54,34 @@ installiert) hat denselben Fehler; ein Pin-Update hilft nicht. Upstream
 dieser Fehler ist dort nicht gemeldet. Seit wann justETF die Seite so
 ausliefert, ist nicht belegt.
 
-**Entscheidung Mike nötig:** wie die Korrektur in StockInfo ankommt (Fork
-mit Fix und Upstream-PR, eigene Auswertung in StockInfo, oder auf Upstream
-warten). Bis dahin keine Produktänderung.
+**Entscheidung Mike, 2026-10-15:** „Fork + Upstream-PR“. Fork unter
+`MikeMitterer/justetf-scraping`, Fix mit Test, PR an `druzsan`; StockInfo
+pinnt bis zum Merge auf den Fork-Commit.
+
+## Scope-Vertrag
+
+**Beobachtbares Ergebnis:** Für IE00B4L5Y983 liefert StockInfos
+justETF-Plugin wieder TER, Fondsgröße, Anbieter, Replikation, Volatilität,
+Domizil, Fondswährung und Ertragsverwendung; die beiden Online-Tests und
+`make test` sind grün.
+
+**Fachliche Änderungen (zwei):**
+
+1. Im Fork: Stammdaten aus der Tabelle `etf-basics_data_table` lesen statt
+   aus der zweiten Tabelle, mit Test; PR an Upstream.
+2. In StockInfo: `requirements.txt` pinnt auf den Fork-Commit, mit
+   Kommentar, wann der Pin zurück auf Upstream geht.
+
+**Erwartete Dateien:** Fork: `etf_profile.py` und ein Test (2). StockInfo:
+`requirements.txt` (1), Ticket. Keine Doku-Datei: die READMEs nennen die
+Bibliothek ohne Quelle oder Version; geprüft im Doku-Abgleich.
+
+**Diff-Budget:** StockInfo unter 20 Zeilen ohne `_tickets/`; Fork unter
+100 Zeilen.
+
+**Nicht-Ziele:** keine eigene Auswertung in StockInfo; Klärung von
+Verify #4 (Verhalten bei leerer Antwort) nur als Befund, ohne Code, falls
+dafür eine neue Entscheidung nötig ist; kein Push von StockInfo.
 
 **Folgen im Betrieb:** Bei jeder Metadaten-Aktualisierung (alle
 `METADATA_TTL_DAYS` und bei manueller Aktualisierung) kommt von justETF
