@@ -9,7 +9,7 @@ das, was hier liegt.**
 contract/
 ├── core-contract.json           # der Vertrag: Felder, Nullability, Bedeutung, Regeln
 ├── openapi-core-snapshot.json   # gespeicherte OpenAPI-Form der erfassten Endpunkte
-└── fixtures/                    # HTTP-Vertragsbeispiele, positiv und negativ
+└── fixtures/                    # interne HTTP-Beispiele für die Vertragstests
 ```
 
 Zur Laufzeit beantwortet **`GET /fields`** denselben Vertrag: Feldliste je
@@ -36,11 +36,24 @@ vollständige, leere und unvollständige HTTP-Auskünfte. Semantik und Statuswer
 
 ## Für Konsumenten
 
-**Vertragsbeispiele sind nicht durchgehend Laufzeitnachweise.**
-`/fields` liefert eine persistierte `generation_id`;
-`/instrument-types` sendet dieselbe UUID als `StockInfo-Generation`.
-Bekannte Abweichungen bei Tageskursen und Pence-Währungen stehen in der
+**Was die laufende App liefert, beschreiben drei Quellen:** `GET /fields`
+(Felder, Detailschema, `generation_id`), `GET /instrument-types` (Typkatalog,
+dieselbe UUID im Header `StockInfo-Generation`) und
+[`openapi-core-snapshot.json`](openapi-core-snapshot.json), den
+`tests/test_contract_openapi.py` laufend gegen die App prüft. Bekannte
+Abweichungen bei Tageskursen und Pence-Währungen stehen in der
 [REST-Referenz](../docs/rest-core-contract.md#die-begriffe-die-sich-sonst-niemand-erschließt).
+
+**Unbekannte Felder werden ignoriert**, nicht als Fehler behandelt. Sonst
+bricht die nächste additive Erweiterung den Konsumenten.
+
+**Die Fixtures sind keine Beispielantworten der laufenden App.** Sie sind
+interne Beispiele, mit denen `tests/test_contract.py` das Artefakt prüft, und
+kein Laufzeitvertrag für Konsumenten.
+
+[↑ Übersicht](#übersicht)
+
+## Für dieses Repo
 
 Die Fixtures sind kein reines JSON, sondern ein **HTTP-Umschlag** aus Status,
 Headern und Rumpf. Gekürztes Strukturbeispiel; der Rumpf ist hier
@@ -62,25 +75,14 @@ ausgelassen:
 }
 ```
 
-Ein Konsument — etwa StockPortfolio — fährt seine Mapper gegen diese Dateien,
-ohne StockInfo zu starten und ohne das Repository zu klonen. Zwei Regeln
-dabei:
-
-- **Nur `contract_compliant: true` ist eine Beispielantwort.** Fixtures mit
-  `false` verletzen absichtlich die Regel, die `violates` nennt; `note`
-  erklärt sie.
-- **Unbekannte Felder werden ignoriert**, nicht als Fehler behandelt. Sonst
-  bricht die nächste additive Erweiterung den Konsumenten.
+Fixtures mit `contract_compliant: false` verletzen absichtlich die Regel, die
+`violates` nennt; `note` erklärt sie.
 
 Der `request` einer Fixture beschreibt einen konkreten Aufruf: Methode, Pfad
 und Query-Namen werden gegen die Endpunktliste im Artefakt geprüft
 (`endpoints`, dazu `query_notes` mit der Bedeutung je Parameter). Ein Beispiel
 mit einem Parameter, den es nicht gibt, sieht sonst aus wie eine zugesagte
 Funktion — FastAPI ignoriert Unbekanntes still.
-
-[↑ Übersicht](#übersicht)
-
-## Für dieses Repo
 
 `tests/test_contract.py` prüft beide Dateiarten gegeneinander: dieselben
 Endpunktpfade, derselbe Headername, jede Erfolgsfixture erfüllt die

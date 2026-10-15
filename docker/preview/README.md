@@ -169,18 +169,8 @@ StockInfo is built for its author's own use and shared free of charge. Issues an
 
 Copyright © 2026 Michael Mitterer. **MangoLila GmbH** is the provider and licensor.
 
-StockInfo is licensed under the **[EUPL 1.2](https://github.com/MikeMitterer/stockinfo/blob/master/LICENSE)**, version 1.2 only. It permits personal and commercial use, changes, redistribution, sale and hosting without a paid license.
-
-If you redistribute StockInfo or a changed version, or offer it as a network service, keep the copyright and license notices, mark your changes and provide the corresponding source under the license's copyleft rules.
-
-The warranty and liability exclusions in EUPL Articles 7 and 8 also apply to consumers, as far as the law permits. Mandatory rights remain unaffected, including liability for intent, gross negligence, personal injury and product liability. No additional guarantee is given.
-
-The independent plugin API and its example plugin remain under MIT. Third-party components retain their own licenses.
-
-Contact: **<office@MangoLila.at>**.
+StockInfo is licensed under the **[EUPL 1.2](https://github.com/MikeMitterer/stockinfo/blob/master/LICENSE)**, version 1.2 only. What it permits and requires, the consumer declaration and the contact are in the [License section of the README](https://github.com/MikeMitterer/stockinfo/blob/master/README.md#license).
 
 In the dashboard, **Settings → About** links to the EUPL in the selected UI language and to the consumer declaration.
 
-The image includes `/app/LICENSE`, `/app/LICENSE.de.txt` and `/app/LICENSING.md`, and the MIT licenses at `/app/plugin_api/LICENSE` and `/app/plugin_api/examples/us-example/LICENSE`. Image tags identify the source commit in the [source repository](https://github.com/MikeMitterer/stockinfo).
-
-Details: [LICENSE](https://github.com/MikeMitterer/stockinfo/blob/master/LICENSE) · [German license text](https://github.com/MikeMitterer/stockinfo/blob/master/LICENSE.de.txt) · [Provider and consumer declaration](https://github.com/MikeMitterer/stockinfo/blob/master/LICENSING.md)
+The image includes `/app/LICENSE`, `/app/LICENSE.de.txt` and `/app/LICENSING.md`, and the MIT licenses of the plugin API at `/app/plugin_api/LICENSE` and `/app/plugin_api/examples/us-example/LICENSE`. Image tags identify the source commit in the [source repository](https://github.com/MikeMitterer/stockinfo).

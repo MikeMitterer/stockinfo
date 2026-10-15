@@ -84,6 +84,8 @@ FORBIDDEN=(
     # Ticketnummern und Verweise ins Ticket-Board
     "/\bT-\d+[a-z]?\b/|interne Ticketgeschichte, gehört nicht in Nutzerdoku"
     "_tickets/|Ticket-Board ist intern, gehört nicht in Nutzerdoku"
+    # Alte Fassungen der EUPL-Pflichten ohne Bedingung (Mike, 2026-10-15)
+    "/if you change or redistribute|wer \S+ ändert oder weitergibt|preserve the required notices/i|EUPL-Pflichten ohne Bedingung: Satz aus dem Lizenz-Baustein verwenden"
 )
 
 # Höchstens zwei farbige Hinweisboxen je Dokument; mehr nehmen jeder
@@ -247,4 +249,11 @@ DEPENDS_HINT=(
 
     # Unraid-Betrieb teilt Aussagen mit der Container-Anleitung
     "docker/README.md|unraid/README.md|30|gemeinsame Aussagen zum Betrieb"
+)
+
+# Sprachfassungen mit derselben Gliederung: Überschriften und je Abschnitt
+# Linkziele, Bilder, Code, Hinweisboxen, Anker und Absätze müssen
+# übereinstimmen; jede Abweichung ist ein Problem.
+TRANSLATIONS=(
+    "README.md|README.de.md|deutsche Fassung"
 )

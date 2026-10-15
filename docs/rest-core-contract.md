@@ -305,7 +305,7 @@ derselben Datenbank wie `generation_id` von `GET /fields` und ist keine Katalogv
 Clients laden die Auskunft beim Öffnen ihrer Filter neu. Während einer
 gesperrten Migration gilt wie für andere Fachendpunkte der HTTP-503-Riegel.
 
-Beispiele für Offline-Konsumententests liegen unter
+Die Vertragstests verwenden dafür
 [`contract/fixtures/instrument-types-200.json`](../contract/fixtures/instrument-types-200.json),
 [`…-200-empty.json`](../contract/fixtures/instrument-types-200-empty.json) und
 [`…-200-incomplete.json`](../contract/fixtures/instrument-types-200-incomplete.json).
@@ -321,8 +321,11 @@ Ohne Cross-Repo-CI, in drei Stufen:
    OpenAPI-Schnappschuss (`tests/test_contract_openapi.py`) — der schlägt an,
    sobald sich ein erfasstes Modell, ein Core-Pfad, `/fields` oder
    `/instrument-types` gegenüber dem gespeicherten Stand ändert.
-2. **StockPortfolio** prüft seine Mapper gegen dieselben veröffentlichten
-   Fixtures unter [`contract/fixtures/`](../contract/fixtures).
+2. **StockPortfolio** prüft seine Mapper gegen eigene Kopien einzelner
+   Fixtures. Was die laufende App liefert, beschreiben `/fields`,
+   `/instrument-types` und der OpenAPI-Schnappschuss; die Fixtures unter
+   [`contract/fixtures/`](../contract/fixtures) sind Beispiele der
+   Vertragstests ([`contract/README.md`](../contract/README.md#für-konsumenten)).
 3. **Vor Releases** ein kleiner Lauf: eine bestehende Position gegen eine
    frische Profil-Datenbank.
 
