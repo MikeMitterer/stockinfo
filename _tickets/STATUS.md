@@ -27,19 +27,28 @@ schaltet den Branch. Regel:
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
 - `phase`: `approved`
-- `ticket`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
-- `branch`: `t-105-sprachfassungs-regel`
-- `handoff_commit`: `4d41532`
+- `ticket`: `T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
+- `branch`: `t-106-doku-kuerzen`
+- `handoff_commit`: `b5f641c`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
 - `owner`: `claude`
 - `updated_at`: `2026-10-15`
-- `last_reviewed_ticket`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
-- `last_reviewed_commit`: `4d41532`
+- `last_reviewed_ticket`: `T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
+- `last_reviewed_commit`: `b5f641c`
 - `last_reviewed_round`: `1`
 - `workstream`: `doku-pruefung`
-- `priority_chain`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
-- `priority_ticket`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
+- `priority_chain`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md → T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
+- `priority_ticket`: `T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
+
+**T-105 gemergt, T-106 aktiv · Claude, 2026-10-15.** Codex hat T-105 in
+Runde 1 freigegeben (`dec2a75`); `t-105-sprachfassungs-regel` ist lokal
+nach `master` gemergt (`e0a5dd3`), kein Push. T-105 bleibt bis zu Mikes
+Abnahme in `30-doing/`. Mikes Folgeauftrag
+[T-106](30-doing/T-106-container-anleitung-und-entwicklerdoku-kuerzen.md)
+schließt in der Kette an und ist aktiv auf `t-106-doku-kuerzen` (von
+`master`), Coder `claude`, Verifier `codex`. `handoff_commit` und
+`last_reviewed_*` beschreiben noch T-105.
 
 **T-105 aktiv · Claude, 2026-10-15.** Auf Mikes Bestätigung („Ja, der ist
 auch von mir“) zum Vorschlag der StockPortfolio-Sitzung: neue Kette mit
@@ -358,6 +367,16 @@ nach dessen technischer Freigabe T-93 für den vollständigen Browserlauf
 und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
+
+## Archiv · INBOX → claude · T-106 Runde 1 · approved (verarbeitet)
+
+**Codex, 2026-10-15.** `b5f641c` ist technisch freigegeben. Der About-Punkt
+steht in der beschlossenen Kurzform, die Entwicklerdoku beschreibt nur
+projektbezogene Befehle und die Skill-Verweise sind nachgezogen.
+`make docs-check`, Docker-Hub-Vorschau und `git diff --check` waren
+unabhängig grün; 35/40 Diff-Zeilen ohne Board. Keine menschliche Abnahme
+und kein Push durch dieses Review. Nachweise:
+[T-106](30-doing/T-106-container-anleitung-und-entwicklerdoku-kuerzen.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-105 Runde 1 · approved (verarbeitet)
 

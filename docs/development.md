@@ -39,11 +39,8 @@ note without it. To build the image yourself, run
 `docker build -f docker/Dockerfile -t mangolila/stockinfo:latest .` instead of
 `make build`.
 
-For the maintainer, `make setup` also links the shared helpers under `.libs/`
-(MakeLib, BashLib, ProjectTools) via `scripts/setup-libs.sh`. It finds them
-through `DEV_MAKE`, `BASH_LIBS` (BashLib `src`) and `PROJECT_TOOLS`
-(ProjectTools `src`) and installs the Python part of ProjectTools from
-`requirements-maintainer.txt`. The Docker image needs none of this.
+For the maintainer, `make setup` also links the shared libraries under
+`.libs/`. The Docker image needs none of this.
 
 [↑ Contents](#contents)
 
@@ -70,9 +67,8 @@ pin, even if the package version stayed the same.
 
 `make dev-down` also cleans up after a crash: it ends leftover overmind, tmux
 and app processes of this project, removes a stale `.overmind.sock` and frees
-ports 5173 and 8000. It uses `dev-ports.sh` from ProjectTools with the ports in
-`.dev-ports.conf.sh`, only ends your own processes inside this project and can
-be run as often as you like.
+ports 5173 and 8000. It only ends your own processes inside this project and
+can be run as often as you like.
 
 The server then runs at `http://localhost:8000`. Interactive API docs (Swagger UI,
 dark theme) live at `http://localhost:8000/docs` (use `http://` in the browser, not

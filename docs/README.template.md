@@ -12,7 +12,7 @@ Abschnitte erscheinen im README.
 
 **Allgemeine Regeln** (Ausschlüsse, Kürze, nur Belegtes, Mermaid, zentrierter
 Kopf, Absatzregel, Sprachfassungen, Bedienelemente im Wortlaut der App,
-eingehende Anker) stehen im Skill `readme-conventions` und werden hier nicht
+eingehende Anker) stehen im Skill `docs-conventions` und werden hier nicht
 wiederholt. Verbotene Begriffe stehen mit Grund in `.docs-check.conf.sh` unter
 `FORBIDDEN`.
 
@@ -115,6 +115,6 @@ werden gelesen, ohne Zusage auf Antwort, Fix oder neue Funktion.
 
 ## 13. Lizenz
 
-Baustein `templates/license-eupl.md` aus dem Skill `readme-conventions`,
+Baustein `templates/license-eupl.md` aus dem Skill `docs-conventions`,
 Wortlaut unverändert. Alle Werte und Links aus `LICENSING.md` und den dort
 genannten Lizenzdateien; das bisherige README ist keine Quelle.

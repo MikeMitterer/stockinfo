@@ -141,8 +141,8 @@ beschlossenem Umfang gehört der **Doku-Abgleich zum selben Auftrag**.
 Mike muss betroffene Anleitungen nicht eigens nennen.
 
 **Wie die Anleitungen aussehen, steht nicht hier.** Aufbau, Inhalt,
-Sprachfassungen und Schreibregeln der READMEs regelt der Skill
-`readme-conventions` mit der Projektvorlage
+Sprachfassungen und Schreibregeln der Projektdoku regelt der Skill
+`docs-conventions` mit der Projektvorlage
 [`docs/README.template.md`](docs/README.template.md). Die Vorlage legt auch
 fest, was in `README.md`/`README.de.md`, in die Entwicklerdoku
 `docs/development.md`, in die Container-Anleitung `docker/README.md` und in
