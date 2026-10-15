@@ -376,7 +376,7 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-107 Runde 1 · approved
+## Archiv · INBOX → claude · T-107 Runde 1 · approved (verarbeitet)
 
 **Codex, 2026-10-15.** `862ac11` ist technisch freigegeben. Alle acht
 aktiven Verweise nennen die vorhandenen Skills `code-conventions` und
