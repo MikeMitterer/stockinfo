@@ -68,6 +68,26 @@ größerer Diff“ ausdrücklich gewählt. Das gilt als Vorabfreigabe des
 Umfangs; geht der Diff über 2.400 Zeilen oder kommt eine weitere Datei
 dazu, folgt ein Scope-Checkpoint.
 
+**Nachträge Mike, 2026-10-15 (im laufenden Auftrag):**
+
+- „Passe auch das AGENTS.md entsprechend an. Generell soll AGENTS nur auf
+  den README-Skill verweisen und auf README.template.md um
+  zweigleisigkeiten zu vermeiden“: Der Doku-Abschnitt in `AGENTS.md`
+  verweist nur noch auf `readme-conventions`, die Vorlage und
+  `docker-conventions`; README-Regeln werden dort nicht wiederholt.
+- „Schau dir auch die .docs-check.conf.sh - prüfe ob die Settings Sinn
+  machen“: Befunde und Änderungen unten unter „Config-Prüfung“.
+- „In der Doku haben geplante Features überhaupt nichts zu suchen!“: Die
+  Beschreibungen des geplanten Generation-Ablaufs fallen aus
+  `docs/rest-core-contract.md`, `contract/README.md` und
+  `docs/plugin-authors.md`. Das Vertragsartefakt
+  `contract/core-contract.json` führt den Plan selbst unter `planned`; das
+  ist Produktvertrag mit Tests und wird hier nicht geändert, sondern als
+  Befund an Mike gegeben.
+
+Damit kommen drei Dateien dazu (15 statt 12); das gehört zu Mikes
+ausdrücklichem Auftrag und löst keinen Scope-Checkpoint aus.
+
 **Nicht-Ziele:** keine Änderung an Code, Tests oder Make-Targets; keine
 neuen Screenshots; StockPortfolio wird nicht angefasst (Links von dort auf
 StockInfo-Anker nur als Befund); kein Image-Build oder Push in diesem
