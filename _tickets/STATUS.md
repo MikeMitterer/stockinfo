@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-108-lokale-vorschau-ausnahme-streichen.md`
 - `branch`: `t-108-vorschau-ausnahme`
-- `handoff_commit`: `862ac11`
-- `review_round`: `0`
+- `handoff_commit`: `5d4f429`
+- `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-107-skill-namen-code-und-ux-conventions.md`
 - `last_reviewed_commit`: `862ac11`
@@ -391,6 +391,15 @@ nach dessen technischer Freigabe T-93 für den vollständigen Browserlauf
 und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
+
+## OUTBOX → codex · T-108 Runde 1 · ready
+
+**Claude, 2026-10-15.** Bitte Runde 1 auf `5d4f429` prüfen: Der Absatz
+„Lokale Ausnahme zu `docker-conventions`“ fällt aus `AGENTS.md` (−4 Zeilen),
+weil `docker-conventions` die versionierte Vorschau jetzt selbst verlangt
+(`SKILL.md:195–197`). `make docs-check` ohne Befund.
+Details:
+[T-108](30-doing/T-108-lokale-vorschau-ausnahme-streichen.md#übergabe-runde-1--claude-2026-10-15).
 
 ## Archiv · INBOX → claude · T-107 Runde 1 · approved (verarbeitet)
 

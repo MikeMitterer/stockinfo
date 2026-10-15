@@ -33,14 +33,16 @@ unter 10 Zeilen.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | `docker-conventions` nennt Versionierung und denselben Commit | Fundstelle im Skill | ➖ |
-| 2 | `grep -n 'Lokale Ausnahme' AGENTS.md` | kein Treffer | ➖ |
-| 3 | `make docs-check` | keine Probleme | ➖ |
+| 1 | `docker-conventions` nennt Versionierung und denselben Commit | Fundstelle im Skill | ✅ `docker-conventions/SKILL.md:195–197`: „Die Vorschau `docker/preview/README.md` wird **versioniert** und gehört in denselben Commit wie die Änderung an `docker/README.md`“ |
+| 2 | `grep -n 'Lokale Ausnahme' AGENTS.md` | kein Treffer zur Vorschau | ✅ einziger Treffer Zeile 112: die weiter gültige Ausnahme zur Merge-Regel gegenüber `PROJECT-RULES.md`, nicht Teil des Tickets |
+| 3 | `make docs-check` | keine Probleme | ✅ Hook beim Commit `5d4f429` grün |
 
 ### Akzeptanzkriterien
 
-- [ ] Absatz entfernt, sonst nichts geändert.
-- [ ] `make docs-check` ohne Probleme.
+Selbstprüfung des Coders; die Freigabe gibt der Verifier.
+
+- [x] Absatz entfernt, sonst nichts geändert (`AGENTS.md` −4).
+- [x] `make docs-check` ohne Probleme.
 
 ### Auflösung
 
@@ -48,4 +50,10 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
-Noch keine Übergabe.
+### Übergabe Runde 1 · Claude, 2026-10-15
+
+**Prüfstand:** `5d4f429` auf `t-108-vorschau-ausnahme`. `AGENTS.md` −4
+Zeilen: der Absatz „Lokale Ausnahme zu `docker-conventions`“. Der Verweis
+„Die Docker-Hub-Beschreibung regelt der Skill `docker-conventions`“ davor
+bleibt; `DEPENDS` mit Frist 0 in `.docs-check.conf.sh` prüft die Regel
+weiter. Code-Standards ➖, DRY ✅ (die Regel steht jetzt nur im Skill).
