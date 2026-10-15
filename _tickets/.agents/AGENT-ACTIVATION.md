@@ -46,7 +46,7 @@ Führe _tickets/.agents/CODEX-IN-CONTEXT-SCHEDULER.md aus.
 ```
 
 Erst bei einem fälligen Auftrag lädt die Instanz den fachlichen Vertrag aus
-`AGENT-WORKFLOW.md`, den Skill `code-standards` gemäß dessen
+`AGENT-WORKFLOW.md`, den Skill `code-conventions` gemäß dessen
 Standard-Riegel und die nötigen Review-Muster — unabhängig von ihrer Rolle.
 Damit kosten Leerdurchläufe nur den Zustandscheck; die ausführlichen Regeln
 bleiben trotzdem versioniert und überstehen Exit sowie Compaction.
@@ -89,7 +89,7 @@ löschen. Claude bestätigt beim Anlegen den Takt und die Job-ID.
    `priority_ticket` entsprechen und in `priority_chain` stehen.
    Andernfalls `portfolio_mismatch` melden und stoppen.
 4. Beachte `AGENTS.md` und lies das Ticket sowie den vollständigen
-   [gemeinsamen Workflow](AGENT-WORKFLOW.md). Lade `code-standards`
+   [gemeinsamen Workflow](AGENT-WORKFLOW.md). Lade `code-conventions`
    samt passenden Referenzen nach dessen Standard-Riegel und die zur
    Autorenschaft passende Mustersammlung. Führe ausschließlich den für deine
    Rolle fälligen Schritt aus. Übergabe, Rückgabe, Rundenlimit, Selbstheilung

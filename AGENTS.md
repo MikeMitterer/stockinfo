@@ -45,7 +45,7 @@ TS-Compiler-API, für Bash die Liste aller Zuweisungen und Funktionsköpfe.
 (`vue-tsc` prüft Typen, kein Inventar — es findet einen deutschen Namen nie.) Genau daran ist die zu kurze Liste in
 T-21 Runde 37 gescheitert.
 
-Vollständige Konventionen samt Namensschema je Sprache: Skill `code-standards`.
+Vollständige Konventionen samt Namensschema je Sprache: Skill `code-conventions`.
 
 [↑ Übersicht](#übersicht)
 
@@ -128,7 +128,7 @@ Entwicklungsregeln brauchen keine Übergangs- oder Ablösungshinweise.
 Prüfaufwand und Befundgewicht folgen dem belegten Schaden. Das gilt für die
 Breite zusätzlicher Arbeit, nicht für bereits geltende, als MUST oder eigene
 Abnahmebedingung formulierte Standardregeln (etwa i18n oder DRY in
-`code-standards`): ein Verstoß dagegen bleibt blockierend, unabhängig vom
+`code-conventions`): ein Verstoß dagegen bleibt blockierend, unabhängig vom
 beobachteten Schaden ([SI-P-13](_tickets/.agents/lessons/SI-P-13-eine-muss-regel-wird-per-schadensabwaegung-zur-kann-regel.md)).
 Diese Einordnung gilt, bis Mike einen anderen Betriebsstand festlegt.
 

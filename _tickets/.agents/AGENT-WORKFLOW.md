@@ -16,7 +16,7 @@ nur Linkeinstiege; auch neue Dateien im Verzeichnis berücksichtigen.
 Die bisherigen [Verfahrensabschnitte](LESSONS-PROCESS.md) gehören zu diesem
 Workflow und werden nicht als Erfahrungen eingesammelt.
 
-Vor fachlicher Arbeit laden **Coder und Verifier** den Skill `code-standards`
+Vor fachlicher Arbeit laden **Coder und Verifier** den Skill `code-conventions`
 nach dem [Standard-Riegel](#standard-riegel--die-hausregeln-stehen-im-bericht-nicht-im-vorsatz).
 Das gilt auch bei manuellem Einstieg ohne Scheduler oder Loop.
 
@@ -634,7 +634,7 @@ Sie ist keine dauerhafte Eigenschaft von Coder oder Verifier.
 **Heute entscheidet die verfügbare Ausstattung.** Der Coder führt
 nötige visuelle Prüfungen mit tatsächlich verfügbaren Browserwerkzeugen aus
 oder nennt konkret die fehlenden Belege. Für breite und schmale Ansichten
-gelten die Messregeln aus `ux-standards`.
+gelten die Messregeln aus `ux-conventions`.
 
 Der unabhängige Verifier bewertet die Belege und führt verfügbare Gegenproben
 aus. Fehlt ihm ein Browser, weist er die nicht selbst geprüften Punkte aus.
@@ -763,7 +763,7 @@ minimal falschen Pfad rot und am neuen Pfad grün gewesen sein.
 
 *(Entscheidung Mike, 2026-09-08.)*
 
-Der Skill `code-standards` gilt für beide Rollen, und er gilt ab der ersten
+Der Skill `code-conventions` gilt für beide Rollen, und er gilt ab der ersten
 Zeile: **Der Coder wendet ihn beim Schreiben an**, nicht erst, wenn der
 Verifier danach fragt. Ein Review kann einen Standardverstoß nur finden — es
 kann ihn nicht ungeschehen machen, und jede Fundstelle kostet eine Runde.

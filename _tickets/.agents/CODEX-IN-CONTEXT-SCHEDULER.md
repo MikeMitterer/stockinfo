@@ -33,7 +33,7 @@ Die Regeln dieses Abschnitts gelten für Coder und Verifier. Ein Chat mit der
 Kennung `codex-observer` folgt stattdessen dem [Observer-Auftrag](#observer-auftrag).
 
 Bei einem fälligen Auftrag lädt der geweckte Chat **als Coder wie als Verifier**
-den Skill `code-standards` samt passenden Referenzen vor der fachlichen Arbeit.
+den Skill `code-conventions` samt passenden Referenzen vor der fachlichen Arbeit.
 Für Anwendung und Nachweise gilt der
 [Standard-Riegel](AGENT-WORKFLOW.md#standard-riegel--die-hausregeln-stehen-im-bericht-nicht-im-vorsatz)
 des gemeinsamen Vertrags. Der Timer selbst lädt keine Skills für Leerdurchläufe.
