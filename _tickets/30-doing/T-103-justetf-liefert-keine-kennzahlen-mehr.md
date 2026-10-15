@@ -35,9 +35,28 @@ gefunden beim Gesamtlauf von `make test` in T-102. Auf Mikes Auftrag
 | Gepinnte Fassung | `requirements.txt`: `justetf-scraping @ git+https://github.com/druzsan/justetf-scraping.git@b52934a…` (Paketversion 0.1.0) |
 | Upstream | `git ls-remote` zeigt `HEAD` auf `53cca6a…`; ob diese Fassung den Fehler behebt, ist nicht geprüft |
 
-Wahrscheinliche Ursache: justETF hat den Aufbau der Profilseite geändert,
-und die gepinnte Fassung der Bibliothek findet die Felder nicht mehr. Nicht
-belegt ist, seit wann.
+**Ursache (geklärt 2026-10-15):** `justetf_scraping/etf_profile.py` liest
+die Stammdaten aus `soup.find_all("table")[1]`, also aus der zweiten
+Tabelle der Seite. justETF liefert die Stammdaten heute in der **ersten**
+Tabelle (`data-testid="etf-basics_data_table"`); an zweiter Stelle steht
+jetzt „Fund Structure / UCITS compliance / Administrator“. Alle
+Zeilenbeschriftungen, die die Bibliothek erwartet („Fund size“, „Total
+expense ratio“, „Replication“, „Fund currency“, „Currency risk“,
+„Volatility 1 year (in EUR)“, „Distribution policy“, „Fund domicile“,
+„Fund Provider“ …), stehen unverändert in dieser ersten Tabelle; für
+IE00B4L5Y983 etwa „EUR 133,518 m“, „0.20% p.a.“, „Currency unhedged“,
+„10.48%“. `currency_hedged` wird `True`, weil die Bibliothek
+`"Currency risk"` fehlt und `"" != "currency unhedged"` gilt.
+
+Die Upstream-Fassung `53cca6a` (in einer eigenen venv im Scratchpad
+installiert) hat denselben Fehler; ein Pin-Update hilft nicht. Upstream
+`druzsan/justetf-scraping`: letzter Commit 2026-08-01, 16 offene Issues/PRs,
+dieser Fehler ist dort nicht gemeldet. Seit wann justETF die Seite so
+ausliefert, ist nicht belegt.
+
+**Entscheidung Mike nötig:** wie die Korrektur in StockInfo ankommt (Fork
+mit Fix und Upstream-PR, eigene Auswertung in StockInfo, oder auf Upstream
+warten). Bis dahin keine Produktänderung.
 
 **Folgen im Betrieb:** Bei jeder Metadaten-Aktualisierung (alle
 `METADATA_TTL_DAYS` und bei manueller Aktualisierung) kommt von justETF
