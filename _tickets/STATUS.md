@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
+- `phase`: `portfolio_review`
 - `ticket`: `T-108-lokale-vorschau-ausnahme-streichen.md`
-- `branch`: `t-108-vorschau-ausnahme`
+- `branch`: `master`
 - `handoff_commit`: `5d4f429`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-108-lokale-vorschau-ausnahme-streichen.md`
 - `last_reviewed_commit`: `5d4f429`
@@ -40,6 +40,13 @@ schaltet den Branch. Regel:
 - `workstream`: `doku-pruefung`
 - `priority_chain`: `T-108-lokale-vorschau-ausnahme-streichen.md`
 - `priority_ticket`: `T-108-lokale-vorschau-ausnahme-streichen.md`
+
+**T-105 bis T-107 abgenommen, T-108 gemergt · 2026-10-15.** Mike: „T-105
+bis T-107 sind abgenommen“; die drei Tickets liegen in `40-done/`, die
+Verweise zeigen dorthin. Codex hat T-108 in Runde 1 freigegeben (`a904ed0`);
+`t-108-vorschau-ausnahme` ist lokal nach `master` gemergt. Zustand
+`portfolio_review`, `owner: mike`, `branch: master`. Mike hat den Push von
+`master` und eine `THIRD_PARTY_NOTICES.md` beauftragt.
 
 **T-108 aktiv · Claude, 2026-10-15.** Auf Mikes Bestätigung („Ja, der ist
 auch von mir“) neue Kette mit
@@ -61,7 +68,7 @@ versionierte Vorschau jetzt selbst); Push von `master`; Image-Build und
 Runde 1 freigegeben (`7072f2c`); `t-106-doku-kuerzen` ist lokal nach
 `master` gemergt (`e2bc7fe`), kein Push. T-105 und T-106 bleiben bis zu
 Mikes Abnahme in `30-doing/`. Mikes Folgeauftrag
-[T-107](30-doing/T-107-skill-namen-code-und-ux-conventions.md) ist aktiv auf
+[T-107](40-done/T-107-skill-namen-code-und-ux-conventions.md) ist aktiv auf
 `t-107-skill-namen` (von `master`), Coder `claude`, Verifier `codex`.
 `handoff_commit` und `last_reviewed_*` beschreiben noch T-106.
 
@@ -69,14 +76,14 @@ Mikes Abnahme in `30-doing/`. Mikes Folgeauftrag
 Runde 1 freigegeben (`dec2a75`); `t-105-sprachfassungs-regel` ist lokal
 nach `master` gemergt (`e0a5dd3`), kein Push. T-105 bleibt bis zu Mikes
 Abnahme in `30-doing/`. Mikes Folgeauftrag
-[T-106](30-doing/T-106-container-anleitung-und-entwicklerdoku-kuerzen.md)
+[T-106](40-done/T-106-container-anleitung-und-entwicklerdoku-kuerzen.md)
 schließt in der Kette an und ist aktiv auf `t-106-doku-kuerzen` (von
 `master`), Coder `claude`, Verifier `codex`. `handoff_commit` und
 `last_reviewed_*` beschreiben noch T-105.
 
 **T-105 aktiv · Claude, 2026-10-15.** Auf Mikes Bestätigung („Ja, der ist
 auch von mir“) zum Vorschlag der StockPortfolio-Sitzung: neue Kette mit
-[T-105](30-doing/T-105-sprachfassungs-regel-in-der-entwicklerdoku.md) auf
+[T-105](40-done/T-105-sprachfassungs-regel-in-der-entwicklerdoku.md) auf
 `t-105-sprachfassungs-regel` (von `master`), Coder `claude`, Verifier
 `codex`. Die übrigen offenen Punkte aus dem folgenden Vermerk bleiben bei
 Mike.
@@ -392,7 +399,7 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-108 Runde 1 · approved
+## Archiv · INBOX → claude · T-108 Runde 1 · approved (verarbeitet)
 
 **Codex, 2026-10-15.** `5d4f429` ist technisch freigegeben. Die
 vermeintliche lokale Ausnahme ist entfernt; Skill und Docs-Check sichern
@@ -408,7 +415,7 @@ aktiven Verweise nennen die vorhandenen Skills `code-conventions` und
 `ux-conventions`; historische Dateien bleiben unverändert.
 `make docs-check` und `git diff --check` waren unabhängig grün. Keine
 menschliche Abnahme und kein Push durch dieses Review. Nachweise:
-[T-107](30-doing/T-107-skill-namen-code-und-ux-conventions.md#verifier-prüfung--runde-1--codex-2026-10-15).
+[T-107](40-done/T-107-skill-namen-code-und-ux-conventions.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-106 Runde 1 · approved (verarbeitet)
 
@@ -418,7 +425,7 @@ projektbezogene Befehle und die Skill-Verweise sind nachgezogen.
 `make docs-check`, Docker-Hub-Vorschau und `git diff --check` waren
 unabhängig grün; 35/40 Diff-Zeilen ohne Board. Keine menschliche Abnahme
 und kein Push durch dieses Review. Nachweise:
-[T-106](30-doing/T-106-container-anleitung-und-entwicklerdoku-kuerzen.md#verifier-prüfung--runde-1--codex-2026-10-15).
+[T-106](40-done/T-106-container-anleitung-und-entwicklerdoku-kuerzen.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-105 Runde 1 · approved (verarbeitet)
 
@@ -428,7 +435,7 @@ geprüften Sprachfassungsmerkmale und den nicht quittierbaren Hook-Befund.
 `make docs-check` und `git diff --check` waren unabhängig grün. Keine
 menschliche Abnahme und kein Push durch dieses Review.
 Details:
-[T-105](30-doing/T-105-sprachfassungs-regel-in-der-entwicklerdoku.md#verifier-prüfung--runde-1--codex-2026-10-15).
+[T-105](40-done/T-105-sprachfassungs-regel-in-der-entwicklerdoku.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-104 Runde 3 · approved (verarbeitet; Mike hat `TRANSLATIONS` bestätigt)
 
@@ -2668,11 +2675,7 @@ T-70 ist keine zweite fortgeschriebene Fassung des Haupttickets.
 
 Die [Aufnahmeregel](.agents/AGENT-WORKFLOW.md#ticketgrenzen) erlaubt höchstens
 zwei zusätzliche Tickets bei begründetem Bedarf. Andere Ordner haben kein Limit.
-Aktuelle Ausnahmen: `30-doing` mit vier Tickets (T-105, T-106, T-107,
-T-108), zwei über der Zielgrenze und genau an der harten Obergrenze. Bedarf:
-T-105 bis T-107 sind technisch freigegeben und gemergt und warten nur auf
-Mikes Abnahme; T-108 ist ein kleiner Folgeauftrag (Mike, 2026-10-15). Kein
-weiteres Ticket nach `30-doing/` vor einer Abnahme. Bei einer
+Aktuelle Ausnahmen: keine. Bei einer
 Überschreitung hier Ordner, betroffene
 Tickets und konkreten Bedarf nennen; nach Rückkehr zur Zielgrenze entfernen.
 Der Bestand wird aus den Ticketdateien ermittelt, nicht als Zähler gepflegt.

@@ -87,7 +87,7 @@ Die Docker-Hub-Beschreibung ändert sich erst mit dem nächsten `make push`.
 
 ### Auflösung
 
-Offen.
+Erledigt: technisch freigegeben, nach `master` gemergt, am 2026-10-15 von Mike abgenommen („T-105 bis T-107 sind abgenommen“).
 
 ## Review-Verlauf (neueste Runde zuerst)
 
