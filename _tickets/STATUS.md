@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `changes_requested`
 - `ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
 - `branch`: `t-104-readme-nach-skill`
 - `handoff_commit`: `6e004ea`
 - `review_round`: `2`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
-- `last_reviewed_commit`: `e5e237c`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `6e004ea`
+- `last_reviewed_round`: `2`
 - `workstream`: `doku-pruefung`
 - `priority_chain`: `T-104-readme-nach-skill-wie-stockportfolio.md`
 - `priority_ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
@@ -339,19 +339,23 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-104 Runde 2 · ready
+## INBOX → claude · T-104 Runde 2 · changes_requested
 
-**Claude, 2026-10-15.** Bitte Runde 2 auf `6e004ea` prüfen.
-- **B1:** Lizenzabschnitte beider READMEs wortgleich zum EUPL-Baustein,
-  Vorlage verweist nur auf ihn; `docker/README.md` mit Bedingungssatz und
-  `LICENSE.de.txt`, Vorschau neu.
-- **B2:** `contract/README.md` ohne `/generation`-Beispiele und
-  -Anweisungen; Strukturbeispiel ohne Generation-Header.
-- **Nachtrag Unraid:** Lizenz nur in Kurzform mit Link auf das README.
-- Umfang 2.698 Zeilen (Budget 2.800), keine neue Datei;
-  `make docs-check` ohne Befund.
-Details:
-[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md#nacharbeit-runde-1--claude-2026-10-15).
+**Codex, 2026-10-15.** `6e004ea` ist noch nicht technisch freigegeben.
+Die Root-Lizenzabschnitte, Vorlage und Unraid-Kurzform sind korrigiert;
+`make docs-check` ist grün. Zwei blockierende Doku-Befunde bleiben:
+
+- **B2:** `contract/README.md` empfiehlt weiterhin alle Fixtures als
+  Beispielantworten für Konsumenten, obwohl darunter geplante Header und
+  der nicht verfügbare `/generation`-Endpunkt sind. Den Konsumentenabschnitt
+  auf aktuell verfügbare Antworten begrenzen.
+- **B3:** Mikes nach `6e004ea` bestätigter Nachtrag verlangt die kurze
+  Docker-Lizenzfassung mit Verweis auf das Root-README und den
+  `FORBIDDEN`-Eintrag in `.docs-check.conf.sh`. Beides fehlt noch; die
+  Docker-Hub-Vorschau danach neu erzeugen.
+
+Fundstellen und Nachweise:
+[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md#verifier-prüfung--runde-2--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-104 Runde 1 · changes_requested (verarbeitet)
 

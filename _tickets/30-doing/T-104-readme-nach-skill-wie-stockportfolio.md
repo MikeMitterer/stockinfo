@@ -195,6 +195,30 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Verifier-Prüfung · Runde 2 · Codex, 2026-10-15
+
+**Ergebnis: `changes_requested` für `6e004ea`.** B1 ist in den beiden
+Root-READMEs und der Vorlage behoben. Die Unraid-Lizenz steht in der
+beschlossenen Kurzform. Zwei Doku-Befunde bleiben offen:
+
+| Befund | Fundstelle und Auswirkung | Erwartete Korrektur |
+|---|---|---|
+| B2 · weiterhin blockierend | `contract/README.md:43–71` nennt `contract_compliant: true` eine Beispielantwort und empfiehlt Konsumenten, ihre Mapper gegen diese Fixtures zu fahren. Unter den so markierten Dateien sind `contract/fixtures/quote-200.json` mit einem zur Laufzeit fehlenden `StockInfo-Generation`-Header und `contract/fixtures/generation-200.json` für den nicht verfügbaren Endpunkt. Der einleitende Vorbehalt räumt die konkrete Beispiel- und Nutzungsempfehlung nicht aus. | Den Abschnitt „Für Konsumenten“ auf gegenwärtig verfügbare Antworten begrenzen. Die Fixtures nur als interne Beispiele des Vertragsartefakts einordnen; keine Empfehlung an Konsumenten, geplante Antwortmerkmale als Laufzeitvertrag zu verwenden. Das Artefakt und die Fixtures bleiben gemäß Mikes Entscheidung unverändert. |
+| B3 · blockierend, bestätigter Nachtrag | `docker/README.md:248–274` enthält weiterhin einen eigenen Erlaubnis-, Pflichten- und Haftungstext. `.docs-check.conf.sh:83–87` enthält den von Mike verlangten `FORBIDDEN`-Eintrag nicht. Beides widerspricht seinem nach `6e004ea` bestätigten Nachtrag im Scope-Vertrag. | Docker-Lizenzteil auf Copyright, Lizenzgeber, „EUPL 1.2, version 1.2 only“, Verweis auf den Root-Lizenzabschnitt und die Container-Angaben kürzen. `FORBIDDEN` wie im Nachtrag ergänzen und die Docker-Hub-Vorschau neu erzeugen. |
+
+**Nachweise:** `make docs-check` unabhängig mit Exit 0 (18 Dokumente,
+25 Pflichtdateien, 12 Abhängigkeiten); `git diff --check 6e004ea` ohne
+Befund. Diese Prüfungen erkennen die zwei inhaltlichen Abweichungen nicht.
+Der Umfang bleibt im freigegebenen Budget von 2.800 Diff-Zeilen; die
+Nacharbeit betrifft vorhandene Scope-Dateien.
+
+**Standards und Doku-Abgleich:** `readme-conventions` mit EUPL-Baustein,
+`docker-conventions`, `code-standards` und die lokale Projektvorlage gegen
+Root-, Docker-, Unraid- und Vertragsdoku geprüft. Die neue Gliederung,
+Entwicklerdoku und Sprachfassungen bleiben konsistent. B2 betrifft die
+Zusage an API-Konsumenten; B3 die Container-Anleitung und ihren Prüfguard.
+Keine technische Freigabe, kein Push, keine menschliche Abnahme.
+
 ### Nacharbeit Runde 1 · Claude, 2026-10-15
 
 **Prüfstand:** `6e004ea`, als Runde 2 übergeben. Umfang gesamt 15 Dateien,
