@@ -11,7 +11,7 @@ steht dort `code-conventions`.
 
 **Stand:** Auf Mikes Auftrag vom 2026-10-15 in `20-ready/` angelegt
 (Hinweis der StockPortfolio-Sitzung `stockportfolio-97`, von Mike
-bestätigt: „Ja, das ist auch von mir“). Aktiviert wird es nach T-106.
+bestätigt: „Ja, das ist auch von mir“). Nach der Freigabe von T-106 aktiviert (2026-10-15) auf `t-107-skill-namen`, Coder `claude`, Verifier `codex`.
 Geprüft: Das gemeinsame Paket `agent-workflow` (`e627c21…`) nennt keinen
 der alten Namen; alle Treffer stehen in StockInfos eigenen Dateien.
 Vorbild: StockPortfolio `d690e5f`.

@@ -26,11 +26,11 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
-- `ticket`: `T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
-- `branch`: `t-106-doku-kuerzen`
+- `phase`: `claude_working`
+- `ticket`: `T-107-skill-namen-code-und-ux-conventions.md`
+- `branch`: `t-107-skill-namen`
 - `handoff_commit`: `b5f641c`
-- `review_round`: `1`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
 - `owner`: `claude`
 - `updated_at`: `2026-10-15`
@@ -38,8 +38,16 @@ schaltet den Branch. Regel:
 - `last_reviewed_commit`: `b5f641c`
 - `last_reviewed_round`: `1`
 - `workstream`: `doku-pruefung`
-- `priority_chain`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md → T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
-- `priority_ticket`: `T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
+- `priority_chain`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md → T-106-container-anleitung-und-entwicklerdoku-kuerzen.md → T-107-skill-namen-code-und-ux-conventions.md`
+- `priority_ticket`: `T-107-skill-namen-code-und-ux-conventions.md`
+
+**T-106 gemergt, T-107 aktiv · Claude, 2026-10-15.** Codex hat T-106 in
+Runde 1 freigegeben (`7072f2c`); `t-106-doku-kuerzen` ist lokal nach
+`master` gemergt (`e2bc7fe`), kein Push. T-105 und T-106 bleiben bis zu
+Mikes Abnahme in `30-doing/`. Mikes Folgeauftrag
+[T-107](30-doing/T-107-skill-namen-code-und-ux-conventions.md) ist aktiv auf
+`t-107-skill-namen` (von `master`), Coder `claude`, Verifier `codex`.
+`handoff_commit` und `last_reviewed_*` beschreiben noch T-106.
 
 **T-105 gemergt, T-106 aktiv · Claude, 2026-10-15.** Codex hat T-105 in
 Runde 1 freigegeben (`dec2a75`); `t-105-sprachfassungs-regel` ist lokal
@@ -2626,7 +2634,11 @@ T-70 ist keine zweite fortgeschriebene Fassung des Haupttickets.
 
 Die [Aufnahmeregel](.agents/AGENT-WORKFLOW.md#ticketgrenzen) erlaubt höchstens
 zwei zusätzliche Tickets bei begründetem Bedarf. Andere Ordner haben kein Limit.
-Aktuelle Ausnahmen: keine. Bei einer Überschreitung hier Ordner, betroffene
+Aktuelle Ausnahmen: `30-doing` mit drei Tickets (T-105, T-106, T-107), eins
+über der Zielgrenze, unter der harten Obergrenze. Bedarf: T-105 und T-106
+sind technisch freigegeben und gemergt und warten nur auf Mikes Abnahme;
+T-107 ist ein kleiner Folgeauftrag (Mike, 2026-10-15). Bei einer
+Überschreitung hier Ordner, betroffene
 Tickets und konkreten Bedarf nennen; nach Rückkehr zur Zielgrenze entfernen.
 Der Bestand wird aus den Ticketdateien ermittelt, nicht als Zähler gepflegt.
 
