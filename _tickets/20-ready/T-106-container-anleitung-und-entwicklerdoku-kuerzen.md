@@ -1,4 +1,4 @@
-# T-106 · About-Punkt in der Container-Anleitung kürzen
+# T-106 · Container-Anleitung und Entwicklerdoku kürzen
 
 **Warum dieses Ticket:** `docker/README.md` beschreibt unter „What you get“
 den About-Reiter mit Logo, Postadresse, Website-Link, dem Hinweis zu
@@ -20,14 +20,34 @@ bestätigt: „Ja, der ist auch von mir“). Vorbild: StockPortfolio `ad3458b`,
 **Beobachtbares Ergebnis:** Der About-Punkt in `docker/README.md` ist ein
 Satz; die Docker-Hub-Vorschau ist neu erzeugt.
 
-**Fachliche Änderung:** eine. **Dateien:** `docker/README.md`,
-`docker/preview/README.md`. **Diff-Budget:** unter 30 Zeilen ohne
-`_tickets/`.
+**Fachliche Änderungen (zwei):** About-Punkt kürzen; in der
+Entwicklerdoku keine gemeinsamen Werkzeuge erklären (Regel „Nur die eigene
+Anwendung“ in `readme-conventions`, Skill-Commit `0ac008a`).
 
-**Neuer Wortlaut:**
+**Dateien:** `docker/README.md`, `docker/preview/README.md`,
+`docs/development.md`. **Diff-Budget:** unter 40 Zeilen ohne `_tickets/`.
+
+**Neuer Wortlaut `docker/README.md`:**
 
 > - An **About** tab under Settings, also linked from the status bar, explains
 >   the limits of the displayed data and links to the license documents.
+
+**`docs/development.md`, Nachtrag Mike, 2026-10-15** („Ja, beide mit in
+T-106“):
+
+1. „Set up and start“, `make dev-down`: der Halbsatz „It uses `dev-ports.sh`
+   from ProjectTools with the ports in `.dev-ports.conf.sh`,“ entfällt
+   (Vorschlag `stockportfolio-97`). Danach: „… frees ports 5173 and 8000.
+   It only ends your own processes inside this project and can be run as
+   often as you like.“
+2. „Requirements“: Der Absatz, wie `scripts/setup-libs.sh` MakeLib, BashLib
+   und ProjectTools über `DEV_MAKE`, `BASH_LIBS` und `PROJECT_TOOLS` findet,
+   wird zu einem Satz: „For the maintainer, `make setup` also links the
+   shared libraries under `.libs/`.“ Was die Docker-Image-Zeile dort sagt
+   („The Docker image needs none of this“), bleibt, wenn es weiter zutrifft.
+
+Befehle, die das Projekt nutzt (`dockerhub-readme.sh`, `changelog.py`),
+bleiben.
 
 **Nicht-Ziele:** keine Änderung an READMEs oder Oberfläche. Fehlt der
 Nutzerdoku danach etwas aus der gestrichenen Beschreibung, wird es dort
@@ -42,6 +62,7 @@ ergänzt; das prüft der Doku-Abgleich.
 | 1 | Neuer Satz gegen `dashboard/src/i18n/en.ts` (`about.*`) und die Statusleiste | Aussagen stimmen | ➖ |
 | 2 | Vorschau neu erzeugen, `make docs-check` | keine Probleme, Vorschau unter 25.000 Bytes | ➖ |
 | 3 | Doku-Abgleich | READMEs nennen den About-Reiter; nichts Nötiges geht verloren | ➖ |
+| 4 | `grep` nach `dev-ports`, `setup-libs`, `DEV_MAKE`, `BASH_LIBS` in `docs/development.md` | keine Erklärung der Werkzeuge mehr; genutzte Befehle bleiben | ➖ |
 
 ### Akzeptanzkriterien
 
