@@ -131,6 +131,8 @@ den Cache zurückfallen; ohne beides schlägt der Abruf fehl.
 
 [↑ Übersicht](#übersicht)
 
+<a id="identität-listing_id-für-maschinen-symbol-für-menschen"></a>
+
 ## Identität: `listing_id` für Maschinen, `symbol` für Menschen
 
 `identity` ist ein Pflichtobjekt in Quote- und Instrumentantworten.

@@ -535,7 +535,7 @@ See the [Unraid guide](unraid/README.md) for installation, configuration and ope
 ```bash
 make test                       # backend, plugin API, example plugin and dashboard
 make test-backend               # backend only (pytest)
-cd dashboard && npm run test    # dashboard only (Vitest)
+make test-dashboard             # dashboard only (ESLint and Vitest)
 make check                      # everything that works offline, plus Ruff and type checks
 ```
 

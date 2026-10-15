@@ -107,8 +107,9 @@ Unraid's `nobody:users`; a freshly created appdata directory owned by `root`
 works without changes. When the directory is not writable, the container stops with a log message naming the
 path and IDs.
 
-The template uses a host directory, whereas `make up` uses a named Docker
-volume. Data is not copied between them automatically.
+The template uses a host directory, whereas the local container from the
+[Docker section of the project README](../README.md#docker) uses a named
+Docker volume. Data is not copied between them automatically.
 
 To select the file-only source profile, run the following from a StockInfo
 checkout with its [development prerequisites](../README.md#quick-start) set up,
