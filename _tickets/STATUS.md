@@ -43,13 +43,15 @@ schaltet den Branch. Regel:
 
 **T-111 technisch freigegeben · Codex, 2026-10-15.** Runde 1 ist für die
 selbst geheilte Prüffassung `8e80372` `approved`.
-[Review-Nachweise](30-doing/T-111-doku-nach-geaendertem-docs-conventions.md#verifier-prüfung--runde-1--codex-2026-10-15).
+[Review-Nachweise](40-done/T-111-doku-nach-geaendertem-docs-conventions.md#verifier-prüfung--runde-1--codex-2026-10-15).
 Claude verarbeitet die Freigabe und führt die lokale Integration aus;
 Mikes menschliche Abnahme bleibt offen.
 
+**T-111 abgenommen · Mike, 2026-10-15.** „T-111 ist abgenommen, push master“. Das Ticket liegt in `40-done/`, die Verweise zeigen dorthin; `master` ist gepusht. `30-doing/` ist leer. Offen bei Mike: Image-Build und -Push.
+
 **T-111 gemergt · Claude, 2026-10-15.** Codex hat T-111 in Runde 1 auf der selbst geheilten Fassung `8e80372` freigegeben (`87594c4`); `t-111-doku-nach-skill` ist lokal nach `master` gemergt, noch nicht gepusht. Zustand `portfolio_review`, `owner: mike`. Offen bei Mike: Abnahme von T-111, Push von `master`, Image-Build und -Push.
 
-**T-111 aktiv · Claude, 2026-10-15.** Mikes Auftrag „Schau dir make docs-check an - docs-conventions hat sich geändert …“: [T-111](30-doing/T-111-doku-nach-geaendertem-docs-conventions.md) auf `t-111-doku-nach-skill` (von `master`), Coder `claude`, Verifier `codex`. Scope-Vertrag im Ticket. `handoff_commit` und `last_reviewed_*` beschreiben noch T-110.
+**T-111 aktiv · Claude, 2026-10-15.** Mikes Auftrag „Schau dir make docs-check an - docs-conventions hat sich geändert …“: [T-111](40-done/T-111-doku-nach-geaendertem-docs-conventions.md) auf `t-111-doku-nach-skill` (von `master`), Coder `claude`, Verifier `codex`. Scope-Vertrag im Ticket. `handoff_commit` und `last_reviewed_*` beschreiben noch T-110.
 
 **T-108 bis T-110 abgenommen · Mike, 2026-10-15.** „T-108 bis T-110 sind abgenommen, push master“. Die drei Tickets liegen in `40-done/`, die Verweise zeigen dorthin; `master` ist gepusht. `30-doing/` ist leer. Offen bei Mike: Image-Build und -Push.
 
@@ -432,7 +434,7 @@ offenen T-93-Testbefunde und keine menschliche Abnahme.
 geprüft; `make docs-check` ist ohne Problem oder Hinweis, die Docker-Hub-
 Vorschau liegt bei 12.626 Byte. Die Quittungen für die unveränderten
 README-Gliederungen stehen in `.docs-check.ack`. Details:
-[T-111](30-doing/T-111-doku-nach-geaendertem-docs-conventions.md#verifier-prüfung--runde-1--codex-2026-10-15).
+[T-111](40-done/T-111-doku-nach-geaendertem-docs-conventions.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-110 Runde 1 · approved (verarbeitet)
 
