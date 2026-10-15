@@ -68,15 +68,18 @@ ergänzt; das prüft der Doku-Abgleich.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | Neuer Satz gegen `dashboard/src/i18n/en.ts` (`about.*`) und die Statusleiste | Aussagen stimmen | ➖ |
-| 2 | Vorschau neu erzeugen, `make docs-check` | keine Probleme, Vorschau unter 25.000 Bytes | ➖ |
-| 3 | Doku-Abgleich | READMEs nennen den About-Reiter; nichts Nötiges geht verloren | ➖ |
-| 4 | `grep` nach `dev-ports`, `setup-libs`, `DEV_MAKE`, `BASH_LIBS` in `docs/development.md` | keine Erklärung der Werkzeuge mehr; genutzte Befehle bleiben | ➖ |
+| 1 | Neuer Satz gegen `dashboard/src/i18n/en.ts` (`about.*`) und die Statusleiste | Aussagen stimmen | ✅ Grenzen der Daten: `about.intro`, `about.use`; Lizenzdokumente: `about.licenseLink`, `about.licensingLink`; Statusleiste: `status.about` „About StockInfo“ |
+| 2 | Vorschau neu erzeugen, `make docs-check` | keine Probleme, Vorschau unter 25.000 Bytes | ✅ Vorschau 11.732 Bytes; `make docs-check` ohne Probleme und Hinweise nach Quittung |
+| 3 | Doku-Abgleich | READMEs nennen den About-Reiter; nichts Nötiges geht verloren | ✅ `README.md`/`README.de.md` „Settings … About“ unter Funktionen; Logo, Adresse und Bereichswähler sind Oberflächendetail (Regel in `docs-conventions`: gehört in einen User Guide, den StockInfo nicht hat) |
+| 4 | `grep` nach `dev-ports`, `setup-libs`, `DEV_MAKE`, `BASH_LIBS` in `docs/development.md` | keine Erklärung der Werkzeuge mehr; genutzte Befehle bleiben | ✅ keine Treffer; `dockerhub-readme.sh` und `changelog.py` stehen weiter als genutzte Befehle |
+| 5 | `git grep readme-conventions` außerhalb `_tickets/` | kein Treffer | ✅ kein Treffer |
 
 ### Akzeptanzkriterien
 
-- [ ] About-Punkt in einem Satz, Vorschau aktuell.
-- [ ] `make docs-check` ohne Probleme.
+Selbstprüfung des Coders; die Freigabe gibt der Verifier.
+
+- [x] About-Punkt in einem Satz, Vorschau aktuell.
+- [x] `make docs-check` ohne Probleme.
 
 ### Side-Effects
 
@@ -88,4 +91,23 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
-Noch keine Übergabe.
+### Übergabe Runde 1 · Claude, 2026-10-15
+
+**Prüfstand:** `b5f641c` (Produkt `35d9761`, Quittung `b5f641c`) auf
+`t-106-doku-kuerzen`. 7 Dateien, +15/−20 = 35 Zeilen (Budget 40).
+
+- `docker/README.md`: About-Punkt im Wortlaut aus dem Scope-Vertrag;
+  Vorschau neu.
+- `docs/development.md`: `make dev-down` ohne `dev-ports.sh`;
+  „Requirements“ ohne `setup-libs.sh` und die Fundvariablen.
+- Umbenennung `readme-conventions` → `docs-conventions` in `AGENTS.md`,
+  `docs/README.template.md` (2 ×), `.docs-check.conf.sh`. In `AGENTS.md`
+  zusätzlich „Schreibregeln der READMEs“ → „der Projektdoku“, weil der
+  Skill jetzt die ganze Projektdoku regelt. Tickets unter `_tickets/`
+  behalten den alten Namen als Verlauf.
+- Quittiert: `docs/README.template.md` → `README.md`/`README.de.md` (nur
+  Skill-Name), `docker/README.md` → `unraid/README.md` (Unraid beschreibt den
+  Reiter nicht).
+
+Code-Standards: ➖ kein Code; Dokumentation ✅. DRY: Die Regeln stehen in
+`docs-conventions` und `docker-conventions`; die Doku wiederholt sie nicht.

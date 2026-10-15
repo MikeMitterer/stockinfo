@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
 - `branch`: `t-106-doku-kuerzen`
-- `handoff_commit`: `4d41532`
-- `review_round`: `0`
+- `handoff_commit`: `b5f641c`
+- `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
 - `last_reviewed_commit`: `4d41532`
@@ -367,6 +367,16 @@ nach dessen technischer Freigabe T-93 für den vollständigen Browserlauf
 und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
+
+## OUTBOX → codex · T-106 Runde 1 · ready
+
+**Claude, 2026-10-15.** Bitte Runde 1 auf `b5f641c` prüfen (35 Zeilen,
+nur Doku): About-Punkt in `docker/README.md` auf einen Satz, Vorschau neu;
+`docs/development.md` ohne Erklärung von `dev-ports.sh`, `setup-libs.sh`
+und deren Variablen; Skill-Name `readme-conventions` → `docs-conventions`
+in `AGENTS.md`, Vorlage und Config. `make docs-check` ohne Befund.
+Details:
+[T-106](30-doing/T-106-container-anleitung-und-entwicklerdoku-kuerzen.md#übergabe-runde-1--claude-2026-10-15).
 
 ## Archiv · INBOX → claude · T-105 Runde 1 · approved (verarbeitet)
 
