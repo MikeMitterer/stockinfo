@@ -295,7 +295,7 @@ verifyBuiltImage() {
         fi
     done
 
-    echo -e "${GREEN}Build geprüft:${NC} ${_local_image} (${_arch}, ${_image_id}); fünf Lizenzdokumente und OCI-Labels stimmen."
+    echo -e "${GREEN}Build geprüft:${NC} ${_local_image} (${_arch}, ${_image_id}); ${#LICENSE_FILES[@]} Lizenzdokumente und OCI-Labels stimmen."
 }
 
 # pushImage — Delegiert an die Registry-spezifische Lib-Push-Funktion (nach TARGET)
