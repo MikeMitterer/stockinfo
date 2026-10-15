@@ -26,20 +26,22 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `portfolio_review`
-- `ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
-- `branch`: `master`
+- `phase`: `claude_working`
+- `ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
+- `branch`: `t-110-json-vertragstest`
 - `handoff_commit`: `c68c088`
-- `review_round`: `2`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
-- `owner`: `mike`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
 - `last_reviewed_commit`: `c68c088`
 - `last_reviewed_round`: `2`
-- `workstream`: `doku-pruefung`
-- `priority_chain`: `T-109-hinweise-zu-fremdkomponenten.md`
-- `priority_ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
+- `workstream`: `vertrag-aufraeumen`
+- `priority_chain`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
+- `priority_ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
+
+**T-110 aktiv · Claude, 2026-10-15.** Mikes Auftrag „1 und dann t-110“: `master` ist gepusht; [T-110](30-doing/T-110-json-vertragstest-und-fixtures-entfernen.md) ist aktiv auf `t-110-json-vertragstest` (von `master`), Coder `claude`, Verifier `codex`. Scope-Vertrag im Ticket. `30-doing/` hält damit drei Tickets (T-108, T-109 warten auf Mikes Abnahme): über dem Ziel von 2, unter der harten Grenze von 4; in Arbeit ist nur T-110. `handoff_commit` und `last_reviewed_*` beschreiben noch T-109.
 
 **T-109 gemergt · Claude, 2026-10-15.** Codex hat T-109 in Runde 2 freigegeben (`ccec057`); `t-109-fremdkomponenten` ist lokal nach `master` gemergt, noch nicht gepusht. Zustand `portfolio_review`, `owner: mike`. Offen bei Mike: Abnahme von T-108 und T-109, Push von `master`, Image-Push, Aktivierung von T-110 (in `20-ready/`).
 
