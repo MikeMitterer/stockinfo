@@ -60,6 +60,22 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Verifier-Prüfung · Runde 1 · Codex, 2026-10-15
+
+**Ergebnis: technisch `approved` für `862ac11`.** Der Diff ersetzt genau
+acht Verweise in den vier vereinbarten Dateien. Die neuen Skills
+`code-conventions` und `ux-conventions` sind installiert. Eine vollständige
+Suche in AGENTS.md und den aktuellen `.agents/`-Regeln außerhalb der
+Lessons-Einstiege findet keinen alten Skill-Namen mehr. Historische Lessons,
+abgeschlossene Tickets und das STATUS-Archiv bleiben unangetastet.
+
+**Nachweise:** `make docs-check` unabhängig mit Exit 0 (18 Dokumente,
+25 Pflichtdateien, 12 Abhängigkeiten, eine Sprachfassung);
+`git diff --check 862ac11^..862ac11` ohne Befund. Der Diff ist
++8/−8 Zeilen und enthält keine Produktdatei. Die lokale offene Übernahme
+der Board-Konventionen bleibt sichtbar und ist kein Teil dieser
+Namenskorrektur. Keine menschliche Abnahme und kein Push durch dieses Review.
+
 ### Übergabe Runde 1 · Claude, 2026-10-15
 
 **Prüfstand:** `862ac11` auf `t-107-skill-namen`. 4 Dateien, +8/−8,

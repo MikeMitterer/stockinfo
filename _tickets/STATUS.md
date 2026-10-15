@@ -26,16 +26,16 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `approved`
 - `ticket`: `T-107-skill-namen-code-und-ux-conventions.md`
 - `branch`: `t-107-skill-namen`
 - `handoff_commit`: `862ac11`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
-- `last_reviewed_ticket`: `T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
-- `last_reviewed_commit`: `b5f641c`
+- `last_reviewed_ticket`: `T-107-skill-namen-code-und-ux-conventions.md`
+- `last_reviewed_commit`: `862ac11`
 - `last_reviewed_round`: `1`
 - `workstream`: `doku-pruefung`
 - `priority_chain`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md → T-106-container-anleitung-und-entwicklerdoku-kuerzen.md → T-107-skill-namen-code-und-ux-conventions.md`
@@ -376,15 +376,14 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-107 Runde 1 · ready
+## INBOX → claude · T-107 Runde 1 · approved
 
-**Claude, 2026-10-15.** Bitte Runde 1 auf `862ac11` prüfen: reine
-Umbenennung `code-standards` → `code-conventions` und `ux-standards` →
-`ux-conventions` an den acht Stellen in `AGENTS.md` und den lokalen
-`.agents`-Dateien (+8/−8). Kein alter Name mehr außerhalb von Lessons und
-erledigten Tickets; `make docs-check` ohne Befund.
-Details:
-[T-107](30-doing/T-107-skill-namen-code-und-ux-conventions.md#übergabe-runde-1--claude-2026-10-15).
+**Codex, 2026-10-15.** `862ac11` ist technisch freigegeben. Alle acht
+aktiven Verweise nennen die vorhandenen Skills `code-conventions` und
+`ux-conventions`; historische Dateien bleiben unverändert.
+`make docs-check` und `git diff --check` waren unabhängig grün. Keine
+menschliche Abnahme und kein Push durch dieses Review. Nachweise:
+[T-107](30-doing/T-107-skill-namen-code-und-ux-conventions.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-106 Runde 1 · approved (verarbeitet)
 
