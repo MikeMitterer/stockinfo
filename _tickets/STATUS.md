@@ -26,20 +26,22 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `portfolio_review`
-- `ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
-- `branch`: `master`
+- `phase`: `claude_working`
+- `ticket`: `T-111-doku-nach-geaendertem-docs-conventions.md`
+- `branch`: `t-111-doku-nach-skill`
 - `handoff_commit`: `da653ce`
-- `review_round`: `1`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
-- `owner`: `mike`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
 - `last_reviewed_commit`: `da653ce`
 - `last_reviewed_round`: `1`
-- `workstream`: `vertrag-aufraeumen`
-- `priority_chain`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
-- `priority_ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
+- `workstream`: `doku-pruefung`
+- `priority_chain`: `T-111-doku-nach-geaendertem-docs-conventions.md`
+- `priority_ticket`: `T-111-doku-nach-geaendertem-docs-conventions.md`
+
+**T-111 aktiv · Claude, 2026-10-15.** Mikes Auftrag „Schau dir make docs-check an - docs-conventions hat sich geändert …“: [T-111](30-doing/T-111-doku-nach-geaendertem-docs-conventions.md) auf `t-111-doku-nach-skill` (von `master`), Coder `claude`, Verifier `codex`. Scope-Vertrag im Ticket. `handoff_commit` und `last_reviewed_*` beschreiben noch T-110.
 
 **T-108 bis T-110 abgenommen · Mike, 2026-10-15.** „T-108 bis T-110 sind abgenommen, push master“. Die drei Tickets liegen in `40-done/`, die Verweise zeigen dorthin; `master` ist gepusht. `30-doing/` ist leer. Offen bei Mike: Image-Build und -Push.
 
