@@ -9,7 +9,11 @@
 fastapi==0.139.0
 uvicorn[standard]==0.51.0
 yfinance==1.5.1
-justetf-scraping @ git+https://github.com/druzsan/justetf-scraping.git@b52934a3b19d218b7e0f4f272deb0bd47bc89519
+# Fork mit der Korrektur, die die Stammdaten aus der Basistabelle der
+# justETF-Seite liest; Upstream liest sie aus der zweiten Tabelle und liefert
+# seit einer Umstellung der Seite keine Kennzahlen mehr. Zurück auf
+# druzsan/justetf-scraping, sobald dort Pull Request #59 gemergt ist.
+justetf-scraping @ git+https://github.com/MikeMitterer/justetf-scraping.git@1e804a89ecc37df4d4cf63f507695a7dcc28aa28
 apscheduler==3.11.3
 pydantic-settings==2.14.2
 # Seit T-22 liest die App `data/sources.yaml`. Bis dahin war PyYAML nur
