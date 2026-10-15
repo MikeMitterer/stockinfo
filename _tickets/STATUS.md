@@ -38,8 +38,14 @@ schaltet den Branch. Regel:
 - `last_reviewed_commit`: `e57c7f4`
 - `last_reviewed_round`: `2`
 - `workstream`: `doku-pruefung`
-- `priority_chain`: `T-102-docs-check-nach-stockportfolio-schema.md`
+- `priority_chain`: `T-102-docs-check-nach-stockportfolio-schema.md → T-103-justetf-liefert-keine-kennzahlen-mehr.md`
 - `priority_ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
+
+**T-103 in der Kette · Mike, 2026-10-15.** „Nimm T-103 in die Kette nach
+T-102“. [T-103](20-ready/T-103-justetf-liefert-keine-kennzahlen-mehr.md)
+liegt in `20-ready/` (Verschiebung von Claude, mitcommittet in `38e693f`)
+und folgt T-102 in `priority_chain`. Aktiviert wird es erst nach der
+technischen Freigabe von T-102. Coder `claude`, Verifier `codex`.
 
 **Aktivierung T-102 · Claude, 2026-10-15.** Auf Mikes Auftrag aus der
 StockPortfolio-Sitzung („Leg in StockInfo als ein Ticket nach doing dass dort
