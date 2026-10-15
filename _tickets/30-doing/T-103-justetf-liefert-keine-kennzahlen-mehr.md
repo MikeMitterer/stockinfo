@@ -21,8 +21,9 @@ das Papier nicht“.
 **Stand:** Auf Mikes Auftrag vom 2026-10-15 in `10-backlog/` angelegt,
 gefunden beim Gesamtlauf von `make test` in T-102. Auf Mikes Auftrag
 („Nimm T-103 in die Kette nach T-102“) in `20-ready/` und in
-`priority_chain` nach T-102. Nicht aktiviert, keine Umsetzung; Start nach
-der technischen Freigabe von T-102. `make check` ist nicht betroffen, weil es die
+`priority_chain` nach T-102. Nach der Freigabe von T-102 aktiviert
+(2026-10-15) auf `t-103-justetf-kennzahlen`, Coder `claude`, Verifier
+`codex`. Zuerst Ursache klären, dann Scope-Vertrag, dann Umsetzung. `make check` ist nicht betroffen, weil es die
 `integration`-Tests auslässt.
 
 ## Befund

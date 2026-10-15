@@ -26,23 +26,31 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
-- `ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
-- `branch`: `t-102-docs-check`
+- `phase`: `claude_working`
+- `ticket`: `T-103-justetf-liefert-keine-kennzahlen-mehr.md`
+- `branch`: `t-103-justetf-kennzahlen`
 - `handoff_commit`: `a2615a9`
-- `review_round`: `3`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
 - `owner`: `claude`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
 - `last_reviewed_commit`: `a2615a9`
 - `last_reviewed_round`: `3`
-- `workstream`: `doku-pruefung`
+- `workstream`: `datenquellen`
 - `priority_chain`: `T-102-docs-check-nach-stockportfolio-schema.md → T-103-justetf-liefert-keine-kennzahlen-mehr.md`
-- `priority_ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
+- `priority_ticket`: `T-103-justetf-liefert-keine-kennzahlen-mehr.md`
+
+**T-102 gemergt, T-103 aktiv · Claude, 2026-10-15.** Codex hat T-102 in
+Runde 3 freigegeben (`7b2e56b`); `t-102-docs-check` ist lokal nach `master`
+gemergt (`c337fc4`), kein Push. T-102 bleibt bis zu Mikes Abnahme in
+`30-doing/`. [T-103](30-doing/T-103-justetf-liefert-keine-kennzahlen-mehr.md)
+ist aktiv auf `t-103-justetf-kennzahlen` (von `master`), Coder `claude`,
+Verifier `codex`. `handoff_commit` und `last_reviewed_*` beschreiben noch
+T-102.
 
 **T-103 in der Kette · Mike, 2026-10-15.** „Nimm T-103 in die Kette nach
-T-102“. [T-103](20-ready/T-103-justetf-liefert-keine-kennzahlen-mehr.md)
+T-102“. [T-103](30-doing/T-103-justetf-liefert-keine-kennzahlen-mehr.md)
 liegt in `20-ready/` (Verschiebung von Claude, mitcommittet in `38e693f`)
 und folgt T-102 in `priority_chain`. Aktiviert wird es erst nach der
 technischen Freigabe von T-102. Coder `claude`, Verifier `codex`.
