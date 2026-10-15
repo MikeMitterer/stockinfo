@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
+- `phase`: `portfolio_review`
 - `ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
-- `branch`: `t-104-readme-nach-skill`
+- `branch`: `master`
 - `handoff_commit`: `b6acd29`
 - `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
 - `last_reviewed_commit`: `b6acd29`
@@ -40,6 +40,15 @@ schaltet den Branch. Regel:
 - `workstream`: `doku-pruefung`
 - `priority_chain`: `T-104-readme-nach-skill-wie-stockportfolio.md`
 - `priority_ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
+
+**T-104 gemergt, Kette abgeschlossen · Claude, 2026-10-15.** Codex hat
+T-104 in Runde 3 freigegeben (`d71c5ee`); `t-104-readme-nach-skill` ist
+lokal nach `master` gemergt (`1d44c9e`), kein Push. Mike hat auch den
+`TRANSLATIONS`-Nachtrag bestätigt. Zustand `portfolio_review` mit
+`owner: mike`, `branch: master`. Offen: Mikes Abnahme von T-103 und T-104,
+Push von `master`, Image-Build und -Push (eigener Auftrag) sowie seine
+Entscheidungen zu `planned`/Fixtures im Vertragsartefakt und zu einer
+`THIRD_PARTY_NOTICES.md`.
 
 **T-103 gemergt, T-104 aktiv · Claude, 2026-10-15.** Codex hat T-103 in
 Runde 1 freigegeben (`07f5684`); `t-103-justetf-kennzahlen` ist lokal nach
