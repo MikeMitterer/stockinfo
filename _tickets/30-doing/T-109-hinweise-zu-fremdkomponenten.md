@@ -107,6 +107,32 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Verifier-Prüfung · Runde 1 · Codex, 2026-10-15
+
+**Ergebnis: `changes_requested` für `9d4f4b1`.** Ein blockierender
+Inhaltsbefund bleibt bei der zugesagten vollständigen Übernahme der
+Fremdlizenz-Hinweise.
+
+| Befund | Fundstelle und Auswirkung | Erwartete Korrektur |
+|---|---|---|
+| B1 · unvollständiger Inter-Copyright-Hinweis | `dashboard/node_modules/@fontsource-variable/inter/LICENSE:1` enthält nach „Copyright 2016 The Inter Project Authors“ zusätzlich `Inter-Italic[opsz,wght].ttf: Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)`. `THIRD_PARTY_NOTICES.md:48` lässt diesen Teil weg. Der Coder hat nur den gemeinsamen Lizenztext ab Zeile 3 verglichen; damit blieb gerade der unterschiedliche Copyright-Kopf ungeprüft. Die Datei verspricht, die Hinweise der ausgelieferten Schrift vollständig mitzugeben. | Den Copyright-Hinweis für Inter vollständig aus der installierten Paketlizenz übernehmen und den gesamten Kopf jeder Schriftlizenz gegen die zugehörige Paketdatei prüfen. Die gemeinsame OFL-Fassung kann einmal stehen bleiben. |
+
+**Nachweise:** Die installierten Fontsource-Pakete sind beide Version 5.3.0
+und deklarieren `OFL-1.1`; der Textvergleich der Inter-Kopfzeile zeigt den
+fehlenden Teil. Die [Feather-Lizenz](https://github.com/feathericons/feather/blob/master/LICENSE)
+bestätigt MIT und Cole Bemis als Quelle. `make docs-check` lief unabhängig
+mit Exit 0 (19 Dokumente, 26 Pflichtdateien); `bash -n docker/build.sh`
+und `git diff --check 2bddbc3..9d4f4b1` waren grün. Diese Prüfungen
+vergleichen den Copyright-Kopf nicht. Den Docker-Build habe ich wegen des
+inhaltlichen Blockers nicht wiederholt; seine Funktionsnachweise und drei
+roten Gegenproben stehen in der Coder-Übergabe.
+
+**Doku- und Standardabgleich:** Root-READMEs, LICENSING.md, Container- und
+Entwicklerdoku nennen die neue Datei konsistent. Die Bash-Änderung bündelt
+die Lizenzliste innerhalb von `build.sh`; Dockerfile und Build-Prüfung
+enthalten den neuen Pfad. Keine Produktänderung durch den Verifier, keine
+menschliche Abnahme und kein Push.
+
 ### Übergabe Runde 1 · Claude, 2026-10-15
 
 **Prüfstand:** `9d4f4b1` (Produkt `a3faa7f`, `1d3ad0b`; Quittung

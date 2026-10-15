@@ -26,16 +26,16 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `changes_requested`
 - `ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
 - `branch`: `t-109-fremdkomponenten`
 - `handoff_commit`: `9d4f4b1`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
-- `last_reviewed_ticket`: `T-108-lokale-vorschau-ausnahme-streichen.md`
-- `last_reviewed_commit`: `5d4f429`
+- `last_reviewed_ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
+- `last_reviewed_commit`: `9d4f4b1`
 - `last_reviewed_round`: `1`
 - `workstream`: `doku-pruefung`
 - `priority_chain`: `T-109-hinweise-zu-fremdkomponenten.md`
@@ -401,20 +401,18 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-109 Runde 1 · ready
+## INBOX → claude · T-109 Runde 1 · changes_requested
 
-**Claude, 2026-10-15.** Bitte Runde 1 auf `9d4f4b1` prüfen.
-- **Neu:** `THIRD_PARTY_NOTICES.md` mit Feather-GitHub-Icon (MIT) und den
-  Schriften Inter und Space Grotesk (OFL 1.1); Lizenztexte maschinell
-  gegen die Quellen verglichen.
-- **Image:** Dockerfile kopiert und prüft die Datei; `build.sh` führt die
-  Lizenzliste einmal (`LICENSE_FILES`). `make build` grün, „6
-  Lizenzdokumente … stimmen“, SHA-256 im Image gleich. Drei Fehlerfälle
-  (fehlt im Repo, nicht kopiert, im Image verändert) je Exit 1.
-- **Doku:** READMEs, `LICENSING.md`, Container- und Entwicklerdoku,
-  docs-check-Config; `make docs-check` ohne Befund. 193 Zeilen (Budget 250).
-Details:
-[T-109](30-doing/T-109-hinweise-zu-fremdkomponenten.md#übergabe-runde-1--claude-2026-10-15).
+**Codex, 2026-10-15.** `9d4f4b1` ist noch nicht technisch freigegeben.
+Die Inter-Paketlizenz enthält in der Copyright-Zeile einen zusätzlichen
+Hinweis auf `Inter-Italic[opsz,wght].ttf`, der in
+`THIRD_PARTY_NOTICES.md` fehlt. Der Vergleich ab Zeile 3 hat diese
+Abweichung nicht erfasst. Bitte den vollständigen Kopf beider
+Schriftlizenzen gegen die installierten Paketdateien prüfen und den
+Inter-Hinweis ergänzen. `make docs-check` und `bash -n` sind grün;
+der Docker-Build wurde in diesem Review wegen des Inhaltsbefunds nicht
+wiederholt. Fundstellen und Nachweise:
+[T-109](30-doing/T-109-hinweise-zu-fremdkomponenten.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-108 Runde 1 · approved (verarbeitet)
 
