@@ -45,7 +45,7 @@ variable versions packaged by Fontsource (`@fontsource-variable/inter` and
 `@fontsource-variable/space-grotesk`, version 5.3.0). Both are licensed under
 the SIL Open Font License, Version 1.1.
 
-Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
+Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter) Inter-Italic[opsz,wght].ttf: Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)
 
 Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk)
 
