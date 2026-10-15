@@ -41,19 +41,21 @@ schaltet den Branch. Regel:
 - `priority_chain`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
 - `priority_ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
 
+**T-108 bis T-110 abgenommen · Mike, 2026-10-15.** „T-108 bis T-110 sind abgenommen, push master“. Die drei Tickets liegen in `40-done/`, die Verweise zeigen dorthin; `master` ist gepusht. `30-doing/` ist leer. Offen bei Mike: Image-Build und -Push.
+
 **T-110 gemergt · Claude, 2026-10-15.** Codex hat T-110 in Runde 1 freigegeben (`aa73a09`); `t-110-json-vertragstest` ist lokal nach `master` gemergt (`0495692`), noch nicht gepusht. Zustand `portfolio_review`, `owner: mike`. In StockPortfolio trägt T-35 statt eines eigenen Tickets einen Hinweis (`f9f736d`, gepusht). Offen bei Mike: Abnahme von T-108, T-109 und T-110, Push von `master`, Image-Build und -Push.
 
 **T-110 technisch freigegeben · Codex, 2026-10-15.** Prüffassung
-`da653ce` ist in Runde 1 `approved`. [Nachweise und Doku-Abgleich](30-doing/T-110-json-vertragstest-und-fixtures-entfernen.md#verifier-prüfung--runde-1--codex-2026-10-15).
+`da653ce` ist in Runde 1 `approved`. [Nachweise und Doku-Abgleich](40-done/T-110-json-vertragstest-und-fixtures-entfernen.md#verifier-prüfung--runde-1--codex-2026-10-15).
 Claude verarbeitet die Freigabe und führt die lokale Integration aus;
 Mikes menschliche Abnahme bleibt offen. T-108 und T-109 warten ebenfalls
 noch auf Mikes Abnahme.
 
-**T-110 aktiv · Claude, 2026-10-15.** Mikes Auftrag „1 und dann t-110“: `master` ist gepusht; [T-110](30-doing/T-110-json-vertragstest-und-fixtures-entfernen.md) ist aktiv auf `t-110-json-vertragstest` (von `master`), Coder `claude`, Verifier `codex`. Scope-Vertrag im Ticket. `30-doing/` hält damit drei Tickets (T-108, T-109 warten auf Mikes Abnahme): über dem Ziel von 2, unter der harten Grenze von 4; in Arbeit ist nur T-110. `handoff_commit` und `last_reviewed_*` beschreiben noch T-109.
+**T-110 aktiv · Claude, 2026-10-15.** Mikes Auftrag „1 und dann t-110“: `master` ist gepusht; [T-110](40-done/T-110-json-vertragstest-und-fixtures-entfernen.md) ist aktiv auf `t-110-json-vertragstest` (von `master`), Coder `claude`, Verifier `codex`. Scope-Vertrag im Ticket. `30-doing/` hält damit drei Tickets (T-108, T-109 warten auf Mikes Abnahme): über dem Ziel von 2, unter der harten Grenze von 4; in Arbeit ist nur T-110. `handoff_commit` und `last_reviewed_*` beschreiben noch T-109.
 
 **T-109 gemergt · Claude, 2026-10-15.** Codex hat T-109 in Runde 2 freigegeben (`ccec057`); `t-109-fremdkomponenten` ist lokal nach `master` gemergt, noch nicht gepusht. Zustand `portfolio_review`, `owner: mike`. Offen bei Mike: Abnahme von T-108 und T-109, Push von `master`, Image-Push, Aktivierung von T-110 (in `20-ready/`).
 
-**T-109 aktiv · Claude, 2026-10-15.** Mikes Auftrag („5 - ja“, „erledige erst T-109“): neue Kette mit [T-109](30-doing/T-109-hinweise-zu-fremdkomponenten.md) auf `t-109-fremdkomponenten` (von `master`), Coder `claude`, Verifier `codex`. T-108 bleibt bis zu Mikes Abnahme in `30-doing/`; `master` ist gepusht (`c822dcf`). Image-Build und -Push folgen nach T-109.
+**T-109 aktiv · Claude, 2026-10-15.** Mikes Auftrag („5 - ja“, „erledige erst T-109“): neue Kette mit [T-109](40-done/T-109-hinweise-zu-fremdkomponenten.md) auf `t-109-fremdkomponenten` (von `master`), Coder `claude`, Verifier `codex`. T-108 bleibt bis zu Mikes Abnahme in `30-doing/`; `master` ist gepusht (`c822dcf`). Image-Build und -Push folgen nach T-109.
 
 **T-105 bis T-107 abgenommen, T-108 gemergt · 2026-10-15.** Mike: „T-105
 bis T-107 sind abgenommen“; die drei Tickets liegen in `40-done/`, die
@@ -64,7 +66,7 @@ Verweise zeigen dorthin. Codex hat T-108 in Runde 1 freigegeben (`a904ed0`);
 
 **T-108 aktiv · Claude, 2026-10-15.** Auf Mikes Bestätigung („Ja, der ist
 auch von mir“) neue Kette mit
-[T-108](30-doing/T-108-lokale-vorschau-ausnahme-streichen.md) auf
+[T-108](40-done/T-108-lokale-vorschau-ausnahme-streichen.md) auf
 `t-108-vorschau-ausnahme` (von `master`), Coder `claude`, Verifier `codex`.
 Die übrigen offenen Punkte aus dem folgenden Vermerk bleiben bei Mike.
 
@@ -419,7 +421,7 @@ offenen T-93-Testbefunde und keine menschliche Abnahme.
 Die statischen Fixtures und ihre Tests sind entfernt; der verbliebene Vertrag
 und der OpenAPI-Test entsprechen dem tatsächlich zugesagten API-Verhalten.
 `make test`, `make check` und `make docs-check` sind unabhängig grün.
-Details: [T-110](30-doing/T-110-json-vertragstest-und-fixtures-entfernen.md#verifier-prüfung--runde-1--codex-2026-10-15).
+Details: [T-110](40-done/T-110-json-vertragstest-und-fixtures-entfernen.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-109 Runde 2 · approved (verarbeitet)
 
@@ -428,7 +430,7 @@ vollständige Inter-Copyright-Kopf und der OFL-Text wurden unabhängig
 gegen die installierten Paketlizenzen verglichen. Die lokale Image-Datei
 ist bytegleich zur Repository-Datei; `make docs-check` ist grün. Keine
 menschliche Abnahme und kein Push durch dieses Review. Nachweise:
-[T-109](30-doing/T-109-hinweise-zu-fremdkomponenten.md#verifier-prüfung--runde-2--codex-2026-10-15).
+[T-109](40-done/T-109-hinweise-zu-fremdkomponenten.md#verifier-prüfung--runde-2--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-109 Runde 1 · changes_requested (verarbeitet)
 
@@ -441,7 +443,7 @@ Schriftlizenzen gegen die installierten Paketdateien prüfen und den
 Inter-Hinweis ergänzen. `make docs-check` und `bash -n` sind grün;
 der Docker-Build wurde in diesem Review wegen des Inhaltsbefunds nicht
 wiederholt. Fundstellen und Nachweise:
-[T-109](30-doing/T-109-hinweise-zu-fremdkomponenten.md#verifier-prüfung--runde-1--codex-2026-10-15).
+[T-109](40-done/T-109-hinweise-zu-fremdkomponenten.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-108 Runde 1 · approved (verarbeitet)
 
@@ -450,7 +452,7 @@ vermeintliche lokale Ausnahme ist entfernt; Skill und Docs-Check sichern
 die Vorschau-Regel. `make docs-check` und `git diff --check` waren
 unabhängig grün. Keine menschliche Abnahme und kein Push durch dieses
 Review. Nachweise:
-[T-108](30-doing/T-108-lokale-vorschau-ausnahme-streichen.md#verifier-prüfung--runde-1--codex-2026-10-15).
+[T-108](40-done/T-108-lokale-vorschau-ausnahme-streichen.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-107 Runde 1 · approved (verarbeitet)
 
