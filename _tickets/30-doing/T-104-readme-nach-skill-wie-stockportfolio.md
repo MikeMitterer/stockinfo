@@ -137,8 +137,8 @@ StockInfo-Anker nur als Befund); kein Image-Build oder Push in diesem
 Ticket.
 
 **Nachtrag Mike, 2026-10-15, übermittelt von der StockPortfolio-Sitzung
-`stockportfolio-97` nach `6e004ea` (Bestätigung durch Mike steht aus;
-ersetzt den Docker-Teil des Nachtrags `06d15cf`):**
+`stockportfolio-97` nach `6e004ea`, von Mike bestätigt („Ja, der Nachtrag
+ist von mir“); ersetzt den Docker-Teil des Nachtrags `06d15cf`:**
 
 - `docker/README.md`, Lizenzteil: nur Kurzform — Copyright und Lizenzgeber,
   „EUPL 1.2, version 1.2 only“ und Link auf `../README.md#license` für
