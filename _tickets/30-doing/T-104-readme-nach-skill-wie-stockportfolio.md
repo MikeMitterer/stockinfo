@@ -109,6 +109,17 @@ StockPortfolio-Sitzung):**
   geänderte Fassung weitergibt oder als Netzwerkdienst anbietet, …“).
   Vorbild: StockPortfolio `0229c8b`.
 
+- `docker/README.md`, Abschnitt „Support and license“: Er übernimmt die
+  Kernaussagen des Bausteins (Regel jetzt in `docker-conventions`,
+  Skill-Commit `acf8f80`). Der Pflichtensatz „Preserve the required notices,
+  identify changes and provide the corresponding source … including for
+  covered network services“ wird zum Bedingungssatz des Bausteins; ohne
+  Bedingung liest er sich wie eine Pflicht für jeden, der das Image nur
+  betreibt. Copyright und Lizenz kommen vor die Angaben zum About-Reiter.
+  `LICENSE.de.txt` wird verlinkt (bisher nur `/app/LICENSE.de.txt`).
+  Container-Angaben (`/app/…`, MIT-Pfade, Image-Tags) bleiben. Vorschau
+  neu erzeugen. Vorbild: StockPortfolio `ad3458b`.
+
 Codex nimmt den Nachtrag in Runde 1 als Befund auf; umgesetzt wird er in
 der nächsten Coder-Runde. Er ändert keine weitere Datei des Scopes.
 
