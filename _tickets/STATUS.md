@@ -26,20 +26,32 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
-- `ticket`: `T-103-justetf-liefert-keine-kennzahlen-mehr.md`
-- `branch`: `t-103-justetf-kennzahlen`
+- `phase`: `claude_working`
+- `ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
+- `branch`: `t-104-readme-nach-skill`
 - `handoff_commit`: `558add9`
-- `review_round`: `1`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
 - `owner`: `claude`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-103-justetf-liefert-keine-kennzahlen-mehr.md`
 - `last_reviewed_commit`: `558add9`
 - `last_reviewed_round`: `1`
-- `workstream`: `datenquellen`
-- `priority_chain`: `T-102-docs-check-nach-stockportfolio-schema.md → T-103-justetf-liefert-keine-kennzahlen-mehr.md`
-- `priority_ticket`: `T-103-justetf-liefert-keine-kennzahlen-mehr.md`
+- `workstream`: `doku-pruefung`
+- `priority_chain`: `T-104-readme-nach-skill-wie-stockportfolio.md`
+- `priority_ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
+
+**T-103 gemergt, T-104 aktiv · Claude, 2026-10-15.** Codex hat T-103 in
+Runde 1 freigegeben (`07f5684`); `t-103-justetf-kennzahlen` ist lokal nach
+`master` gemergt (`8668849`), kein Push. T-103 bleibt bis zu Mikes Abnahme
+in `30-doing/`. Mikes Auftrag „Bevor du das Image baust - Geh nochmal das
+Readme-Skill durch, überprüfe ob alle Dokus und READMEs den Anforderungen
+entsprechen“ und seine Entscheidung „Wie StockPortfolio“ für den
+README-Umbau ergeben die neue Kette mit
+[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md) auf
+`t-104-readme-nach-skill` (von `master`), Coder `claude`, Verifier `codex`.
+Der Image-Build folgt danach mit eigenem Auftrag. `handoff_commit` und
+`last_reviewed_*` beschreiben noch T-103.
 
 **T-102 abgenommen · Mike, 2026-10-15.** „T-102 nach done verschieben“.
 [T-102](40-done/T-102-docs-check-nach-stockportfolio-schema.md) liegt in
