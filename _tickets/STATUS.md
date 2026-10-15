@@ -26,20 +26,22 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `portfolio_review`
-- `ticket`: `T-108-lokale-vorschau-ausnahme-streichen.md`
-- `branch`: `master`
+- `phase`: `claude_working`
+- `ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
+- `branch`: `t-109-fremdkomponenten`
 - `handoff_commit`: `5d4f429`
-- `review_round`: `1`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
-- `owner`: `mike`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-108-lokale-vorschau-ausnahme-streichen.md`
 - `last_reviewed_commit`: `5d4f429`
 - `last_reviewed_round`: `1`
 - `workstream`: `doku-pruefung`
-- `priority_chain`: `T-108-lokale-vorschau-ausnahme-streichen.md`
-- `priority_ticket`: `T-108-lokale-vorschau-ausnahme-streichen.md`
+- `priority_chain`: `T-109-hinweise-zu-fremdkomponenten.md`
+- `priority_ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
+
+**T-109 aktiv · Claude, 2026-10-15.** Mikes Auftrag („5 - ja“, „erledige erst T-109“): neue Kette mit [T-109](30-doing/T-109-hinweise-zu-fremdkomponenten.md) auf `t-109-fremdkomponenten` (von `master`), Coder `claude`, Verifier `codex`. T-108 bleibt bis zu Mikes Abnahme in `30-doing/`; `master` ist gepusht (`c822dcf`). Image-Build und -Push folgen nach T-109.
 
 **T-105 bis T-107 abgenommen, T-108 gemergt · 2026-10-15.** Mike: „T-105
 bis T-107 sind abgenommen“; die drei Tickets liegen in `40-done/`, die
