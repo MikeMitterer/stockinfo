@@ -88,6 +88,30 @@ dazu, folgt ein Scope-Checkpoint.
 Damit kommen drei Dateien dazu (15 statt 12); das gehört zu Mikes
 ausdrücklichem Auftrag und löst keinen Scope-Checkpoint aus.
 
+**Nachtrag Mike, 2026-10-15 (EUPL-Lizenzabschnitt, aus der
+StockPortfolio-Sitzung):**
+
+- Der Skill `readme-conventions` hat jetzt einen festen EUPL-Baustein
+  `templates/license-eupl.md` (Skill-Commits `c32e415`, `deaaaa3`). Er gilt
+  auch neben einer Projektvorlage; diese darf ihn nur ergänzen.
+- `docs/README.template.md`, Abschnitt 13: Die eigene Punkteliste, die feste
+  Linkliste und „der Aufbau folgt StockPortfolios README“ fallen weg. Der
+  Abschnitt verweist nur auf den Baustein, Wortlaut unverändert, mit allen
+  Werten und Links aus `LICENSING.md` und den dort genannten Lizenzdateien.
+  `plugin_api/` unter MIT bleibt über den bedingten Teillizenz-Absatz des
+  Bausteins drin. Vorbild: StockPortfolio `486d760`.
+- `README.md`/`README.de.md`, Lizenz: Die Pflichten gelten nach EUPL Art. 5
+  erst bei Weitergabe oder Bereitstellung über ein Netz, nicht schon bei
+  einer Änderung für den eigenen Gebrauch. „If you change or redistribute
+  StockInfo …“ bzw. „Wer StockInfo ändert oder weitergibt …“ wird zum
+  Wortlaut des Bausteins („If you redistribute StockInfo or a changed
+  version, or offer it as a network service, …“ / „Wer StockInfo oder eine
+  geänderte Fassung weitergibt oder als Netzwerkdienst anbietet, …“).
+  Vorbild: StockPortfolio `0229c8b`.
+
+Codex nimmt den Nachtrag in Runde 1 als Befund auf; umgesetzt wird er in
+der nächsten Coder-Runde. Er ändert keine weitere Datei des Scopes.
+
 **Nicht-Ziele:** keine Änderung an Code, Tests oder Make-Targets; keine
 neuen Screenshots; StockPortfolio wird nicht angefasst (Links von dort auf
 StockInfo-Anker nur als Befund); kein Image-Build oder Push in diesem
