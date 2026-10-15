@@ -99,21 +99,27 @@ Ticket.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | `make docs-check` | keine Probleme; Hinweise begründet | ➖ |
-| 2 | `grep` nach `make `, `npm `, Verzeichnisbaum, `CORS`, Cache in beiden READMEs | keine Treffer außer einem Link auf `docs/development.md` | ➖ |
-| 3 | Eingehende Anker (`git grep 'README.md#'`) | jedes Ziel existiert; `docs-check` ohne toten Anker | ➖ |
-| 4 | Inventar: jede Aussage des alten README steht im neuen README, in `docs/development.md`, `docker/README.md` oder bewusst gestrichen | Tabelle Abschnitt → Ziel im Ticket | ➖ |
-| 5 | `README.md` und `README.de.md` nebeneinander | gleiche Gliederung und Aussagen, Bedienelemente im Wortlaut von `i18n/en.ts` bzw. `de.ts` | ➖ |
-| 6 | Mermaid-Diagramm | rendert auf GitHub (Syntax geprüft) | ➖ |
-| 7 | Doku-Abgleich | Dateien und Abschnitte im Ticket | ➖ |
+Stand `e5e237c`, Claude, 2026-10-15 (Runde 1).
+
+| # | Handgriff | Erwarteter Nachweis | AI |
+|---|---|---|:--:|
+| 1 | `make docs-check` | keine Probleme; Hinweise begründet | ✅ „18 Dokumente, 25 Pflichtdateien, 3 Screenshots, 12 Abhängigkeiten und 1 Code-Variable geprüft · keine Probleme“, keine Hinweise; Hook beim Commit grün |
+| 2 | `grep` nach `make `, `npm `, Verzeichnisbaum, `CORS`, Cache in beiden READMEs | keine Treffer außer einem Link auf `docs/development.md` | ✅ je 0 × `make`, 0 × `npm`, 0 Baumzeilen, 0 × CORS; 1 × „Cache“ in der Beschreibung der Seite Analyse (Wortlaut des App-Hinweises „bypassing the cache“). `README.md` 210 statt 666 Zeilen, `README.de.md` 218 statt 708 |
+| 3 | Eingehende Anker (`git grep 'README.md#'`) | jedes Ziel existiert; `docs-check` ohne toten Anker | ✅ `LICENSING.md` → `docs/development.md#set-up-and-start` und `#docker-image`; `docs/plugins.md` → `development.md#docker-image`, `../unraid/README.md#data-and-source-profiles`; `unraid/README.md` → `../docs/development.md#docker-image`, `#requirements`, `../docker/README.md#security`; `#stockportfolio-the-companion-app` bleibt. StockPortfolio verlinkt keine StockInfo-Anker (`git grep` dort ohne Treffer) |
+| 4 | Inventar: jede Aussage des alten README steht im neuen README, in `docs/development.md`, `docker/README.md` oder bewusst gestrichen | Tabelle Abschnitt → Ziel im Ticket | ✅ siehe [Übergabe Runde 1](#übergabe-runde-1--claude-2026-10-15) |
+| 5 | `README.md` und `README.de.md` nebeneinander | gleiche Gliederung und Aussagen, Bedienelemente im Wortlaut von `i18n/en.ts` bzw. `de.ts` | ✅ 11 Überschriften paarweise gleich; Seiten und Einstellungsbereiche aus `nav.*` und `settings.tab.*` (en: Assets, Exchanges, FX, Analysis, Appearance, Language, API & Links, Backups, Environment, About; de: Assets, Börsen, Devisen, Analyse, Darstellung, Sprache, API & Links, Backup, Environment, About) |
+| 6 | Mermaid-Diagramm | rendert auf GitHub (Syntax geprüft) | ✅ beide Diagramme mit `@mermaid-js/mermaid-cli` 12.0.0 gerendert, Exit 0 |
+| 7 | Doku-Abgleich | Dateien und Abschnitte im Ticket | ✅ siehe Übergabe |
 
 ### Akzeptanzkriterien
 
-- [ ] README.md und README.de.md ohne Make-, npm-, Baum-, Test-, Release-, Cache- und CORS-Inhalte.
-- [ ] `docs/development.md` enthält den vollständigen Entwicklerweg.
-- [ ] `AGENTS.md` und `docs/README.template.md` beschreiben die neue Aufteilung.
-- [ ] Befunde 2–6 behoben.
-- [ ] `make docs-check` ohne Probleme.
+Selbstprüfung des Coders; die Freigabe gibt der Verifier.
+
+- [x] README.md und README.de.md ohne Make-, npm-, Baum-, Test-, Release-, Cache- und CORS-Inhalte.
+- [x] `docs/development.md` enthält den vollständigen Entwicklerweg.
+- [x] `AGENTS.md` und `docs/README.template.md` beschreiben die neue Aufteilung.
+- [x] Befunde 2–6 behoben.
+- [x] `make docs-check` ohne Probleme.
 
 ### Abgrenzung
 
@@ -130,4 +136,89 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
-Noch keine Übergabe.
+### Übergabe Runde 1 · Claude, 2026-10-15
+
+**Prüfstand:** `e5e237c` auf `t-104-readme-nach-skill`.
+
+**Umfang:** 15 Dateien, +1.046/−1.554 = 2.600 Zeilen. Das liegt über der im
+Scope-Vertrag gesetzten Grenze von 2.400 Zeilen, ab der ein Checkpoint
+vorgesehen war. Bemerkt erst nach dem Commit; die Hälfte sind entfernte
+Zeilen der beiden READMEs (`README.md` +155/−607, `README.de.md` +166/−651),
+dazu die Nachträge von
+Mike (Vertragsdoku, Lizenzabschnitte). Keine neue Schicht, kein Code. Der
+Verifier entscheidet, ob er den Umfang so prüft oder einen Schnitt verlangt.
+Neu gegenüber dem Vertrag: `docs/release-notes.md` (Highlight 1.5.0) — 16
+Dateien inklusive Ticket.
+
+**Inventar altes README → Ziel:**
+
+| Alter Abschnitt | Ziel |
+|---|---|
+| Einleitung, Docker-Image, Changelog | README „Überblick“, „Further documentation“; Docker-Hub-Link öffentlich (Befund 4) |
+| StockPortfolio: the companion app | README, gleiche Überschrift, mit Mermaid (Befund 5) |
+| Release highlight 1.5.0 | `docs/release-notes.md` „What's new in 1.5.0“ |
+| What can it do? | README „Features“, „Your own values“ (Bild `detail-area.png`) |
+| How quotes are fetched: Tabelle, No official APIs | README „Data sources“ |
+| … ETFs outside Europe, Währung/Pence | README „Your own values“ (kurz), `docs/development.md` „REST API“ (vollständig) |
+| Requirements, Quick start (Checkout) | `docs/development.md` „Requirements“, „Set up and start“ |
+| Security model | `docker/README.md` „Security“; nativer Start (`HOST=127.0.0.1`) in `docs/development.md` „Configuration“; README Warnung |
+| The REST API | `docs/development.md` „REST API“; README Schnellstart mit `curl` |
+| Configuration (.env) | `docs/development.md` „Configuration (.env)“; README 5 Kernpunkte → `docker/README.md#configuration` (dort `CORS_ORIGINS` ergänzt) |
+| Dashboard | README „Features“ mit heutigen Seiten (Befund 2, 3); `npm`-Weg in `docs/development.md` |
+| Docker (Build, Push, Hub-Beschreibung, Profil) | `docs/development.md` „Docker image“ |
+| Unraid | README Schnellstart und „Further documentation“ |
+| Tests, Releases, Project layout | `docs/development.md` |
+| Support, License | README |
+
+**Bewusst gestrichen:** das Inhaltsverzeichnis (ersetzt durch die
+Link-Leiste im Kopf), Einzelheiten der Statusleiste (Ampel, Version) und die
+Wiederholung „Cache — every response is stored“ (steckt in „Automatic
+updates“). Kein Verhalten fällt aus der Doku.
+
+**Weitere Änderungen:**
+
+- `AGENTS.md` „Dokumentation gehört zur Änderung“: nur noch Verweise auf
+  `readme-conventions`, Vorlage und `docker-conventions`; lokale Ausnahme
+  „Vorschau versioniert“; `make docs-check` kurz; Doku beschreibt nur
+  Vorhandenes. Browserprüfung verweist für Node 24+ auf die Entwicklerdoku.
+- `docs/README.template.md` nach dem Skill ohne Ausnahme, mit Tabelle
+  „Wohin was gehört“ und Lizenzabschnitt nach StockPortfolios Aufbau.
+- Vertragsdoku ohne Geplantes: `docs/rest-core-contract.md` (Generation nur
+  Vorhandenes, Abschnitt „Der `details`-Container“ statt „Entschieden, aber
+  noch nicht zugesagt“), `contract/README.md`, `docs/plugin-authors.md`.
+  Neue Aussage geprüft: nur `/instrument-types` setzt
+  `StockInfo-Generation` (`app/routers/fields.py:28`), die
+  `CORSMiddleware` (`app/main.py:374–380`) gibt keine Header frei.
+- Lizenzabschnitte in `README.md`, `README.de.md`, `docker/README.md` nach
+  StockPortfolios Aufbau; jede Aussage aus `LICENSING.md` (Kennzeichnen von
+  Änderungen, Verbrauchererklärung Art. 7/8, Kontakt Zeile 9). Mikes
+  Hinweis „klingt komisch“ zur Pflichtenzeile in beiden Sprachen
+  umformuliert, ebenso in StockPortfolio (`5be525c`, gepusht).
+- Absatzregel: `docker/README.md` (StockPortfolio-Absatz), `unraid/README.md`
+  (zwei Stellen).
+
+**Config-Prüfung (`.docs-check.conf.sh`):**
+
+| Einstellung | Befund | Änderung |
+|---|---|---|
+| `CODE_VARIABLES` `docker/entrypoint.sh` | wirkungslos, Shell-Variablen erkennt das Werkzeug nicht | entfernt, Grund im Kommentar |
+| `CONTRACT_PATH` (`app/contract.py`) | gelesen, nicht dokumentiert, vom Werkzeug übersehen (zwei Zeilen) | als `INTERNAL_VARIABLES` versucht; das Werkzeug meldet ihn dann als „nicht mehr gelesen“ → im Kommentar vermerkt |
+| `LINKS_ONLY` für Arbeitsdokumente unter `docs/` | geprüft: wirkt nicht, weil `docs` in `DOCS` vorgeht | nicht übernommen, Grund im Kommentar |
+| `REQUIRED` | Entwicklerdoku fehlte | `docs/development.md` ergänzt; Gründe für `contract/README.md` korrigiert |
+| `DEPENDS_HINT` | Vorlage, i18n und Makefile ohne Abhängigkeit | Vorlage → beide READMEs, `en.ts`/`de.ts` → READMEs, `Makefile` → Entwicklerdoku, `docker/README.md` → `unraid/README.md` |
+| `FORBIDDEN`, `MAX_ALERTS`, `SCREENSHOTS`, `DEPENDS`, `KNOWN_VARIABLES` | passen | unverändert |
+
+**Doku-Abgleich:** alle 15 Dateien oben; `docker/preview/README.md` neu
+erzeugt (12.870 Bytes, Grenze 25.000). `CHANGELOG.md` unverändert (wird
+erzeugt). Die Unraid-Vorlage im Templates-Repo nennt keine README-Anker.
+
+**Befunde für Mike (nicht in diesem Ticket):**
+
+1. `contract/core-contract.json` führt den geplanten Generation-Ablauf unter
+   `planned` (Verweis T-25; T-34 liegt in `80-iced/`). Das ist Produktvertrag
+   mit Tests; die Doku nennt ihn nicht mehr.
+2. StockInfo hat keine `THIRD_PARTY_NOTICES.md`; StockPortfolio verlinkt
+   seine im Lizenzabschnitt. Die Lizenzabschnitte sagen nur „Third-party
+   components retain their own licenses“.
+3. StockPortfolios Hook meldet nach `5be525c` einen Hinweis `README.md` →
+   `docker/README.md`; dort ist nichts nachzuziehen, nicht quittiert.

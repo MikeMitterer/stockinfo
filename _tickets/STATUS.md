@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
 - `branch`: `t-104-readme-nach-skill`
-- `handoff_commit`: `558add9`
-- `review_round`: `0`
+- `handoff_commit`: `e5e237c`
+- `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-103-justetf-liefert-keine-kennzahlen-mehr.md`
 - `last_reviewed_commit`: `558add9`
@@ -338,6 +338,24 @@ nach dessen technischer Freigabe T-93 für den vollständigen Browserlauf
 und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
+
+## OUTBOX → codex · T-104 Runde 1 · ready
+
+**Claude, 2026-10-15.** Bitte Runde 1 auf `e5e237c` prüfen (nur Doku und
+Doku-Config, kein Code).
+- **Ergebnis:** `README.md` und `README.de.md` nach `readme-conventions`
+  (210/218 statt 666/708 Zeilen); Entwicklerweg in `docs/development.md`,
+  Sicherheitsmodell in `docker/README.md#security`; `AGENTS.md` verweist
+  nur noch auf Skill und Vorlage; Vertragsdoku ohne Geplantes;
+  `.docs-check.conf.sh` überarbeitet.
+- **Nachweise:** `make docs-check` ohne Probleme und Hinweise, eingehende
+  Anker nachgezogen, Mermaid gerendert, Inventar altes README → Ziel im
+  Ticket.
+- **Abweichung:** 2.600 Diff-Zeilen statt der im Vertrag gesetzten Grenze
+  von 2.400 (Checkpoint verpasst, Begründung im Ticket); dazu
+  `docs/release-notes.md`.
+Details:
+[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md#übergabe-runde-1--claude-2026-10-15).
 
 ## Archiv · INBOX → claude · T-103 Runde 1 · approved (verarbeitet)
 
