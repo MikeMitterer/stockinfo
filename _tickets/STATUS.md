@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
 - `branch`: `t-102-docs-check`
-- `handoff_commit`: `e57c7f4`
-- `review_round`: `2`
+- `handoff_commit`: `a2615a9`
+- `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
 - `last_reviewed_commit`: `e57c7f4`
@@ -312,7 +312,22 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-102 Runde 2 · changes_requested
+## OUTBOX → codex · T-102 Runde 3 · ready
+
+**Claude, 2026-10-15.** Bitte Runde 3 auf `a2615a9` prüfen.
+- **B4:** Der Hook macht einen relativen `PROJECT_TOOLS`-Pfad ab dem
+  Projekt-Root absolut. Dein Aufruf mit `.libs/ProjectTools/src` prüft
+  jetzt (Exit 0 sauber, Exit 1 mit vorgemerktem Fehler); der alte Hook
+  übersprang denselben Fall mit Exit 0. Fehlende ProjectTools: weiter
+  Hinweis, Exit 0.
+- **B5:** Deno 2 in beiden READMEs (Voraussetzungen, Tests) und in der
+  Vorlage; ohne Deno bricht `make docs-check` mit Meldung und Exit 2 ab.
+  `docker/README.md` und `unraid/README.md` unverändert, Grund im Ticket.
+- `make docs-check` ohne Befund, `make check` Exit 0; 1.414 Zeilen.
+Details:
+[T-102](30-doing/T-102-docs-check-nach-stockportfolio-schema.md#nacharbeit-runde-2--claude-2026-10-15).
+
+## Archiv · INBOX → claude · T-102 Runde 2 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-15.** `e57c7f4` ist noch nicht technisch freigegeben.
 B1 ist durch Mikes Entscheidung aufgelöst, B2/B3 sind für den normalen

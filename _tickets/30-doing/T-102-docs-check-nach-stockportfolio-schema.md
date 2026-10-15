@@ -19,8 +19,9 @@ nach dem Schema von StockPortfolio docs-check nachgezogen wird inkl.
 passendem config-File, Makefile-Target, README.template.md usw.“). In
 `30-doing/` aktiviert, Coder `claude`, Verifier `codex`. Umsetzung auf
 `t-102-docs-check` in Runde 2 unabhängig geprüft (`e57c7f4`). B1 ist durch
-Mikes Entscheidung aufgelöst, B2/B3 sind nachgearbeitet. Zwei Restbefunde
-gehen an Claude zurück; technische Freigabe und menschliche Abnahme stehen aus.
+Mikes Entscheidung aufgelöst, B2/B3 sind nachgearbeitet, B4/B5 in
+`9fc2e8e`; als Runde 3 übergeben (`a2615a9`). Technische Freigabe und
+menschliche Abnahme stehen aus.
 
 ## Ausgangslage
 
@@ -135,7 +136,8 @@ Docker-Hub-Update.
 ### Verify
 
 Legende: ✅ belegt · ⚠️ belegt mit Abweichung · ➖ noch keine
-Live-Verifikation. Stand `e57c7f4`, Claude, 2026-10-15 (Runde 2).
+Live-Verifikation. Stand `a2615a9`, Claude, 2026-10-15 (Runde 3); #4 und
+#6 zusätzlich mit den Hook-Fällen aus Nacharbeit Runde 2.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
@@ -179,10 +181,43 @@ Auftrag.
 
 ### Auflösung
 
-Offen. Runde 2 mit Nacharbeit bei Claude; keine technische Freigabe, keine menschliche
+Offen. Runde 3 beim Verifier; keine technische Freigabe, keine menschliche
 Abnahme.
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+### Nacharbeit Runde 2 · Claude, 2026-10-15
+
+**Stand:** `a2615a9` (Produkt `9fc2e8e`, Quittung `a2615a9`), als Runde 3
+übergeben. Umfang jetzt 14 Dateien, +1.396/−18 = 1.414 Zeilen (Budget
+1.600).
+
+**B4 · Relativer `PROJECT_TOOLS`-Pfad.** Der Hook macht einen gesetzten
+relativen Pfad vor dem Wechsel ins Snapshot absolut, ab dem Projekt-Root
+wie bei `make`. ShellCheck grün.
+
+| Aufruf | Ausgabe | Exit |
+|---|---|---|
+| `PROJECT_TOOLS=.libs/ProjectTools/src bash .githooks/pre-commit` | Ergebniszeile, Prüfung gelaufen | 0 |
+| `PROJECT_TOOLS=./.libs/ProjectTools/src …` | Ergebniszeile | 0 |
+| absoluter Pfad | Ergebniszeile | 0 |
+| relativer Pfad, Fehler in `docker/README.md` vorgemerkt | Befund, Abbruch | **1** |
+| derselbe Fall mit dem alten Hook aus `e57c7f4` | „ProjectTools nicht verfügbar“ | 0 (der Fehler, den B4 meldet) |
+| `/nonexistent` und `does/not/exist` | „ProjectTools nicht verfügbar“ | 0 (erlaubtes Verhalten erhalten) |
+
+**B5 · Deno 2.** `README.md` und `README.de.md` nennen Deno 2 unter
+Voraussetzungen und im Abschnitt Tests, mit der Grenze: nur nötig, wenn
+ProjectTools verlinkt ist; `make setup` installiert es nicht. Die Vorlage
+verlangt das in Abschnitt 7 und 11. Belegt: ohne `deno` im `PATH` bricht
+`make docs-check` mit „Fehler: Deno nicht gefunden. Tipp: Deno 2
+installieren“ ab, Exit 2. `docker/README.md` und `unraid/README.md`
+bleiben unverändert: Sie beschreiben den fertigen Container und das
+Unraid-Template und nennen keine Entwickler-Voraussetzungen; der Hinweis
+`README.md` → `docker/README.md` ist mit diesem Grund quittiert.
+
+**Gegenlauf:** `make docs-check` ohne Probleme und Hinweise, `make check`
+Exit 0 (Plugin-API 324, Beispiel 50, Dashboard 399, Backend 1310, Ruff
+grün). Die justETF-Online-Tests liegen weiter in T-103.
 
 ### Verifier-Prüfung · Runde 2 · Codex, 2026-10-15
 
