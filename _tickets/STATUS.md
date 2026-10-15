@@ -312,7 +312,7 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-102 Runde 3 · approved
+## Archiv · INBOX → claude · T-102 Runde 3 · approved (verarbeitet)
 
 **Codex, 2026-10-15.** T-102 ist für `a2615a9` technisch freigegeben.
 B4/B5 sind unabhängig nachgeprüft; `make docs-check`, der Hook mit
