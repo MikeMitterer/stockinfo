@@ -1,4 +1,14 @@
+<div align="center">
+
+<img src="dashboard/public/stockinfo-icon.png" alt="StockInfo icon" width="96" height="96">
+
 # StockInfo
+
+**Stock and ETF quotes via a REST API, cached in SQLite**
+
+English · [Deutsch](README.de.md)
+
+</div>
 
 A small app that serves **stock and ETF quotes via a REST API** and caches them in a
 **SQLite database**. Query by **ISIN** or by **symbol + exchange**; the response is
@@ -206,15 +216,15 @@ curl http://localhost:8000/quote/IE00B3RBWM25
 
 `make help` lists all available commands, `make hints` shows useful URLs.
 
-[↑ Contents](#contents)
-
----
-
 Plugin data migrations run automatically before normal operation when an
 active source increases its `data_version`. StockInfo backs up first and commits
 each migration together with its new version. Failed or missing migrations
 block business requests and refreshes; the server log identifies the plugin,
 versions and cause. See [plugin data migrations](docs/plugin-authors.md#plugin-data-migrations).
+
+[↑ Contents](#contents)
+
+---
 
 ## Security model
 
@@ -506,6 +516,9 @@ Preview without Docker Hub credentials (initial setup may download packages):
 # Output: docker/preview/README.md
 ```
 
+The preview is versioned and belongs in the same commit as the change to
+`docker/README.md`; otherwise `make docs-check` reports a problem.
+
 If the README upload fails, `make push` fails too, but the image is already
 published. Retry only the description with:
 
@@ -533,11 +546,18 @@ See the [Unraid guide](unraid/README.md) for installation, configuration and ope
 ## Tests
 
 ```bash
-make test                       # backend, plugin API, example plugin and dashboard
+make test                       # documentation, backend, plugin API, example plugin and dashboard
 make test-backend               # backend only (pytest)
 make test-dashboard             # dashboard only (ESLint and Vitest)
+make docs-check                 # documentation only: links, commands, variables, dependent files
 make check                      # everything that works offline, plus Ruff and type checks
 ```
+
+`make docs-check` checks the user documentation against the project; its
+rules are in `.docs-check.conf.sh`. It needs ProjectTools under `.libs/`;
+without it, the target prints a note and the other tests still run.
+`make setup` also installs a Git pre-commit hook that runs the check and
+stops a commit when it reports problems.
 
 The normal backend run includes tests marked `integration` that call real
 external APIs or the package index. `make check` leaves them out and adds
