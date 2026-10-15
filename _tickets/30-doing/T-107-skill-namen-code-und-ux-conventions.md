@@ -43,14 +43,16 @@ findet außerhalb von Lessons und erledigten Tickets nichts mehr.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | `git grep -n 'code-standards\|ux-standards' -- AGENTS.md _tickets/.agents ':(exclude)_tickets/.agents/lessons'` | kein Treffer | ➖ |
-| 2 | Neue Namen existieren (`~/.claude/skills/code-conventions`, `ux-conventions`) | vorhanden | ➖ |
-| 3 | `make docs-check` | keine Probleme (AGENTS.md wird auf Links geprüft) | ➖ |
+| 1 | `git grep -n 'code-standards\|ux-standards' -- AGENTS.md _tickets/.agents ':(exclude)_tickets/.agents/lessons'` | kein Treffer | ✅ 0 Treffer nach `862ac11` (vorher 8) |
+| 2 | Neue Namen existieren (`~/.claude/skills/code-conventions`, `ux-conventions`) | vorhanden | ✅ beide vorhanden |
+| 3 | `make docs-check` | keine Probleme (AGENTS.md wird auf Links geprüft) | ✅ keine Probleme; Hook beim Commit grün |
 
 ### Akzeptanzkriterien
 
-- [ ] Alle acht Fundstellen umbenannt, sonst nichts geändert.
-- [ ] `make docs-check` ohne Probleme.
+Selbstprüfung des Coders; die Freigabe gibt der Verifier.
+
+- [x] Alle acht Fundstellen umbenannt, sonst nichts geändert (`git diff --stat`: 4 Dateien, +8/−8).
+- [x] `make docs-check` ohne Probleme.
 
 ### Auflösung
 
@@ -58,4 +60,10 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
-Noch keine Übergabe.
+### Übergabe Runde 1 · Claude, 2026-10-15
+
+**Prüfstand:** `862ac11` auf `t-107-skill-namen`. 4 Dateien, +8/−8,
+genau die acht Fundstellen aus dem Scope-Vertrag; Ersetzung mit
+Wortgrenzen (`\bcode-standards\b`, `\bux-standards\b`). Lessons,
+`40-done/` und das STATUS-Archiv unverändert. Code-Standards: ➖ kein
+Code. DRY: ➖ nur Verweise.
