@@ -177,4 +177,48 @@ Offen. Noch keine Umsetzung oder Verifikation.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
-Noch keine Übergabe.
+### Scope-Checkpoint vor README.de.md · Claude, 2026-10-15
+
+**Prüfstand:** `2cdc039` (Produkt `bc8e0c8`, Quittungen `2cdc039`).
+Auslöser: Der Scope-Vertrag kündigt ein Diff über 800 Zeilen an; dieser
+Checkpoint holt die Vorabfreigabe, bevor die Übersetzung entsteht.
+
+**Umfang geplant / tatsächlich bis hier:**
+
+| Größe | Geplant (gesamt) | Bis `2cdc039` | Noch offen |
+|---|---|---|---|
+| Fachliche Änderungen | 3 | 1 und 3 fertig, 2 zur Hälfte (Vorlage da) | `README.de.md`, Kopf und Sprachlink in `README.md` |
+| Produktdateien | 5 | 5 (`Makefile`, `.gitignore`, Hook, Config, `.docs-check.ack`) | 0 |
+| Doku-Dateien | 10 | 8 | `README.de.md` neu, `README.md` erneut |
+| Diff-Zeilen | ≈ 1.600 | 638 (+625/−13) | ≈ 650 (Übersetzung ≈ 640, Kopf ≈ 10) |
+
+Keine neue Produktschicht, keine Abhängigkeit, kein Laufzeitcode. Die
+Übersetzung ist mechanisch: dieselbe Gliederung wie `README.md`,
+Bedienelemente im Wortlaut von `dashboard/src/i18n/de.ts`.
+
+**Stand der Prüfung:** `make docs-check` meldet nur noch die vier
+Probleme zum fehlenden `README.de.md` (Pflichtdatei, Dokument, zwei
+`DEPENDS`). Alle übrigen Befunde des ersten Laufs (17 Probleme, 7 Hinweise)
+sind behoben oder begründet quittiert:
+
+| Befund erster Lauf | Behandlung |
+|---|---|
+| `README.md:539` `make check` nach `cd dashboard` im selben Block | Zeile durch `make test-dashboard` ersetzt; im Block gilt ein `cd` für die Folgezeilen |
+| `unraid/README.md:110` `make up` (README eines Unterordners wird als eigenes Projekt geprüft) | Satz verlinkt den Docker-Abschnitt des Root-README |
+| `docs/markdown-styles/README.md:20` Ticketlink | auf `docs/rest-core-contract.md` umgestellt |
+| `docs/rest-core-contract.md:22` Anker mit `_` | `<a id>` vor der Überschrift; ProjectTools entfernt `_` beim Ankerbilden, GitHub nicht (Werkzeugbefund, siehe unten) |
+| `docs/stockportfolio-quote-projection-review.md:29–32` | Pfade auf `frontend/src/...` in StockPortfolio nachgezogen |
+| 4 Variablen ohne Projektvorkommen | `KNOWN_VARIABLES` mit Grund (StockPortfolio-Variable, Platzhalter, zwei Beispielnamen) |
+| Screenshots `dashboard.png`, `detail-area.png` | quittiert: seit der Aufnahme nur `licensingLink` in `de.ts` geändert (Reiter „Über“, nicht im Bild) |
+| `LICENSING.md` → `README.md`/`docker/README.md` | beide geprüft, die Abschnitte verlinken die Erklärung nur; `README.md` ist mit `bc8e0c8` jünger als die Basis, `docker/README.md` quittiert |
+| `README.md` → `docker/README.md` | quittiert: Änderung betrifft nur den Testbefehl |
+
+**Werkzeuggrenzen (ProjectTools, nicht Teil dieses Tickets):**
+Anker mit `_` werden falsch gebildet; Felder der pydantic-Settings-Klasse
+erkennt `CODE_VARIABLES` nicht (deshalb findet es nur `VITE_API_BASE_URL`).
+Beides steht als Grenze in Config und `AGENTS.md`; ein Ticket dafür lege
+ich nach der Freigabe im StockPortfolio-Board an.
+
+**Bitte entscheiden:** `continue` für die Übersetzung samt Sprachlink und
+zentriertem Kopf nach der Vorlage (≈ 650 Zeilen, Gesamt ≈ 1.290), oder
+`reduce`/`split`.
