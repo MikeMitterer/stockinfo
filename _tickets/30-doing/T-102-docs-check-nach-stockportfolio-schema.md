@@ -18,7 +18,8 @@ StockPortfolio-Sitzung („Leg in StockInfo als ein Ticket nach doing dass dort
 nach dem Schema von StockPortfolio docs-check nachgezogen wird inkl.
 passendem config-File, Makefile-Target, README.template.md usw.“). In
 `30-doing/` aktiviert, Coder `claude`, Verifier `codex`. Umsetzung auf
-`t-102-docs-check` in Runde 1 unabhängig geprüft (`d96ba31`). Drei Befunde
+`t-102-docs-check` in Runde 2 unabhängig geprüft (`e57c7f4`). B1 ist durch
+Mikes Entscheidung aufgelöst, B2/B3 sind nachgearbeitet. Zwei Restbefunde
 gehen an Claude zurück; technische Freigabe und menschliche Abnahme stehen aus.
 
 ## Ausgangslage
@@ -178,10 +179,43 @@ Auftrag.
 
 ### Auflösung
 
-Offen. Runde 2 beim Verifier; keine technische Freigabe, keine menschliche
+Offen. Runde 2 mit Nacharbeit bei Claude; keine technische Freigabe, keine menschliche
 Abnahme.
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+### Verifier-Prüfung · Runde 2 · Codex, 2026-10-15
+
+**Ergebnis: `changes_requested` für `e57c7f4`.** B1 ist durch Mikes
+ausdrückliche Entscheidung („1, und T-96 in StockPortfolio committen“)
+aufgelöst; Verify #2 erwartet nun einen Hinweis mit Zeile und Target. B3
+ist erledigt: Alle fünf betroffenen `REQUIRED`-Einträge haben einen Grund.
+B2 besteht für den normalen Aufruf: Der Hook materialisiert den Git-Index
+und `bash .githooks/pre-commit` meldet denselben grünen docs-check-Befund
+wie `make docs-check`. Die Coder-Gegenprobe zum fehlerhaften Index bei
+korrigiertem Arbeitsbaum ist mit Exit 1 und unverändertem HEAD dokumentiert.
+
+| Befund | Beleg und Auswirkung | Erwartete Nacharbeit |
+|---|---|---|
+| **B4 · Relativer ProjectTools-Pfad umgeht den Hook** | `PROJECT_TOOLS=.libs/ProjectTools/src make docs-check` führt die Prüfung vollständig aus (17 Dokumente, Exit 0). Derselbe gültige Pfad bei `PROJECT_TOOLS=.libs/ProjectTools/src bash .githooks/pre-commit` ergibt nur „ProjectTools nicht verfügbar — Doku nicht geprüft“ und Exit 0. Der Hook wechselt in den Index-Snapshot, lässt einen gesetzten relativen Pfad aber unverändert (`.githooks/pre-commit:32`). Ein Commit kann so trotz vorhandener ProjectTools ungeprüft passieren. | Den gesetzten Pfad vor dem Verzeichniswechsel gegen den Projekt-Root auflösen; die beiden Aufrufe als Gegenprobe mit tatsächlich ausgeführter Prüfung belegen. Das erlaubte Verhalten bei wirklich fehlenden ProjectTools erhalten. |
+| **B5 · Deno-Voraussetzung fehlt in der Anleitung** | `docs-check.sh` nennt Deno 2 als Voraussetzung und führt `deno run` aus; `make setup` installiert es nicht. `README.md` und `README.de.md` nennen für `make docs-check` nur ProjectTools, die Vorlage verlangt nur Python- und Node-Versionen. Mit ProjectTools, aber ohne Deno scheitern `make test`, `make check` und der aktivierte Hook. | Deno 2 in beiden README-Sprachen und in `docs/README.template.md` beim Entwicklungs- und Prüfweg erklären; die gemeinsame Aussage mit `docker/README.md` und `unraid/README.md` abgleichen. |
+
+**Gezielte Verifikation:** `bash -n` und ShellCheck für Hook und Config,
+`make docs-check`, der Hook im normalen Aufruf und `git diff --check`
+bestanden. Der relative Pfad wurde mit beiden Befehlen reproduziert.
+`make check` war in Runde 1 unabhängig grün; die Runde-2-Änderung betrifft
+Hook, Config-Gründe und `AGENTS.md`. `make test` bleibt laut Übergabe an
+zwei unveränderten justETF-Online-Fällen rot; der Befund liegt getrennt in
+T-103 im Backlog und ist kein grüner Gesamtlauf für T-102.
+
+**Standards und DRY:** `code-standards` (`shell.md`, `documentation.md`),
+`makefile-conventions` und `readme-conventions` bleiben die Prüfbasis.
+B4 betrifft Shell/Qualität, B5 Dokumentation; Projektstruktur, Frontend,
+Python und Persistenz sind nicht berührt. Das Bezeichnerinventar der
+geänderten Bash-Zuweisungen (`ROOT`, `GIT_INDEX_FILE`, `PROJECT_TOOLS`,
+`SNAPSHOT`, `OUTPUT`, `GIT_DIR`, `GIT_WORK_TREE`) ist englisch. Die Hook-
+Nacharbeit dupliziert keine Prüflogik aus ProjectTools. Für B4/B5 liegt
+jeweils erst ein StockInfo-Fall vor; keine neue Lesson ohne weiteren Beleg.
 
 ### Nacharbeit Runde 1 · Claude, 2026-10-15
 

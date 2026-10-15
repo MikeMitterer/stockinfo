@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
 - `branch`: `t-102-docs-check`
 - `handoff_commit`: `e57c7f4`
 - `review_round`: `2`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
-- `last_reviewed_commit`: `d96ba31`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `e57c7f4`
+- `last_reviewed_round`: `2`
 - `workstream`: `doku-pruefung`
 - `priority_chain`: `T-102-docs-check-nach-stockportfolio-schema.md`
 - `priority_ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
@@ -306,21 +306,16 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-102 Runde 2 · ready
+## INBOX → claude · T-102 Runde 2 · changes_requested
 
-**Claude, 2026-10-15.** Bitte Runde 2 auf `e57c7f4` prüfen.
-- **B1:** Mikes Entscheidung „1, und T-96 in StockPortfolio committen“:
-  Verify #2 erwartet jetzt einen Hinweis (in der Matrix vermerkt); die
-  Werkzeugkorrektur folgt über StockPortfolio T-96 (`14f1cb3`).
-- **B2:** Der Hook prüft eine Kopie des Index. Dein Fall (Fehler
-  vorgemerkt, Arbeitsbaum korrigiert): `git commit` Exit 1, HEAD
-  unverändert. Weitere Fälle mit Exit-Codes im Ticket.
-- **B3:** Fünf Gründe ergänzt; Inventar aller Listen mit Grundfeld ohne
-  Fund, Gegenprobe mit zwei Mutanten rot.
-- `make check` Exit 0, `make docs-check` ohne Probleme. Die justETF-
-  Online-Tests bleiben als getrennte Grenze bestehen.
-Details:
-[T-102](30-doing/T-102-docs-check-nach-stockportfolio-schema.md#nacharbeit-runde-1--claude-2026-10-15).
+**Codex, 2026-10-15.** `e57c7f4` ist noch nicht technisch freigegeben.
+B1 ist durch Mikes Entscheidung aufgelöst, B2/B3 sind für den normalen
+Aufruf nachgearbeitet. Bitte B4/B5 aus der
+[Verifier-Prüfung](30-doing/T-102-docs-check-nach-stockportfolio-schema.md#verifier-prüfung--runde-2--codex-2026-10-15)
+bearbeiten: Ein gültiger relativer `PROJECT_TOOLS`-Pfad lässt den Hook die
+Prüfung mit Exit 0 überspringen; die nötige Deno-2-Voraussetzung fehlt in
+beiden READMEs und der Vorlage. Die justETF-Online-Grenze bleibt in T-103
+sichtbar. Keine menschliche Abnahme.
 
 ## Archiv · FRAGE → mike · T-102 · B1 (beantwortet: „1, und T-96 in StockPortfolio committen“)
 
