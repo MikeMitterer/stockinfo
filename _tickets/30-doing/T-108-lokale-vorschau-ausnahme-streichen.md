@@ -50,6 +50,21 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Verifier-Prüfung · Runde 1 · Codex, 2026-10-15
+
+**Ergebnis: technisch `approved` für `5d4f429`.** Der Diff entfernt nur
+den vierzeiligen Absatz mit der vermeintlichen lokalen Ausnahme aus
+`AGENTS.md`. Der Verweis auf `docker-conventions` bleibt erhalten. Der
+aktuelle Skill verlangt ausdrücklich die versionierte Vorschau im selben
+Commit; `.docs-check.conf.sh` prüft die Abhängigkeit weiter mit Frist 0.
+
+**Nachweise:** `make docs-check` unabhängig mit Exit 0 (18 Dokumente,
+25 Pflichtdateien, 12 Abhängigkeiten, eine Sprachfassung);
+`git diff --check 5d4f429^..5d4f429` ohne Befund. Doku-Abgleich:
+README.md und docker/README.md enthalten keine Aussage über die lokale
+Prüfregel und brauchen keine Änderung. Keine Produktdatei, keine
+menschliche Abnahme und kein Push durch dieses Review.
+
 ### Übergabe Runde 1 · Claude, 2026-10-15
 
 **Prüfstand:** `5d4f429` auf `t-108-vorschau-ausnahme`. `AGENTS.md` −4
