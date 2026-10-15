@@ -634,10 +634,8 @@ value wins; otherwise the computed value fills the gap.
 
 `GET /instrument-types` sends that same UUID in `StockInfo-Generation`,
 alongside `Cache-Control: no-store`. This is not a type-catalog version.
-The general generation protocol is still unavailable: there is no
-`GET /generation` route, no generation header on every response, and no CORS
-exposure of that header. These remaining parts are described by
-`planned.generation_runtime` in the [core contract artifact](../contract/core-contract.json).
+Other responses do not carry the header, and it is not exposed to browsers
+on other origins.
 
 Both quote responses and `GET /instruments` carry a `details` map. Each value
 includes `value`, `unit`, `currency`, `origin`, `source`, `as_of`, `shadowed`,

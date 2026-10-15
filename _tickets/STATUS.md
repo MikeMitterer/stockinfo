@@ -27,19 +27,31 @@ schaltet den Branch. Regel:
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
 - `phase`: `approved`
-- `ticket`: `T-103-justetf-liefert-keine-kennzahlen-mehr.md`
-- `branch`: `t-103-justetf-kennzahlen`
-- `handoff_commit`: `558add9`
-- `review_round`: `1`
+- `ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
+- `branch`: `t-104-readme-nach-skill`
+- `handoff_commit`: `b6acd29`
+- `review_round`: `3`
 - `max_review_rounds`: `5`
 - `owner`: `claude`
 - `updated_at`: `2026-10-15`
-- `last_reviewed_ticket`: `T-103-justetf-liefert-keine-kennzahlen-mehr.md`
-- `last_reviewed_commit`: `558add9`
-- `last_reviewed_round`: `1`
-- `workstream`: `datenquellen`
-- `priority_chain`: `T-102-docs-check-nach-stockportfolio-schema.md → T-103-justetf-liefert-keine-kennzahlen-mehr.md`
-- `priority_ticket`: `T-103-justetf-liefert-keine-kennzahlen-mehr.md`
+- `last_reviewed_ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
+- `last_reviewed_commit`: `b6acd29`
+- `last_reviewed_round`: `3`
+- `workstream`: `doku-pruefung`
+- `priority_chain`: `T-104-readme-nach-skill-wie-stockportfolio.md`
+- `priority_ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
+
+**T-103 gemergt, T-104 aktiv · Claude, 2026-10-15.** Codex hat T-103 in
+Runde 1 freigegeben (`07f5684`); `t-103-justetf-kennzahlen` ist lokal nach
+`master` gemergt (`8668849`), kein Push. T-103 bleibt bis zu Mikes Abnahme
+in `30-doing/`. Mikes Auftrag „Bevor du das Image baust - Geh nochmal das
+Readme-Skill durch, überprüfe ob alle Dokus und READMEs den Anforderungen
+entsprechen“ und seine Entscheidung „Wie StockPortfolio“ für den
+README-Umbau ergeben die neue Kette mit
+[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md) auf
+`t-104-readme-nach-skill` (von `master`), Coder `claude`, Verifier `codex`.
+Der Image-Build folgt danach mit eigenem Auftrag. `handoff_commit` und
+`last_reviewed_*` beschreiben noch T-103.
 
 **T-102 abgenommen · Mike, 2026-10-15.** „T-102 nach done verschieben“.
 [T-102](40-done/T-102-docs-check-nach-stockportfolio-schema.md) liegt in
@@ -326,6 +338,48 @@ nach dessen technischer Freigabe T-93 für den vollständigen Browserlauf
 und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
+
+## Archiv · INBOX → claude · T-104 Runde 3 · approved (verarbeitet; Mike hat `TRANSLATIONS` bestätigt)
+
+**Codex, 2026-10-15.** `b6acd29` ist technisch freigegeben. B2 trennt
+aktuelle Laufzeitantworten von internen Vertragsfixtures; B3 setzt Mikes
+Docker-Lizenz-Kurzform und den Prüfguard um. `make docs-check` und die
+Docker-Hub-Vorschau wurden unabhängig erfolgreich ausgeführt. Umfang
+2.711/2.800 Diff-Zeilen, keine Produkt- oder Testdatei. Der Vermerk zur
+noch erfragten Bestätigung der zusätzlichen `TRANSLATIONS`-Regel bleibt
+sichtbar. Keine menschliche Abnahme, kein Push und kein Image-Build durch
+dieses Review.
+
+Nachweise:
+[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md#verifier-prüfung--runde-3--codex-2026-10-15).
+
+## Archiv · INBOX → claude · T-104 Runde 2 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-15.** `6e004ea` ist noch nicht technisch freigegeben.
+Die Root-Lizenzabschnitte, Vorlage und Unraid-Kurzform sind korrigiert;
+`make docs-check` ist grün. Zwei blockierende Doku-Befunde bleiben:
+
+- **B2:** `contract/README.md` empfiehlt weiterhin alle Fixtures als
+  Beispielantworten für Konsumenten, obwohl darunter geplante Header und
+  der nicht verfügbare `/generation`-Endpunkt sind. Den Konsumentenabschnitt
+  auf aktuell verfügbare Antworten begrenzen.
+- **B3:** Mikes nach `6e004ea` bestätigter Nachtrag verlangt die kurze
+  Docker-Lizenzfassung mit Verweis auf das Root-README und den
+  `FORBIDDEN`-Eintrag in `.docs-check.conf.sh`. Beides fehlt noch; die
+  Docker-Hub-Vorschau danach neu erzeugen.
+
+Fundstellen und Nachweise:
+[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md#verifier-prüfung--runde-2--codex-2026-10-15).
+
+## Archiv · INBOX → claude · T-104 Runde 1 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-15.** Zwei blockierende Doku-Befunde auf `e5e237c`:
+EUPL-Abschnitte und Projektvorlage müssen dem aktuellen festen Baustein
+folgen (B1); `contract/README.md` beschreibt weiterhin den nicht
+verfügbaren Generation-Ablauf (B2). Den zusätzlichen Umfang habe ich
+einmalig bis 2.800 Diff-Zeilen einschließlich `docs/release-notes.md`
+freigegeben. Nachweise und genaue Korrektur:
+[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-103 Runde 1 · approved (verarbeitet)
 

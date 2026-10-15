@@ -5,13 +5,11 @@
 `GET /fields` liefert den Feldvertrag und das aktuelle Detailschema.
 `GET /instrument-types` liefert die Typen der konfigurierten Plugins.
 Instrumente werden über `identity` beschrieben und über `listing_id`
-dauerhaft referenziert. Das allgemeine Generation-Protokoll ist noch nicht
-verfügbar; der Stand und bekannte Vertragsabweichungen stehen unten.
+dauerhaft referenziert. Bekannte Vertragsabweichungen stehen unten.
 
 Die maschinenlesbaren Zusagen stehen in
 [`contract/core-contract.json`](../contract/core-contract.json).
-Die Fixtures werden gegen dieses Artefakt geprüft. Ein dort beschriebener,
-unter `planned` geführter Ablauf ist noch keine verfügbare Laufzeitfunktion.
+Die Fixtures werden gegen dieses Artefakt geprüft.
 
 ## Übersicht
 
@@ -22,7 +20,7 @@ unter `planned` geführter Ablauf ist noch keine verfügbare Laufzeitfunktion.
 - [Identität: `listing_id` für Maschinen, `symbol` für Menschen](#identität-listing_id-für-maschinen-symbol-für-menschen)
 - [Die Generation: woran ein Konsument einen Datensatzwechsel erkennt](#die-generation-woran-ein-konsument-einen-datensatzwechsel-erkennt)
 - [Was additiv ist und was ein Bruch wäre](#was-additiv-ist-und-was-ein-bruch-wäre)
-- [Entschieden, aber noch nicht zugesagt](#entschieden-aber-noch-nicht-zugesagt)
+- [Der `details`-Container](#der-details-container)
 - [Der Vertrag ist abfragbar, nicht nur dokumentiert](#der-vertrag-ist-abfragbar-nicht-nur-dokumentiert)
 - [Asset-Typen aus der Plugin-Konfiguration](#asset-typen-aus-der-plugin-konfiguration)
 - [Wie man den Vertrag prüft](#wie-man-den-vertrag-prüft)
@@ -188,47 +186,14 @@ nicht nebenbei in einer Kursabfrage statt.
 
 ## Die Generation: woran ein Konsument einen Datensatzwechsel erkennt
 
-**Verfügbar:** `GET /fields` liefert `generation_id` aus der Datenbank.
-Die UUID bleibt über Neustarts erhalten und wird mit der Datenbank gesichert.
+`GET /fields` liefert `generation_id` aus der Datenbank. Die UUID bleibt
+über Neustarts erhalten und wird mit der Datenbank gesichert.
 `GET /instrument-types` sendet dieselbe UUID im Header `StockInfo-Generation`
 und setzt `Cache-Control: no-store`. Sie ist keine Typkatalogversion und
 ändert sich nicht automatisch bei jedem Wechsel der Quellenkonfiguration.
 
-**Noch nicht verfügbar:** `GET /generation`, ein Generation-Header auf jeder
-Antwort und dessen CORS-Freigabe für Browser anderer Origins. Das Artefakt
-beschreibt diese Teile unter `planned.generation_runtime`. Seine allgemeinen
-Generation-Fixtures zeigen den vorgesehenen Vertrag, keine heutigen
-Antworten der laufenden App.
-
-Der geplante Ablauf verwendet folgende Route:
-
-```http
-GET /generation
-Cache-Control: no-store
-
-{ "generation_id": "550e8400-e29b-41d4-a716-446655440000" }
-```
-
-und auf jeder Antwort — auch auf `404`, `409`, `422`, `502` — diesen Header:
-
-```http
-StockInfo-Generation: 550e8400-e29b-41d4-a716-446655440000
-```
-
-Die Fehlerfälle sind kein Detail: Nach einem Profilwechsel kann ein bisher
-bekanntes Papier fehlen. Ohne Header auf der `404` zeigt der Konsument seinen
-alten Cache weiter.
-
-**Im geplanten Ablauf bestätigt `/generation` den aktuellen Stand.** Zwei Anfragen
-können sich über einen Profilwechsel hinweg überschneiden, und eine verspätete
-Antwort aus A trifft nach einer schnellen aus B ein. UUIDs tragen keine
-Reihenfolge — wer dem Header blind folgt, springt von B zurück auf A. Weicht
-der Header ab, wird die Antwort deshalb verworfen, `/generation` bestätigt den
-Stand, und erst danach wird umgeschaltet.
-
-**Die CORS-Freigabe des Headers fehlt derzeit.** Ohne `Access-Control-Expose-Headers` kann
-Browser-JavaScript den Antwort-Header nicht lesen. StockPortfolio läuft
-cross-origin; der Header wäre dort unsichtbar — gesetzt, aber wirkungslos.
+Andere Antworten tragen den Header nicht, und er ist nicht für Browser
+anderer Origins freigegeben (`Access-Control-Expose-Headers`).
 
 [↑ Übersicht](#übersicht)
 
@@ -247,12 +212,8 @@ Fehler behandelt. Nur so bleibt eine additive Erweiterung wirklich additiv.
 
 [↑ Übersicht](#übersicht)
 
-## Entschieden, aber noch nicht zugesagt
+## Der `details`-Container
 
-Unter `planned` ist das allgemeine Generation-Protokoll aufgeführt. Die oben
-genannten Laufzeitteile stehen noch aus; die dort ebenfalls genannte
-persistierte UUID ist für das Detailschema bereits vorhanden.
-Der `details`-Container ist implementiert:
 Quote- und Instrumentantworten liefern Werte, Einheiten, Währungen und
 Herkunft; `/fields` liefert die zugehörigen Felddefinitionen. Manuelle Werte
 werden mit `PATCH /instruments/by-id/{listing_id}/details` gepflegt.
@@ -344,7 +305,7 @@ derselben Datenbank wie `generation_id` von `GET /fields` und ist keine Katalogv
 Clients laden die Auskunft beim Öffnen ihrer Filter neu. Während einer
 gesperrten Migration gilt wie für andere Fachendpunkte der HTTP-503-Riegel.
 
-Beispiele für Offline-Konsumententests liegen unter
+Die Vertragstests verwenden dafür
 [`contract/fixtures/instrument-types-200.json`](../contract/fixtures/instrument-types-200.json),
 [`…-200-empty.json`](../contract/fixtures/instrument-types-200-empty.json) und
 [`…-200-incomplete.json`](../contract/fixtures/instrument-types-200-incomplete.json).
@@ -360,8 +321,11 @@ Ohne Cross-Repo-CI, in drei Stufen:
    OpenAPI-Schnappschuss (`tests/test_contract_openapi.py`) — der schlägt an,
    sobald sich ein erfasstes Modell, ein Core-Pfad, `/fields` oder
    `/instrument-types` gegenüber dem gespeicherten Stand ändert.
-2. **StockPortfolio** prüft seine Mapper gegen dieselben veröffentlichten
-   Fixtures unter [`contract/fixtures/`](../contract/fixtures).
+2. **StockPortfolio** prüft seine Mapper gegen eigene Kopien einzelner
+   Fixtures. Was die laufende App liefert, beschreiben `/fields`,
+   `/instrument-types` und der OpenAPI-Schnappschuss; die Fixtures unter
+   [`contract/fixtures/`](../contract/fixtures) sind Beispiele der
+   Vertragstests ([`contract/README.md`](../contract/README.md#für-konsumenten)).
 3. **Vor Releases** ein kleiner Lauf: eine bestehende Position gegen eine
    frische Profil-Datenbank.
 

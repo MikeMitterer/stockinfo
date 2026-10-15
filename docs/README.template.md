@@ -10,135 +10,111 @@ Abschnitte erscheinen im README.
 
 ## Anweisungen
 
-**Allgemeine Regeln** (nur Belegtes, Mermaid für Zusammenhänge, Kopf
-zentriert, Bedienelemente im Wortlaut der App) stehen im Skill
-`readme-conventions` und werden hier nicht wiederholt.
+**Allgemeine Regeln** (Ausschlüsse, Kürze, nur Belegtes, Mermaid, zentrierter
+Kopf, Absatzregel, Sprachfassungen, Bedienelemente im Wortlaut der App,
+eingehende Anker) stehen im Skill `readme-conventions` und werden hier nicht
+wiederholt. Verbotene Begriffe stehen mit Grund in `.docs-check.conf.sh` unter
+`FORBIDDEN`.
 
-**Abweichung vom Skill: Entwickleranleitung im README.** Der Skill hält
-Make-Targets, Test- und Release-Abläufe aus dem README heraus. StockInfo hat
-keine eigene Entwicklerdoku; laut `AGENTS.md` (Abschnitt „Dokumentation
-gehört zur Änderung“) gehören Entwickleranleitungen ins Root-README,
-Containeranleitungen in `docker/README.md`. Die Abschnitte 7 und 10 bis 13
-bleiben deshalb im README. Eine Auslagerung in eine eigene Entwicklerdoku
-unter `docs/` braucht eine eigene Entscheidung von Mike.
+**Sprachen.** `README.md` ist englisch, `README.de.md` deutsch. Die deutsche
+Fassung verlinkt dieselben Dokumente; englische Ziele bekommen den Zusatz
+„(englisch)“. Bedienelemente kommen aus `dashboard/src/i18n/en.ts`
+beziehungsweise `de.ts`.
 
-**Verbotene Begriffe** stehen mit Grund in `.docs-check.conf.sh` unter
-`FORBIDDEN`; `make docs-check` prüft sie. Sie gelten auch für Codeblöcke.
+**Wohin was gehört.** Was das README nach dem Skill nicht aufnimmt, steht in
+genau einem dieser Dokumente; das README verlinkt nur:
 
-**Zwei Sprachen.** `README.md` ist englisch, `README.de.md` die deutsche
-Fassung, nach der GitHub-Konvention mit dem Sprachcode vor der Endung. Beide
-folgen dieser Vorlage mit denselben Abschnitten in derselben Reihenfolge und
-mit denselben Aussagen. Sie verlinken sich gegenseitig im Kopf. Bedienelemente
-nennt die deutsche Fassung so, wie die deutsche Oberfläche sie zeigt
-(`dashboard/src/i18n/`). Verlinkte Dokumente bleiben in ihrer Sprache; die
-deutsche Fassung verlinkt dieselben Dateien.
+| Inhalt | Dokument |
+|---|---|
+| Voraussetzungen, Einrichten aus dem Checkout, Make-Targets, `.env`-Einstellungen, Dashboard-Entwicklung, REST-API-Referenz, Docker-Build und -Push, Tests, Release, Projektaufbau | `docs/development.md` (englisch) |
+| Container starten, Compose, Speicher und Rechte, alle Container-Einstellungen, Sicherheit, Updates und Backups | `docker/README.md` (englisch; Docker-Hub-Regeln im Skill `docker-conventions`) |
+| Installation über Unraid Apps, Template, appdata | `unraid/README.md` (englisch) |
+| Quellenketten, Dateiquelle, Plugins | `docs/plugins.md`, `docs/plugin-authors.md` |
+| Zusagen der REST-API | `docs/rest-core-contract.md` |
+| Neuerungen eines Release | `docs/release-notes.md`, `CHANGELOG.md` |
 
-**Eingehende Anker.** Andere Dateien verlinken auf Abschnitte von `README.md`
-(etwa `#quick-start`, `#docker`, `#security-model`). `make docs-check` zeigt
-sie. Wer eine Überschrift ändert, zieht diese Links mit.
-
-**Feature-Liste:** Quelle sind die Abschnitte „What can it do?“ des
-bisherigen README, die REST-Routen unter `app/routers/` und die Reiter des
-Dashboards. Beim Aktualisieren `feat`-Commits seit dem letzten README-Commit
-gegen die Liste abgleichen.
+**Funktionsliste.** Quelle sind die Seiten der Navigation
+(`dashboard/src/components/AppHeader.vue`), die Bereiche der Einstellungen
+(`settings.tab` in den i18n-Katalogen), die REST-Routen unter `app/routers/`
+und die Standardquellen. Zahlen wie die Anzahl der Themes aus dem Code
+(`THEME_IDS` in `@mmit/ux-foundation`). Beim Aktualisieren `feat`-Commits
+seit dem letzten README-Commit gegen die Liste abgleichen.
 
 ## 1. Kopf
 
-Zentriert (`<div align="center">`): App-Icon
-(`dashboard/public/stockinfo-icon.png`, 96 × 96), Name als Überschrift, fette
-Zeile mit dem Zweck (Kurse per REST-API, Cache in SQLite), Sprachzeile
-„English · Deutsch“, in der die jeweils andere Sprache auf ihre Datei
-verlinkt. Danach `</div>`.
+Zentriert: App-Icon (`dashboard/public/stockinfo-icon.png`, 96 × 96), Name
+als Überschrift, fette Zeile mit dem Zweck, Sprachzeile, Link-Leiste zu
+Funktionen, Schnellstart, Konfiguration, Docker-Anleitung und Entwicklerdoku.
 
 ## 2. Überblick
 
-Zwei bis drei kurze Absätze: was StockInfo liefert (Abfrage per ISIN oder
-Symbol und Börse, JSON mit Preis, Währung, Zeitpunkt, Name und ETF-Kennzahlen)
-und dass ein Dashboard dazugehört. Links auf das Docker-Image, `CHANGELOG.md`
-und `docs/release-notes.md`. Darunter der Screenshot
-`unraid/screenshots/dashboard.png`.
+Zwei kurze Absätze: was StockInfo liefert (Abfrage per ISIN oder Symbol und
+Börse, JSON mit Preis, Währung, Zeitpunkt, Name, ETF-Kennzahlen) und dass ein
+Dashboard und die REST-API dazugehören. Darunter
+`unraid/screenshots/dashboard.png` mit kursiver Bildunterschrift.
 
-## 3. Schwester-App StockPortfolio
+## 3. Warnung
 
-Dass StockInfo allein läuft und StockPortfolio eine optionale Ergänzung ist,
-die ihre Kurse von StockInfo bezieht. Vergleichstabelle (Zweck, läuft ohne die
-andere App, Docker-Image). Link auf StockPortfolios Einrichtungsanleitung.
-Quelle: StockPortfolios README.
+Ein `> [!WARNING]`: keine Anmeldung, nicht ins Internet, nur im Heimnetz, von
+außen per VPN. Quelle: Abschnitt „Security“ in `docker/README.md`.
 
-## 4. Release-Highlight
+## 4. Funktionen
 
-Die wichtigsten Punkte des neuesten Release als kurze Liste. Quelle:
-`CHANGELOG.md` und die `feat`/`fix`-Commits seit dem vorherigen Tag. Beim
-nächsten Release ersetzen, nicht anhängen.
+Liste, je Eintrag fetter Name und kurze Beschreibung. Quelle siehe
+Anweisungen. Eigene Werte verlinken auf Abschnitt 5.
 
-## 5. Inhalt und Funktionen
+## 5. Eigene Werte
 
-Inhaltsverzeichnis mit Links auf alle folgenden Abschnitte, dann die
-Feature-Liste: je Eintrag fetter Name und kurze Beschreibung. Beim Eintrag zu
-manuellen Werten der Screenshot `unraid/screenshots/detail-area.png`.
+Was der Detailbereich einer Zeile erlaubt, dass die Quelle Vorrang hat, und
+wofür das gedacht ist (TER und Fondsgröße von ETFs außerhalb Europas). Bild
+`unraid/screenshots/detail-area.png`.
 
-## 6. Wie Kurse abgerufen werden
+## 6. Datenquellen
 
-Tabelle der Standardquellen und wofür sie dienen, Hinweis auf
-`sources.yaml`, `docs/plugins.md` und `docs/plugin-authors.md`. Pflicht:
-„keine offiziellen APIs“ samt Verantwortung des Betreibers, die Lücke bei
-ETFs außerhalb Europas und der Hinweis zu Währung und Börse. Quellen:
-`app/providers/`, `docs/plugins.md`, `docs/rest-core-contract.md`.
+Tabelle der Standardquellen und wofür sie dienen; Hinweis auf
+`sources.yaml`, `docs/plugins.md`, `docs/plugin-authors.md`. Pflicht: „Keine
+offiziellen APIs“ samt Verantwortung des Betreibers. Quelle:
+`app/providers/`, `docs/plugins.md`.
 
-## 7. Voraussetzungen und Schnellstart
+## 7. Schwester-App StockPortfolio
 
-Python- und Node-Version aus `Makefile` (`PYTHON_BOOTSTRAP`) und
-`dashboard/package.json`, Deno 2 für `make docs-check` (Voraussetzung laut
-`.libs/ProjectTools/src/bash/docs-check.sh`, nur mit ProjectTools nötig),
-dann die Schritte vom Klonen bis zum laufenden
-Backend und Dashboard. Adressen aus `make hints`.
+Dass StockInfo allein läuft und StockPortfolio optional ist und seine Daten
+von StockInfo bezieht. Mermaid-Diagramm: Browser, StockPortfolio, Skripte,
+StockInfo, Datenbank, Quellen. Vergleichstabelle (Zweck, läuft allein,
+Docker-Image) und Link auf StockPortfolios Einrichtungsanleitung. Die
+Überschrift bleibt „StockPortfolio: the companion app“; sie wird von
+`unraid/README.md` verlinkt.
 
-## 8. Sicherheitsmodell
+## 8. Schnellstart
 
-Für wen StockInfo gedacht ist (Heimnetz, keine Anmeldung), was ein Angreifer
-im Netz tun könnte und was der Betreiber dagegen tut. Ein
-GitHub-Hinweis (`> [!WARNING]`) gegen den Betrieb im offenen Internet.
-Quelle: bisheriger Abschnitt „Security model“ und `docker/README.md`.
+`docker run` aus `docker/README.md`, Adressen von Dashboard und `/docs`, eine
+`curl`-Abfrage. Dann ein Satz, was die Docker-Anleitung zusätzlich erklärt,
+und der Link auf die Unraid-Anleitung.
 
-## 9. REST-API und Konfiguration
+## 9. Konfiguration
 
-Die wichtigsten Endpunkte mit je einem `curl`-Beispiel, Verweis auf Swagger
-(`/docs`) und `docs/rest-core-contract.md`. Danach die Einstellungen aus
-`.env.example` als Tabelle; Quelle der Namen und Standardwerte ist die
-Settings-Klasse in `app/config.py`.
+Tabelle der wichtigsten Punkte: Port, `/data`, `DEFAULT_EXCHANGE`,
+`REFRESH_INTERVAL_HOURS`, `OPENFIGI_API_KEY`. Vorgaben aus
+`docker/README.md`; dorthin für alle Einstellungen verlinken.
 
-## 10. Dashboard, Docker und Unraid
+## 10. Entwicklung
 
-Dashboard: Reiter und was sie zeigen. Docker: Bauen, Starten, Daten-Volume,
-Veröffentlichen samt Docker-Hub-Beschreibung; Details in `docker/README.md`.
-Unraid: ein Satz und der Link auf `unraid/README.md`.
+Ein Satz und der Link auf `docs/development.md`.
 
-## 11. Tests
+## 11. Weitere Dokumentation
 
-Welche Make-Targets welche Teile prüfen, inklusive `make docs-check` samt
-Voraussetzungen (ProjectTools, Deno 2) und Pre-Commit-Hook, und was die
-Online-Tests (`integration`) von `make check` unterscheidet.
+Liste mit Links und je einer kurzen Beschreibung: Docker-Anleitung,
+Unraid-Anleitung, Quellenkonfiguration, Plugin-Anleitung, REST-Vertrag,
+Entwicklerdoku, Changelog und Release Notes. Entwürfe unter
+`docs/superpowers/` und das Ticket-Board nicht aufnehmen.
 
-## 12. Releases und Changelog
-
-Wie ein Release entsteht (`make tag-patch`, `make tag-minor`,
-`make tag-major`, `make changelog`) und wo die Änderungen stehen.
-
-## 13. Projektstruktur
-
-Kurzer Verzeichnisbaum der Teilprojekte (`app/`, `dashboard/`,
-`plugin_api/`, `contract/`, `docker/`, `unraid/`, `docs/`, `scripts/`,
-`tests/`) mit je einer Zeile.
-
-## 14. Support
+## 12. Support
 
 Für den Eigengebrauch gebaut und frei geteilt; Issues und Pull Requests
-werden gelesen, ohne Zusage auf Antwort, Fix oder neue Funktion. Link auf die
-Issues.
+werden gelesen, ohne Zusage auf Antwort, Fix oder neue Funktion.
 
-## 15. Lizenz
+## 13. Lizenz
 
-Rechteinhaber und Lizenzgeber, Lizenz (EUPL 1.2, nur diese Version), was sie
-erlaubt und verlangt, Verweis auf die Verbrauchererklärung, MIT für
-`plugin_api/`. Quelle: `LICENSE`, `LICENSE.de.txt` und `LICENSING.md`; jede
-davon verlinken, keinen Lizenztext einfügen.
+Baustein `templates/license-eupl.md` aus dem Skill `readme-conventions`,
+Wortlaut unverändert. Alle Werte und Links aus `LICENSING.md` und den dort
+genannten Lizenzdateien; das bisherige README ist keine Quelle.

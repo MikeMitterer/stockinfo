@@ -27,8 +27,9 @@ their target allocation and calculates rebalancing trades. Prices, exchange
 rates and fund metrics come from StockInfo.
 
 To use both, start StockInfo first, then the `mangolila/stockportfolio`
-container with `STOCKINFO_API_URL` set to your StockInfo address. Details are
-in its [Docker guide](https://hub.docker.com/r/mangolila/stockportfolio)
+container with `STOCKINFO_API_URL` set to your StockInfo address.
+
+Details are in its [Docker guide](https://hub.docker.com/r/mangolila/stockportfolio)
 ([source code](https://github.com/MikeMitterer/stockportfolio)).
 
 ## Quick start
@@ -159,10 +160,47 @@ Pass settings with `docker run -e NAME=value`, an `--env-file`, or Compose's
 | `STRICT_EXCHANGE` | `false` | Require that exchange during ISIN resolution |
 | `FX_TTL_HOURS` | `1` | Exchange-rate cache lifetime |
 | `OPENFIGI_API_KEY` | Empty | Optional key for a higher OpenFIGI rate limit |
+| `CORS_ORIGINS` | `["http://localhost:5173"]` | Web pages on another address that may call the API, as a JSON list; see [Security](#security) |
 
 The container listens on **port 8000**. To use a different host port, change
 only the left-hand port in the mapping, for example `127.0.0.1:8080:8000`.
 Dashboard and API share an origin; no separate frontend container is needed.
+
+## Security
+
+**StockInfo has no authentication, and it is not meant to have one.** Every
+endpoint is open to anyone who can reach the port, including the ones that
+change or destroy data:
+
+- `POST /backups/{name}/restore` replaces the whole database with a backup.
+- `DELETE /instruments/{isin}` and `DELETE /instruments/by-symbol/{symbol}`
+  remove an instrument together with its entire price history.
+- `POST /instruments/intake`, `PUT /instruments/by-symbol/{symbol}/isin`,
+  `PUT /instruments/by-symbol/{symbol}/overrides` and
+  `PATCH /instruments/by-id/{listing_id}/details` add or change stored data.
+- `POST /refresh` (also for one instrument) fetches live data from Yahoo and
+  justETF and writes it to the database; `GET /analyze` triggers live
+  requests without storing them.
+
+Every host address the port is published on can reach it. To use StockInfo
+only on the Docker host, publish the port with `-p 127.0.0.1:8000:8000` and
+leave `HOST` unchanged; `HOST=127.0.0.1` inside the container makes the port
+unreachable.
+
+**Do not put StockInfo on the internet.** Use it only in your home network.
+From outside, connect to your home network with a VPN, for example WireGuard
+or Tailscale. Never open StockInfo's port on your router.
+
+`CORS_ORIGINS` is **not** a protection. It restricts what a browser on another
+address may do; it does nothing about `curl`, a script or any server-to-server
+call. It does keep other web pages open in your browser from reading
+StockInfo's answers or deleting data, so list only the addresses you need
+instead of `*`.
+
+Two limits exist, and they are about load rather than access: the global
+refresh takes a non-blocking lock so two runs cannot overlap, and justETF is
+only scraped once every `METADATA_TTL_DAYS` (an explicit single refresh still
+forces it).
 
 ## Updates, backups and troubleshooting
 
@@ -205,22 +243,16 @@ or a new feature.
 - [Changelog by release tag](../CHANGELOG.md)
 - [License: EUPL 1.2 only](../LICENSE)
 
-The dashboard's **Settings → About** tab links to the English or German EUPL
-according to the selected UI language. It also links to the consumer
-declaration. Displayed data may be incomplete or outdated; check important
-figures against their original sources.
-MangoLila's linked financial content notice addresses its website and
-publications; the app's license and consumer declaration remain separate.
+Copyright © 2026 Michael Mitterer. **MangoLila GmbH** is the provider and licensor.
 
-StockInfo permits personal and commercial use, modification, redistribution,
-sale and hosting under the EUPL without an additional paid license. Preserve
-notices and provide the corresponding source as required by the license,
-including for covered network services. Image tags identify the source commit
-in the [source repository](https://github.com/MikeMitterer/stockinfo).
+StockInfo is licensed under the **[EUPL 1.2](../LICENSE)**, version 1.2
+only. What it permits and requires, the consumer declaration and the contact
+are in the [License section of the README](../README.md#license).
 
-Copyright © 2026 Michael Mitterer; provider and licensor: MangoLila GmbH.
-See [licensing, source and the consumer declaration](../LICENSING.md).
-The image includes `/app/LICENSE`, `/app/LICENSE.de.txt` and `/app/LICENSING.md`.
-The independent plugin API and example plugin retain their MIT licenses at
-`/app/plugin_api/LICENSE` and `/app/plugin_api/examples/us-example/LICENSE`.
-Third-party components retain their own licenses.
+In the dashboard, **Settings → About** links to the EUPL in the selected UI
+language and to the consumer declaration.
+
+The image includes `/app/LICENSE`, `/app/LICENSE.de.txt` and `/app/LICENSING.md`,
+and the MIT licenses of the plugin API at `/app/plugin_api/LICENSE` and
+`/app/plugin_api/examples/us-example/LICENSE`. Image tags identify the source
+commit in the [source repository](https://github.com/MikeMitterer/stockinfo).

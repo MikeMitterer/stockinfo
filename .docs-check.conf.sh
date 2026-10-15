@@ -12,12 +12,12 @@
 
 # ─── Welche Dokumente geprüft werden ───────────────────────────────────────────
 
-# Inhaltlich geprüfte Dokumente: die Anleitungen für Nutzer, Betreiber und
-# Plugin-Autoren (AGENTS.md, Abschnitt „Dokumentation gehört zur Änderung“),
-# die Lizenzerklärung und die README-Vorlage. AGENTS.md und _tickets/ sind
-# intern und dürfen Ticketnummern nennen; CHANGELOG.md entsteht aus
-# Commit-Nachrichten (make changelog) und darf alte Angaben behalten. Diese
-# Dateien stehen nicht in DOCS, sondern in REQUIRED und teils in LINKS_ONLY.
+# Inhaltlich geprüfte Dokumente: die Anleitungen für Nutzer, Betreiber,
+# Entwickler und Plugin-Autoren, die Lizenzerklärung und die README-Vorlage.
+# AGENTS.md und _tickets/ sind intern und dürfen Ticketnummern nennen;
+# CHANGELOG.md entsteht aus Commit-Nachrichten (make changelog) und darf alte
+# Angaben behalten. Diese Dateien stehen nicht in DOCS, sondern in REQUIRED
+# und teils in LINKS_ONLY.
 DOCS=(
     "README.md"
     "README.de.md"
@@ -37,6 +37,10 @@ LINKS_ONLY=(
     "AGENTS.md"
     "CLAUDE.md"
 )
+# Die Arbeitsdokumente unter docs/ (stockinfo-currency-request.md,
+# stockportfolio-quote-projection-review.md, markdown-styles/) stehen
+# bewusst nicht hier: Der Ordner "docs" in DOCS geht vor, und sie bestehen
+# die volle Prüfung.
 
 # Datierte Entwürfe und Pläne dürfen interne Angaben enthalten und
 # beschreiben teils verworfene Stände. Die erzeugte Docker-Hub-Vorschau ist
@@ -80,6 +84,8 @@ FORBIDDEN=(
     # Ticketnummern und Verweise ins Ticket-Board
     "/\bT-\d+[a-z]?\b/|interne Ticketgeschichte, gehört nicht in Nutzerdoku"
     "_tickets/|Ticket-Board ist intern, gehört nicht in Nutzerdoku"
+    # Alte Fassungen der EUPL-Pflichten ohne Bedingung (Mike, 2026-10-15)
+    "/if you change or redistribute|wer \S+ ändert oder weitergibt|preserve the required notices/i|EUPL-Pflichten ohne Bedingung: Satz aus dem Lizenz-Baustein verwenden"
 )
 
 # Höchstens zwei farbige Hinweisboxen je Dokument; mehr nehmen jeder
@@ -102,25 +108,28 @@ KNOWN_VARIABLES=(
 )
 
 # Code, dessen Umgebungsvariablen in einem Dokument aus DOCS stehen müssen:
-# Backend, Plugin-Vertrag, Dashboard, Container-Start und Projektskripte.
-# Jede Variable, die der Code dort liest, braucht eine Beschreibung (meist
-# README.md, docker/README.md oder docs/plugin-authors.md); sonst scheitert
-# make test.
+# Backend, Plugin-Vertrag, Dashboard und Projektskripte. Jede Variable, die
+# der Code dort liest, braucht eine Beschreibung (meist docs/development.md,
+# docker/README.md oder docs/plugin-authors.md); sonst scheitert make test.
 #
-# Grenze: Erkannt werden ausdrückliche Lesezugriffe wie os.environ["X"] oder
-# import.meta.env.X. Die Felder der Settings-Klasse in app/config.py liest
-# pydantic-settings ohne solchen Aufruf; sie prüft docs-check nicht. Neue
-# Einstellungen dort deshalb von Hand in README.md und docker/README.md
-# nachtragen (Abschnitt „Configuration“).
+# Grenzen: Erkannt werden nur ausdrückliche Lesezugriffe in einer Zeile wie
+# os.environ["X"] oder import.meta.env.X.
+# - Die Felder der Settings-Klasse in app/config.py liest pydantic-settings
+#   ohne solchen Aufruf. Neue Einstellungen dort von Hand in
+#   docs/development.md und docker/README.md eintragen (Configuration).
+# - Shell-Variablen ($X) zählen nicht; docker/entrypoint.sh steht deshalb
+#   nicht in der Liste, seine Variablen deckt docker/README.md ab.
 CODE_VARIABLES=(
     "app"
     "plugin_api/src"
     "dashboard/src"
-    "docker/entrypoint.sh"
     "scripts"
 )
 
 # Vom Code gelesen, bewusst nicht dokumentiert, je mit "|<grund>".
+# Nicht hier, weil docs-check den Lesezugriff über zwei Zeilen nicht sieht:
+# CONTRACT_PATH (app/contract.py), Pfad des Vertragsartefakts, nur nötig,
+# wenn die App nicht neben contract/ liegt.
 INTERNAL_VARIABLES=(
 )
 
@@ -135,7 +144,8 @@ REQUIRED=(
     "docker/README.md|Container-Anleitung, Quelle der Docker-Hub-Beschreibung"
     "docker/preview/README.md|Docker-Hub-Beschreibung, aus docker/README.md erzeugt"
     "unraid/README.md|Unraid-Anleitung"
-    "contract/README.md|REST-Vertrag, im README verlinkt"
+    "docs/development.md|Entwicklerdoku, im README verlinkt"
+    "contract/README.md|Prüfung der Vertragsdateien, in der Entwicklerdoku verlinkt"
     "docs/plugins.md|im README verlinkt"
     "docs/plugin-authors.md|im README verlinkt"
     "docs/rest-core-contract.md|im README verlinkt"
@@ -222,11 +232,28 @@ DEPENDS=(
 # Gleiches Format, auch überfällig nur ein Hinweis: Die Basis ändert sich oft,
 # ohne dass die abhängige Datei etwas nachziehen muss.
 DEPENDS_HINT=(
-    # docker/README.md übernimmt Aussagen aus README.md (AGENTS.md: beide
-    # READMEs gemeinsam prüfen)
+    # docker/README.md übernimmt Aussagen aus README.md (Schnellstart,
+    # Warnung, Schwester-App)
     "README.md|docker/README.md|14|übernommene Aussagen"
 
-    # Bei Bedarf einschalten:
-    # "docs/README.template.md|README.md|30|Gliederung"
-    # "docker/README.md|unraid/README.md|30|gemeinsame Aussagen zum Betrieb"
+    # Die READMEs folgen der Projektvorlage
+    "docs/README.template.md|README.md|30|Gliederung nach der Vorlage"
+    "docs/README.template.md|README.de.md|30|Gliederung nach der Vorlage"
+
+    # Die Funktionsliste nennt Seiten und Einstellungen im Wortlaut der App
+    "dashboard/src/i18n/en.ts|README.md|30|Bedienelemente im Wortlaut der App"
+    "dashboard/src/i18n/de.ts|README.de.md|30|Bedienelemente im Wortlaut der App"
+
+    # Die Entwicklerdoku beschreibt die Make-Targets
+    "Makefile|docs/development.md|30|Befehle"
+
+    # Unraid-Betrieb teilt Aussagen mit der Container-Anleitung
+    "docker/README.md|unraid/README.md|30|gemeinsame Aussagen zum Betrieb"
+)
+
+# Sprachfassungen mit derselben Gliederung: Überschriften und je Abschnitt
+# Linkziele, Bilder, Code, Hinweisboxen, Anker und Absätze müssen
+# übereinstimmen; jede Abweichung ist ein Problem.
+TRANSLATIONS=(
+    "README.md|README.de.md|deutsche Fassung"
 )

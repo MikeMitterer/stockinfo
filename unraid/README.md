@@ -10,7 +10,9 @@ uses `mangolila/stockinfo:latest`, port **8000** and persistent storage at
 
 StockInfo runs on its own. The optional companion app
 [StockPortfolio](https://github.com/MikeMitterer/stockportfolio) manages
-portfolios and rebalancing and gets its prices from StockInfo; see
+portfolios and rebalancing and gets its prices from StockInfo.
+
+How the two apps work together is described in
 [StockPortfolio: the companion app](../README.md#stockportfolio-the-companion-app).
 
 ## Contents
@@ -38,14 +40,17 @@ installation:
 
 If Community Applications is not installed, follow the
 [Unraid setup instructions](https://docs.unraid.net/community-applications/#installing-the-plugin).
+
 If the application is not listed yet, the manual procedure below can be used
 for testing; it is not the standard installation path.
 
 **Do not put StockInfo on the internet.** It has no login; anyone who can
 reach it can change or delete your data. Use it only in your home network.
 From outside, connect to your home network with a VPN, for example
-WireGuard or Tailscale. See the
-[security model](../README.md#security-model).
+WireGuard or Tailscale.
+
+The Docker guide's [security section](../docker/README.md#security) lists
+what an open port allows.
 
 [↑ Contents](#contents)
 
@@ -108,11 +113,11 @@ works without changes. When the directory is not writable, the container stops w
 path and IDs.
 
 The template uses a host directory, whereas the local container from the
-[Docker section of the project README](../README.md#docker) uses a named
-Docker volume. Data is not copied between them automatically.
+[developer guide](../docs/development.md#docker-image) uses a named Docker
+volume. Data is not copied between them automatically.
 
 To select the file-only source profile, run the following from a StockInfo
-checkout with its [development prerequisites](../README.md#quick-start) set up,
+checkout with its [development prerequisites](../docs/development.md#requirements) set up,
 on the server that owns the appdata directory. Stop an existing StockInfo
 container first, or do this before its first start:
 
@@ -174,19 +179,14 @@ A local XML or Docker check does not replace a test on an actual Unraid server.
 
 ## License
 
-StockInfo is licensed under [EUPL 1.2 only](../LICENSE), including the Docker
-image used on Unraid. Copyright © 2026 Michael Mitterer; provider and licensor:
-MangoLila GmbH. See [licensing and the consumer declaration](../LICENSING.md)
-and the [image license documents and source](../docker/README.md#support-and-license).
-In the dashboard, **Settings → About** explains the limits of
-displayed data and links to the license in the selected language. The status
-bar links directly to that tab. A short note below the asset list also
-states these limits.
-About also links to MangoLila's separate notice for website financial content.
-MangoLila GmbH's logo, postal address and website link are shown beside the
-About text. On narrow screens, choose the Settings section from the selector
-above its content.
-The independent plugin API and its example remain under MIT. The separate
-Unraid template repository retains its own license.
+Copyright © 2026 Michael Mitterer. **MangoLila GmbH** is the provider and licensor.
+
+StockInfo is licensed under the **[EUPL 1.2](../LICENSE)**, version 1.2
+only. What it permits and requires, the consumer declaration and the contact
+are in the [License section of the README](../README.md#license).
+
+The independent plugin API and its example plugin remain under MIT. The
+separate [template repository](https://github.com/MikeMitterer/unraid-templates)
+is MIT-licensed; its license covers the templates.
 
 [↑ Contents](#contents)

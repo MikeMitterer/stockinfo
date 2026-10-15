@@ -136,99 +136,53 @@ Diese Einordnung gilt, bis Mike einen anderen Betriebsstand festlegt.
 
 ## Dokumentation gehört zur Änderung
 
-**Schreibe für normale Programmierer, ohne Vorwissen über dieses Projekt.**
-Das gilt für alle Dokumente, auf Deutsch und Englisch. Der Leser soll schnell
-erkennen, was etwas macht, wie er es benutzt und welche Grenzen gelten.
-
-- Kurze, direkte Sätze und geläufige Wörter. Keine KI-Floskeln, Werbesprache
-  oder erfundenen Fachbegriffe.
-- Fachbegriffe nur, wenn sie nötig sind; beim ersten Auftreten kurz erklären.
-  Ein kleines Beispiel hilft oft mehr als eine abstrakte Erklärung.
-- Aussagekräftige Überschriften und kurze Absätze. Schritte als nummerierte
-  Liste, Vergleiche bei Bedarf als Tabelle. Nicht jeden Satz fett setzen.
-- Die wichtigste Information zuerst. Details stehen beim jeweiligen Thema;
-  Wiederholungen und Erklärungen ohne Nutzen für den Leser entfallen.
-- Anleitungen beschreiben die Benutzung und das aktuelle Verhalten.
-  Interne Arbeitsabläufe und Review-Geschichte gehören in die Tickets.
-
 Bei Änderungen an Verhalten, Verträgen, Konfiguration, Installation oder
 beschlossenem Umfang gehört der **Doku-Abgleich zum selben Auftrag**.
 Mike muss betroffene Anleitungen nicht eigens nennen.
 
-**Beide READMEs gemeinsam prüfen:** Bei Änderungen an Funktionen,
-Konfiguration, Installation oder Betrieb immer `README.md` und
-`docker/README.md` abgleichen. Das gilt sowohl für Codeänderungen als auch
-für Änderungen an einer der beiden Anleitungen. Gemeinsame Aussagen müssen
-übereinstimmen; Entwickleranleitungen gehören ins Root-README,
-Containeranleitungen in `docker/README.md`.
-Bei Unraid-bezogenen Änderungen zusätzlich `unraid/README.md` abgleichen;
-dort stehen Template-Installation, Einstellungen und Unraid-Betrieb.
-Der Doku-Abgleich im Ticket beziehungsweise Abschlussbericht nennt die
-nötigen Anpassungen oder begründet, weshalb die andere Datei unverändert
-bleibt. Der Verifier prüft die inhaltliche Übereinstimmung; Änderungen an
-beiden Dateien allein sind kein Nachweis.
+**Wie die Anleitungen aussehen, steht nicht hier.** Aufbau, Inhalt,
+Sprachfassungen und Schreibregeln der READMEs regelt der Skill
+`readme-conventions` mit der Projektvorlage
+[`docs/README.template.md`](docs/README.template.md). Die Vorlage legt auch
+fest, was in `README.md`/`README.de.md`, in die Entwicklerdoku
+`docs/development.md`, in die Container-Anleitung `docker/README.md` und in
+die Unraid-Anleitung `unraid/README.md` gehört. Die Docker-Hub-Beschreibung
+regelt der Skill `docker-conventions`. Diese Datei wiederholt keine dieser
+Regeln; wer eine ändern will, ändert Skill oder Vorlage.
 
-**Docker-Hub-Beschreibung:** `make push` überträgt nach dem erfolgreichen
-Docker-Hub-Image-Push `docker/README.md`. Diese Datei erklärt Installation und
-Betrieb des fertigen Containers; das Root-README bleibt die Projektanleitung.
-Die konvertierte Fassung darf höchstens
-**25.000 UTF-8-Bytes** umfassen; die absoluten Bild- und Dokumentlinks zählen
-mit. Nach Änderungen an `docker/README.md` die Vorschau prüfen:
-`./.libs/ProjectTools/src/bash/dockerhub-readme.sh --preview`.
-Das Script prüft die Grenze und schneidet nichts ab. Längere Details in
-verlinkte Dokumente auslagern. Bildpfade relativ zu `docker/README.md` angeben
-(z. B. `../unraid/screenshots/dashboard.png`); der Uploader wandelt sie in
-Raw-GitHub-URLs um. Die Größenbeschränkung gilt für die Docker-Hub-Beschreibung.
-Die Vorschau `docker/preview/README.md` ist versioniert und gehört in
-denselben Commit wie die Änderung an `docker/README.md`.
+Für alle übrigen Dokumente unter `docs/` gilt: für normale Programmierer
+ohne Vorwissen über dieses Projekt schreiben. Dokumentation beschreibt nur,
+was es gibt; geplante Funktionen gehören in Tickets, nicht in die Doku.
 
-**`make docs-check` prüft die Nutzerdoku** (läuft auch in `make test`,
-`make check` und vor jedem Commit): tote Links und Anker, unbekannte
-Make-Targets und Variablen, Pflichtdateien und die verbotenen Begriffe.
-Welche Dokumente, Begriffe und Pflichtdateien gelten, steht mit Grund in
-[`.docs-check.conf.sh`](.docs-check.conf.sh); eine neue Doku-Regel dieser
-Art kommt dort hinein. Diese Datei und `CLAUDE.md` prüft es nur auf tote
-Links und Anker; Verweise auf andere Dokumente deshalb als Link schreiben.
+**Lokale Ausnahme zu `docker-conventions`:** Die Vorschau
+`docker/preview/README.md` ist versioniert und gehört in denselben Commit wie
+die Änderung an `docker/README.md`.
 
-- **Abhängigkeiten:** Unter `DEPENDS` stehen Dateien, die einer Basis folgen
-  müssen: die Vorschau folgt `docker/README.md` (Frist 0, also im selben
-  Commit), `README.de.md` folgt `README.md`, die Lizenzabschnitte der
-  READMEs folgen `LICENSING.md`. Ändert sich die Basis danach, meldet die Prüfung einen
-  Hinweis und nach der Frist ein Problem. Zeiten kommen aus git, nicht vom
-  Dateidatum.
-- **Screenshots:** `SCREENSHOTS` meldet Bilder unter `unraid/screenshots/`,
-  deren Dashboard- oder API-Code sich nach der Aufnahme geändert hat. Dann
-  prüfen, ob das Bild die Oberfläche noch richtig zeigt, sonst neu aufnehmen.
-- **Quittung:** Verlangt eine gemeldete Änderung nach dem Prüfen nichts,
-  `./.libs/ProjectTools/src/bash/docs-check.sh --ack <datei>` ausführen und
-  `.docs-check.ack` mitcommitten. Ungesehen quittieren ist kein Weg, eine
-  Meldung loszuwerden.
-- **Hook:** `make setup` aktiviert `.githooks/pre-commit`. Er prüft den
-  vorgemerkten Stand, bricht einen Commit mit Problemen ab und lässt
-  Hinweise durch. `--no-verify` nur im
-  Notfall und mit Begründung im Bericht.
-- **Grenze:** Einstellungen der Settings-Klasse in `app/config.py` erkennt
-  die Prüfung nicht; neue Einstellungen von Hand in `README.md` und
-  `docker/README.md` eintragen.
+**`make docs-check` prüft die Doku gegen das Projekt** (läuft auch in
+`make test`, `make check` und vor jedem Commit über `.githooks/pre-commit`,
+das `make setup` aktiviert). Welche Dokumente, verbotenen Begriffe,
+Pflichtdateien, Screenshots und Abhängigkeiten gelten, steht mit Grund in
+[`.docs-check.conf.sh`](.docs-check.conf.sh); eine neue Regel dieser Art
+kommt dort hinein. Diese Datei und `CLAUDE.md` prüft es nur auf tote Links
+und Anker; Verweise auf andere Dokumente deshalb als Link schreiben.
+Meldungen, die nach dem Prüfen nichts verlangen, mit
+`./.libs/ProjectTools/src/bash/docs-check.sh --ack <datei>` quittieren und
+`.docs-check.ack` mitcommitten; nie ungesehen. `--no-verify` nur im Notfall
+und mit Begründung im Bericht. Einstellungen der Settings-Klasse in
+`app/config.py` erkennt die Prüfung nicht; neue Einstellungen von Hand
+dokumentieren.
 
-Das README entsteht nach [`docs/README.template.md`](docs/README.template.md)
-(Skill `readme-conventions`); `README.md` ist englisch, `README.de.md` die
-deutsche Fassung mit derselben Gliederung.
+**Doku-Abgleich im Ablauf:**
 
-- Der Bearbeiter ermittelt über das Datei- und Überschrifteninventar die
-  betroffenen Anleitungen, Referenzen, Beispiele und Specs; dazu gehören auch
-  README-Dateien außerhalb von `docs/`. Anschließend verfolgt er die geänderten
-  Zusagen und ihre Verweise gezielt durch diese Dokumente.
-- Aktuelle Anleitungen werden mitgezogen. Geplantes wird ausdrücklich als
-  noch nicht verfügbar gekennzeichnet; bei Umsetzung entfällt diese Markierung.
-  Historische Entwürfe und Prüfnachweise bleiben als Historie erkennbar.
-- Im Ticket beziehungsweise Abschlussbericht steht knapp: **Doku-Abgleich:**
-  betroffene Dateien/Abschnitte und Ergebnis. Ist keine Anpassung nötig, wird
-  der Grund genannt. Eine zweite handgepflegte Dokumentationsliste entfällt.
-- Der Verifier prüft die Zuordnung und die Aussagen gegen die geprüfte Fassung.
-  Fehlende oder widersprüchliche aktuelle Dokumentation gehört zur Nacharbeit.
-  Linkprüfungen und ausführbare Beispiele ergänzen diesen Inhaltsabgleich;
-  ein grüner Testlauf ersetzt ihn nicht.
+- Der Bearbeiter ermittelt die betroffenen Dokumente über ein Datei- und
+  Überschrifteninventar und verfolgt die geänderten Zusagen gezielt durch
+  sie hindurch.
+- Im Ticket beziehungsweise Abschlussbericht steht knapp **Doku-Abgleich:**
+  betroffene Dateien und Abschnitte samt Ergebnis, bei unveränderter Datei
+  mit Grund.
+- Der Verifier prüft Zuordnung und Aussagen gegen die geprüfte Fassung. Ein
+  grüner Testlauf ersetzt diesen Inhaltsabgleich nicht; Änderungen an
+  mehreren Dateien allein sind kein Nachweis.
 
 [↑ Übersicht](#übersicht)
 
@@ -260,7 +214,7 @@ Arbeitsdatenbank `data/` berührt es nie.
   angepasst, wenn sich ihr Verhalten ändert.
 - **Kein Make-Target, kein README-Abschnitt:** Die Prüfung ist ein Werkzeug
   für die Agenten; einem Lauf kann kein Mensch folgen. Voraussetzung ist
-  Node 24+, wie im README angegeben.
+  Node 24+, wie in [`docs/development.md`](docs/development.md) angegeben.
 - **Fenster:** Sichtbare Läufe öffnen das Browserfenster auf dem
   Hauptmonitor, links bei x = 100 px, weil dort Mikes Dock liegt (Mike,
   2026-10-02). `HEADLESS=1` bleibt für Läufe ohne Fenster.

@@ -9,7 +9,7 @@ das, was hier liegt.**
 contract/
 ├── core-contract.json           # der Vertrag: Felder, Nullability, Bedeutung, Regeln
 ├── openapi-core-snapshot.json   # gespeicherte OpenAPI-Form der erfassten Endpunkte
-└── fixtures/                    # HTTP-Vertragsbeispiele, positiv und negativ
+└── fixtures/                    # interne HTTP-Beispiele für die Vertragstests
 ```
 
 Zur Laufzeit beantwortet **`GET /fields`** denselben Vertrag: Feldliste je
@@ -36,17 +36,28 @@ vollständige, leere und unvollständige HTTP-Auskünfte. Semantik und Statuswer
 
 ## Für Konsumenten
 
-**Vertragsbeispiele sind nicht durchgehend Laufzeitnachweise.** Die allgemeine
-Generation-Auskunft unter `/generation`, Header auf jeder Antwort und deren
-CORS-Freigabe sind weiterhin geplant (`planned.generation_runtime`).
-`/fields` liefert bereits eine persistierte `generation_id`;
-`/instrument-types` sendet dieselbe UUID als `StockInfo-Generation`.
-Bekannte Abweichungen bei Tageskursen und Pence-Währungen stehen in der
+**Was die laufende App liefert, beschreiben drei Quellen:** `GET /fields`
+(Felder, Detailschema, `generation_id`), `GET /instrument-types` (Typkatalog,
+dieselbe UUID im Header `StockInfo-Generation`) und
+[`openapi-core-snapshot.json`](openapi-core-snapshot.json), den
+`tests/test_contract_openapi.py` laufend gegen die App prüft. Bekannte
+Abweichungen bei Tageskursen und Pence-Währungen stehen in der
 [REST-Referenz](../docs/rest-core-contract.md#die-begriffe-die-sich-sonst-niemand-erschließt).
 
+**Unbekannte Felder werden ignoriert**, nicht als Fehler behandelt. Sonst
+bricht die nächste additive Erweiterung den Konsumenten.
+
+**Die Fixtures sind keine Beispielantworten der laufenden App.** Sie sind
+interne Beispiele, mit denen `tests/test_contract.py` das Artefakt prüft, und
+kein Laufzeitvertrag für Konsumenten.
+
+[↑ Übersicht](#übersicht)
+
+## Für dieses Repo
+
 Die Fixtures sind kein reines JSON, sondern ein **HTTP-Umschlag** aus Status,
-Headern und Rumpf — anders ließe sich das Header-Verhalten der Generation gar
-nicht prüfen. Gekürztes Strukturbeispiel; der Rumpf ist hier ausgelassen:
+Headern und Rumpf. Gekürztes Strukturbeispiel; der Rumpf ist hier
+ausgelassen:
 
 ```json
 {
@@ -58,29 +69,14 @@ nicht prüfen. Gekürztes Strukturbeispiel; der Rumpf ist hier ausgelassen:
   "request":  { "method": "GET", "path": "/quote/IE00B3RBWM25" },
   "response": {
     "status": 200,
-    "headers": {
-      "Content-Type": "application/json",
-      "StockInfo-Generation": "550e8400-e29b-41d4-a716-446655440000"
-    },
+    "headers": { "Content-Type": "application/json" },
     "body": {}
   }
 }
 ```
 
-Ein Konsument — etwa StockPortfolio — fährt seine Mapper gegen diese Dateien,
-ohne StockInfo zu starten und ohne das Repository zu klonen. Drei Regeln dabei:
-
-- **`contract_compliant: false` ist Absicht.** Diese Fixtures zeigen, was ein
-  Konsument **erkennen** können muss: eine generationenfähige Antwort ohne
-  Header, ein `/generation`, dessen Header dem Rumpf widerspricht. Wer sie
-  fehlerfrei durchlaufen lässt, hat einen blinden Fleck.
-- **`violates` ist ein Regelschlüssel, kein Fließtext** — `generation.rule`,
-  `generation.required_on_every_response`. Zu jedem Schlüssel gehört in
-  `tests/test_contract.py` eine Prüfung, die nachweist, dass die Fixture die
-  Verletzung wirklich trägt. Ein Negativfall kann damit nicht unbemerkt
-  aufhören, einer zu sein; die Erklärung steht in `note`.
-- **Unbekannte Felder werden ignoriert**, nicht als Fehler behandelt. Sonst
-  bricht die nächste additive Erweiterung den Konsumenten.
+Fixtures mit `contract_compliant: false` verletzen absichtlich die Regel, die
+`violates` nennt; `note` erklärt sie.
 
 Der `request` einer Fixture beschreibt einen konkreten Aufruf: Methode, Pfad
 und Query-Namen werden gegen die Endpunktliste im Artefakt geprüft
@@ -88,18 +84,14 @@ und Query-Namen werden gegen die Endpunktliste im Artefakt geprüft
 mit einem Parameter, den es nicht gibt, sieht sonst aus wie eine zugesagte
 Funktion — FastAPI ignoriert Unbekanntes still.
 
-[↑ Übersicht](#übersicht)
-
-## Für dieses Repo
-
 `tests/test_contract.py` prüft beide Dateiarten gegeneinander: dieselben
 Endpunktpfade, derselbe Headername, jede Erfolgsfixture erfüllt die
-Pflichtfelder ihres Modells, jede `/generation`-Fixture hält Header und Rumpf
-zusammen.
+Pflichtfelder ihres Modells, und jede Fixture mit `violates` trägt die
+genannte Verletzung wirklich.
 
 Diese Prüfung läuft **ohne die App** und weist nur die Konsistenz der
-Vertragsdateien nach. Sie bestätigt weder die Verfügbarkeit geplanter Routen
-noch die fachliche Übereinstimmung jeder Fixture mit einer Live-Antwort.
+Vertragsdateien nach. Sie bestätigt nicht die fachliche Übereinstimmung
+jeder Fixture mit einer Live-Antwort.
 
 ```bash
 .venv/bin/pytest tests/test_contract.py -q
