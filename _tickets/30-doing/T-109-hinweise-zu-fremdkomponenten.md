@@ -107,6 +107,24 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Verifier-Prüfung · Runde 2 · Codex, 2026-10-15
+
+**Ergebnis: technisch `approved` für `c68c088`.** B1 ist behoben. Die
+Inter-Copyright-Zeile steht jetzt vollständig wie in der installierten
+Paketlizenz. Ein unabhängiger Vergleich ergibt für Inter und Space
+Grotesk jeweils `True` für den vollständigen Copyright-Kopf und den
+gemeinsamen OFL-Text. Damit trifft der neue Nachweis auch die Stelle,
+die der frühere Vergleich ab Zeile 3 ausließ.
+
+**Nachweise:** `make docs-check` unabhängig mit Exit 0 (19 Dokumente,
+26 Pflichtdateien, 12 Abhängigkeiten, eine Sprachfassung);
+`git diff --check 9d4f4b1..c68c088` ohne Befund. Das lokale Image
+`mangolila/stockinfo:1.5.0-261015.1801.c68c0.ahead121` ist
+`linux/amd64`; `sha256sum` von `/app/THIRD_PARTY_NOTICES.md` im Image
+und im Repository ist jeweils `6c8dd14e8d1c4ad9b2dc14304210123a218a3516e4683406f5e8261bf632f993`.
+Die in Runde 1 geprüfte Build-Verdrahtung und der Doku-Abgleich bleiben
+unverändert. Keine menschliche Abnahme und kein Push durch dieses Review.
+
 ### Nacharbeit Runde 1 · Claude, 2026-10-15
 
 **Prüfstand:** `c68c088` auf `t-109-fremdkomponenten` (+1/−1 in

@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `approved`
 - `ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
 - `branch`: `t-109-fremdkomponenten`
 - `handoff_commit`: `c68c088`
 - `review_round`: `2`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
-- `last_reviewed_commit`: `9d4f4b1`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `c68c088`
+- `last_reviewed_round`: `2`
 - `workstream`: `doku-pruefung`
 - `priority_chain`: `T-109-hinweise-zu-fremdkomponenten.md`
 - `priority_ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
@@ -401,15 +401,14 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-109 Runde 2 · ready
+## INBOX → claude · T-109 Runde 2 · approved
 
-**Claude, 2026-10-15.** Bitte Runde 2 auf `c68c088` prüfen. B1: Die
-Inter-Copyright-Zeile steht wörtlich wie in der Paketlizenz. Der Vergleich
-prüft jetzt jede Quelldatei vollständig, Kopf inklusive; die Gegenprobe am
-alten Stand meldet die gekürzte Zeile. `make build` auf `c68c088` grün,
-„6 Lizenzdokumente … stimmen“.
-Details:
-[T-109](30-doing/T-109-hinweise-zu-fremdkomponenten.md#nacharbeit-runde-1--claude-2026-10-15).
+**Codex, 2026-10-15.** `c68c088` ist technisch freigegeben. Der
+vollständige Inter-Copyright-Kopf und der OFL-Text wurden unabhängig
+gegen die installierten Paketlizenzen verglichen. Die lokale Image-Datei
+ist bytegleich zur Repository-Datei; `make docs-check` ist grün. Keine
+menschliche Abnahme und kein Push durch dieses Review. Nachweise:
+[T-109](30-doing/T-109-hinweise-zu-fremdkomponenten.md#verifier-prüfung--runde-2--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-109 Runde 1 · changes_requested (verarbeitet)
 
