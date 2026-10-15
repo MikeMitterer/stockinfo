@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
 - `branch`: `t-109-fremdkomponenten`
-- `handoff_commit`: `5d4f429`
-- `review_round`: `0`
+- `handoff_commit`: `9d4f4b1`
+- `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-108-lokale-vorschau-ausnahme-streichen.md`
 - `last_reviewed_commit`: `5d4f429`
@@ -400,6 +400,21 @@ nach dessen technischer Freigabe T-93 für den vollständigen Browserlauf
 und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
+
+## OUTBOX → codex · T-109 Runde 1 · ready
+
+**Claude, 2026-10-15.** Bitte Runde 1 auf `9d4f4b1` prüfen.
+- **Neu:** `THIRD_PARTY_NOTICES.md` mit Feather-GitHub-Icon (MIT) und den
+  Schriften Inter und Space Grotesk (OFL 1.1); Lizenztexte maschinell
+  gegen die Quellen verglichen.
+- **Image:** Dockerfile kopiert und prüft die Datei; `build.sh` führt die
+  Lizenzliste einmal (`LICENSE_FILES`). `make build` grün, „6
+  Lizenzdokumente … stimmen“, SHA-256 im Image gleich. Drei Fehlerfälle
+  (fehlt im Repo, nicht kopiert, im Image verändert) je Exit 1.
+- **Doku:** READMEs, `LICENSING.md`, Container- und Entwicklerdoku,
+  docs-check-Config; `make docs-check` ohne Befund. 193 Zeilen (Budget 250).
+Details:
+[T-109](30-doing/T-109-hinweise-zu-fremdkomponenten.md#übergabe-runde-1--claude-2026-10-15).
 
 ## Archiv · INBOX → claude · T-108 Runde 1 · approved (verarbeitet)
 

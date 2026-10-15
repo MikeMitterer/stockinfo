@@ -72,18 +72,24 @@ ergänzt, eine Zusammenführung ist ein eigener Befund.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | Inhalt gegen die Quellen | Herkunft, Copyright und Lizenztext wörtlich aus den genannten LICENSE-Dateien | ➖ |
-| 2 | `make build` | Build grün, Lizenzprüfung nennt `THIRD_PARTY_NOTICES.md` | ➖ |
-| 3 | Gegenprobe: Datei im Image weicht ab oder fehlt | Prüfung schlägt mit Exit ≠ 0 fehl | ➖ |
-| 4 | `make docs-check` | keine Probleme; Sprachfassungen gleich | ➖ |
-| 5 | Doku-Abgleich | Lizenzabschnitte, Container- und Entwicklerdoku | ➖ |
+Stand `9d4f4b1`, Claude, 2026-10-15.
+
+| # | Handgriff | Erwarteter Nachweis | AI |
+|---|---|---|:--:|
+| 1 | Inhalt gegen die Quellen | Herkunft, Copyright und Lizenztext wörtlich aus den genannten LICENSE-Dateien | ✅ Python-Vergleich der beiden ```` ```text ````-Blöcke: MIT gleich `feathericons/feather/main/LICENSE`, OFL gleich `@fontsource-variable/space-grotesk/LICENSE` ab Zeile 3; Inter und Space Grotesk ab Zeile 3 identisch |
+| 2 | `make build` | Build grün, Lizenzprüfung nennt `THIRD_PARTY_NOTICES.md` | ✅ `mangolila/stockinfo:1.5.0-261015.1757.1d3ad.ahead116`: „6 Lizenzdokumente und OCI-Labels stimmen“; `sha256sum /app/THIRD_PARTY_NOTICES.md` im Image = Repository (`902513c7…`) |
+| 3 | Gegenprobe: Datei im Image weicht ab oder fehlt | Prüfung schlägt mit Exit ≠ 0 fehl | ✅ M1 Datei fehlt im Repository → „Lizenz fehlt oder ist leer“, Exit 1; M2 Dockerfile kopiert sie nicht → `RUN test -s /app/THIRD_PARTY_NOTICES.md` scheitert, Exit 1; M3 Datei im Image verändert → „Lizenz weicht ab: THIRD_PARTY_NOTICES.md“, Exit 1. Alle mit `STRICT=0`, danach zurückgesetzt und sauber neu gebaut |
+| 4 | `make docs-check` | keine Probleme; Sprachfassungen gleich | ✅ 19 Dokumente, 26 Pflichtdateien, 1 Sprachfassung, keine Probleme |
+| 5 | Doku-Abgleich | Lizenzabschnitte, Container- und Entwicklerdoku | ✅ siehe Übergabe |
 
 ### Akzeptanzkriterien
 
-- [ ] `THIRD_PARTY_NOTICES.md` mit den drei Komponenten.
-- [ ] Datei im Image, von `make build` geprüft.
-- [ ] Lizenzabschnitte und Anleitungen verlinken bzw. nennen sie.
-- [ ] `make docs-check` ohne Probleme.
+Selbstprüfung des Coders; die Freigabe gibt der Verifier.
+
+- [x] `THIRD_PARTY_NOTICES.md` mit den drei Komponenten.
+- [x] Datei im Image, von `make build` geprüft.
+- [x] Lizenzabschnitte und Anleitungen verlinken bzw. nennen sie.
+- [x] `make docs-check` ohne Probleme.
 
 ### Abgrenzung
 
@@ -101,4 +107,38 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
-Noch keine Übergabe.
+### Übergabe Runde 1 · Claude, 2026-10-15
+
+**Prüfstand:** `9d4f4b1` (Produkt `a3faa7f`, `1d3ad0b`; Quittung
+`9d4f4b1`) auf `t-109-fremdkomponenten`. 11 Dateien, +179/−14 = 193 Zeilen
+(Budget 250). Gegenüber dem Vertrag zusätzlich `.docs-check.ack`.
+
+**Änderungen:**
+
+- `THIRD_PARTY_NOTICES.md` neu: Feather `github` (MIT), Inter und Space
+  Grotesk (SIL OFL 1.1, Fontsource 5.3.0), je Herkunft, Copyright und
+  Lizenztext.
+- `docker/Dockerfile`: `COPY` und `test -s` um die Datei ergänzt.
+- `docker/build.sh`: `readonly LICENSE_FILES=(…)` einmal oben; beide
+  Schleifen (`prepareConfig`, `verifyBuiltImage`) nutzen sie; die
+  Erfolgsmeldung zählt die Liste statt fest „fünf“ (`1d3ad0b`, beim ersten
+  Build aufgefallen). Das Dockerfile führt die Dateien weiter selbst, weil es
+  keine Bash-Variable lesen kann; der Kommentar an `LICENSE_FILES` nennt das.
+- Doku: Details-Zeile beider READMEs nach dem EUPL-Baustein; `LICENSING.md`
+  (Verweis bei den Fremdkomponenten, Datei im Image); `docker/README.md`
+  (Dateien im Image), Vorschau neu (11.867 Bytes); `docs/development.md`
+  (was `make build` kopiert); `.docs-check.conf.sh` (`DOCS`, `REQUIRED`).
+
+**Code-Standards** (`code-conventions`, `references/shell.md`): Bash-
+Konstante groß und `readonly`, Array in Anführungszeichen expandiert;
+`bash -n` grün, ShellCheck ohne Meldung zu den neuen Zeilen (die übrigen
+Meldungen sind alt). DRY: Die doppelte Liste in `build.sh` ist
+zusammengeführt; Dockerfile bleibt notwendiges Wiring.
+
+**Doku-Abgleich:** `README.md`, `README.de.md` (Lizenz), `LICENSING.md`,
+`docker/README.md`, `docs/development.md` geändert; `unraid/README.md`
+unverändert (nennt die Dateien im Image nicht, Hinweis quittiert).
+
+**Befund für Mike:** StockPortfolio bindet dieselben Schriften über
+`@mmit/ux-foundation` ein; seine `THIRD_PARTY_NOTICES.md` nennt nur
+Codicons und Lucide.
