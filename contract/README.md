@@ -8,8 +8,7 @@ das, was hier liegt.**
 ```
 contract/
 ├── core-contract.json           # der Vertrag: Felder, Nullability, Bedeutung, Regeln
-├── openapi-core-snapshot.json   # gespeicherte OpenAPI-Form der erfassten Endpunkte
-└── fixtures/                    # interne HTTP-Beispiele für die Vertragstests
+└── openapi-core-snapshot.json   # gespeicherte OpenAPI-Form der erfassten Endpunkte
 ```
 
 Zur Laufzeit beantwortet **`GET /fields`** denselben Vertrag: Feldliste je
@@ -24,8 +23,7 @@ Englisch. Die Sprache ist fest und unabhängig von `Accept-Language` oder der
 Dashboard-Sprache.
 
 `GET /instrument-types` ergänzt den Vertrag um die Asset-Typen der laufenden
-Plugin-Konfiguration. Die drei `fixtures/instrument-types-*.json` zeigen
-vollständige, leere und unvollständige HTTP-Auskünfte. Semantik und Statuswerte:
+Plugin-Konfiguration. Semantik und Statuswerte:
 [Typkatalog](../docs/rest-core-contract.md#asset-typen-aus-der-plugin-konfiguration).
 
 ## Übersicht
@@ -47,59 +45,19 @@ Abweichungen bei Tageskursen und Pence-Währungen stehen in der
 **Unbekannte Felder werden ignoriert**, nicht als Fehler behandelt. Sonst
 bricht die nächste additive Erweiterung den Konsumenten.
 
-**Die Fixtures sind keine Beispielantworten der laufenden App.** Sie sind
-interne Beispiele, mit denen `tests/test_contract.py` das Artefakt prüft, und
-kein Laufzeitvertrag für Konsumenten.
-
 [↑ Übersicht](#übersicht)
 
 ## Für dieses Repo
 
-Die Fixtures sind kein reines JSON, sondern ein **HTTP-Umschlag** aus Status,
-Headern und Rumpf. Gekürztes Strukturbeispiel; der Rumpf ist hier
-ausgelassen:
+`tests/test_contract_openapi.py` prüft die laufende **App** auf zwei Arten:
 
-```json
-{
-  "endpoint": "/quote/{isin}",
-  "model": "quote",
-  "contract_compliant": true,
-  "violates": null,
-  "note": "…",
-  "request":  { "method": "GET", "path": "/quote/IE00B3RBWM25" },
-  "response": {
-    "status": 200,
-    "headers": { "Content-Type": "application/json" },
-    "body": {}
-  }
-}
-```
+- Sie muss `openapi-core-snapshot.json` entsprechen. Der Test schlägt an,
+  sobald sich ein Core-Modell, ein Core-Pfad, `/fields` oder
+  `/instrument-types` ändert.
+- Jedes Pflichtfeld im Artefakt muss im Schema der App Pflicht sein, und kein
+  optionales Feld darf dort heimlich Pflicht sein. Jeder Pfad unter
+  `endpoints` muss in der App existieren.
 
-Fixtures mit `contract_compliant: false` verletzen absichtlich die Regel, die
-`violates` nennt; `note` erklärt sie.
-
-Der `request` einer Fixture beschreibt einen konkreten Aufruf: Methode, Pfad
-und Query-Namen werden gegen die Endpunktliste im Artefakt geprüft
-(`endpoints`, dazu `query_notes` mit der Bedeutung je Parameter). Ein Beispiel
-mit einem Parameter, den es nicht gibt, sieht sonst aus wie eine zugesagte
-Funktion — FastAPI ignoriert Unbekanntes still.
-
-`tests/test_contract.py` prüft beide Dateiarten gegeneinander: dieselben
-Endpunktpfade, derselbe Headername, jede Erfolgsfixture erfüllt die
-Pflichtfelder ihres Modells, und jede Fixture mit `violates` trägt die
-genannte Verletzung wirklich.
-
-Diese Prüfung läuft **ohne die App** und weist nur die Konsistenz der
-Vertragsdateien nach. Sie bestätigt nicht die fachliche Übereinstimmung
-jeder Fixture mit einer Live-Antwort.
-
-```bash
-.venv/bin/pytest tests/test_contract.py -q
-```
-
-`tests/test_contract_openapi.py` hält die andere Richtung: Es vergleicht die
-**App** mit `openapi-core-snapshot.json` und schlägt an, sobald sich ein
-Core-Modell, ein Core-Pfad, `/fields` oder `/instrument-types` ändert.
 Eine beabsichtigte Vertragsänderung verlangt folgende Schritte:
 
 ```bash
@@ -121,8 +79,8 @@ geändertem Pflichtfeld, Minor bei additiver Erweiterung, Patch bei einer
 Klarstellung ohne Änderung am JSON. Die offene Detailmenge zählt getrennt über
 `details_version`, die zur Laufzeit aus dem gespeicherten Detailschema stammt.
 
-Wer ein Feld ergänzt, ergänzt **beides**: den Eintrag im Artefakt und mindestens
-eine Fixture, die ihn zeigt. Der Test schlägt sonst nicht an — er prüft, was
-dasteht, nicht was fehlt.
+Wer ein Feld ergänzt, ergänzt **beides**: das App-Modell und den Eintrag im
+Artefakt. Fehlt der Eintrag, sagt `/fields` das Feld nicht zu, auch wenn die
+App es liefert.
 
 [↑ Übersicht](#übersicht)

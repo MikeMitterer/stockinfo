@@ -305,8 +305,8 @@ async def ambiguous_symbol(
     Tageskurse) wie verändernd (`/refresh/by-symbol`, ISIN setzen, Overrides,
     Löschen). Acht Router-Handler wären dieselbe Fachregel achtmal.
 
-    Der Rumpf folgt `contract/fixtures/quote-409-ambiguous-symbol.json` und
-    trägt zusätzlich `code` und `params`. Die Kandidaten sind der eigentliche
+    Der Rumpf folgt `AmbiguousSymbolDetail`: `detail` und `candidates` aus
+    T-24, dazu `code` und `params`. Die Kandidaten sind der eigentliche
     Inhalt: Ohne sie bekäme der Aufrufer ein „geht nicht" und keinen Weg
     heraus — mit ihnen hat er je Kandidat eine `listing_id`, und die ist
     eindeutig.

@@ -1,9 +1,9 @@
 """Zugriff auf das Vertragsartefakt `contract/core-contract.json`.
 
-Eine Datei, zwei Leser: Die Fixtures werden beim Bauen dagegen geprüft
-(`tests/test_contract.py`), `GET /fields` beantwortet sie im Betrieb. Zwei
-getrennte Listen liefen früher oder später auseinander, und ein Konsument
-bekäme je nach Weg eine andere Zusage.
+Eine Datei, zwei Leser: `GET /fields` beantwortet sie im Betrieb, und
+`tests/test_contract_openapi.py` hält die laufende App gegen ihre
+Pflichtfelder. Zwei getrennte Listen liefen früher oder später auseinander,
+und ein Konsument bekäme je nach Weg eine andere Zusage.
 """
 
 import json

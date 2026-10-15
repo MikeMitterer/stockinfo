@@ -5,10 +5,9 @@ die Core-Endpunkte und ihre Modelle heute aussehen. Weicht die App davon ab,
 gibt es genau zwei richtige Antworten: die Änderung zurücknehmen, oder sie
 wollen — dann steigt `core_version`, und der Schnappschuss wird erneuert.
 
-Der Unterschied zu `tests/test_contract.py`: Dort wird das Artefakt gegen die
-Fixtures geprüft, ohne die App. Hier wird die App gegen ihren eigenen
-Vergangenheitsstand geprüft. Beides zusammen deckt die Frage „hat sich etwas
-geändert, ohne dass es jemand gesagt hat?" ab.
+Geprüft wird die laufende App: gegen ihren eigenen Vergangenheitsstand und
+gegen die Pflichtfelder im Artefakt `contract/core-contract.json`. Das deckt
+die Frage „hat sich etwas geändert, ohne dass es jemand gesagt hat?" ab.
 
 Erneuern:
 

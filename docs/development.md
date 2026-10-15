@@ -415,7 +415,7 @@ app/                    # FastAPI backend
   docs.py               #   dark-themed Swagger UI (/docs)
 dashboard/              # Vue dashboard (standalone app)
 plugin_api/             # independent plugin contract, examples and role tests
-contract/               # REST contract, HTTP fixtures and OpenAPI snapshot
+contract/               # REST contract and OpenAPI snapshot
 examples/               # source profiles and manually maintained asset examples
 tests/                  # backend tests (pytest)
 docker/                 # Dockerfile, build.sh (single-image build)
