@@ -148,6 +148,7 @@ View logs through Unraid's container menu or in the Unraid terminal:
 ```bash
 docker logs --tail=100 stockinfo
 ```
+
 The image checks `/operational`; `/health` checks whether the process runs,
 and `/ready` reports whether normal requests are allowed. A pending database
 migration may need confirmation in the dashboard.

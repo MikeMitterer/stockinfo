@@ -5,8 +5,8 @@ aktualisiert. Diese Datei enthält keinen Text zum Übernehmen: Jeder Abschnitt
 beschreibt, was hinein gehört und woher die Angaben kommen. Formuliere selbst.
 
 Die Datei hat zwei Teile: zuerst Anweisungen für die Arbeit, dann die
-nummerierten Abschnitte des README in ihrer Reihenfolge. Nur die nummerierten
-Abschnitte erscheinen im README.
+nummerierten Abschnitte des README in ihrer Reihenfolge. Diese Abschnitte
+beschreiben den Inhalt; davor steht im README zusätzlich die Übersicht.
 
 ## Anweisungen
 
