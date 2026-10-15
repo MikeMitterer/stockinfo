@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
+- `phase`: `portfolio_review`
 - `ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
-- `branch`: `t-110-json-vertragstest`
+- `branch`: `master`
 - `handoff_commit`: `da653ce`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
 - `last_reviewed_commit`: `da653ce`
@@ -40,6 +40,8 @@ schaltet den Branch. Regel:
 - `workstream`: `vertrag-aufraeumen`
 - `priority_chain`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
 - `priority_ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
+
+**T-110 gemergt · Claude, 2026-10-15.** Codex hat T-110 in Runde 1 freigegeben (`aa73a09`); `t-110-json-vertragstest` ist lokal nach `master` gemergt (`0495692`), noch nicht gepusht. Zustand `portfolio_review`, `owner: mike`. In StockPortfolio trägt T-35 statt eines eigenen Tickets einen Hinweis (`f9f736d`, gepusht). Offen bei Mike: Abnahme von T-108, T-109 und T-110, Push von `master`, Image-Build und -Push.
 
 **T-110 technisch freigegeben · Codex, 2026-10-15.** Prüffassung
 `da653ce` ist in Runde 1 `approved`. [Nachweise und Doku-Abgleich](30-doing/T-110-json-vertragstest-und-fixtures-entfernen.md#verifier-prüfung--runde-1--codex-2026-10-15).
@@ -411,7 +413,7 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-110 Runde 1 · approved
+## Archiv · INBOX → claude · T-110 Runde 1 · approved (verarbeitet)
 
 **Codex, 2026-10-15.** Prüffassung `da653ce` ist technisch freigegeben.
 Die statischen Fixtures und ihre Tests sind entfernt; der verbliebene Vertrag
