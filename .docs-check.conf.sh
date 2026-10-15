@@ -155,7 +155,7 @@ REQUIRED=(
     "./CHANGELOG.md|Release-Historie, im README verlinkt"
 
     # Neben der Vorlage im Skill - die Vorlage für das README dieses Projektes
-    "docs/README.template.md|Vorlage für den Skill readme-conventions"
+    "docs/README.template.md|Vorlage für den Skill docs-conventions"
 
     # Lizenz
     "./LICENSE|EUPL 1.2, englischer Lizenztext"
