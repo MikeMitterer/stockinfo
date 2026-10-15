@@ -26,20 +26,29 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `portfolio_review`
-- `ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
-- `branch`: `master`
+- `phase`: `claude_working`
+- `ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
+- `branch`: `t-102-docs-check`
 - `handoff_commit`: `46f908d`
-- `review_round`: `3`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
-- `owner`: `mike`
-- `updated_at`: `2026-10-03`
+- `owner`: `claude`
+- `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `last_reviewed_commit`: `46f908d`
 - `last_reviewed_round`: `3`
-- `workstream`: `persistenz`
-- `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md → T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
-- `priority_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
+- `workstream`: `doku-pruefung`
+- `priority_chain`: `T-102-docs-check-nach-stockportfolio-schema.md`
+- `priority_ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
+
+**Aktivierung T-102 · Claude, 2026-10-15.** Auf Mikes Auftrag aus der
+StockPortfolio-Sitzung („Leg in StockInfo als ein Ticket nach doing dass dort
+nach dem Schema von StockPortfolio docs-check nachgezogen wird …“) liegt
+[T-102](30-doing/T-102-docs-check-nach-stockportfolio-schema.md) in
+`30-doing/`. Neue Kette mit diesem einen Ticket, Coder `claude`, Verifier
+`codex`. Der Coder hat beim Start `t-102-docs-check` von `master`
+angelegt; `handoff_commit` und `last_reviewed_*` beschreiben noch T-97.
+Kein Push.
 
 **SQL-Umstellung abgenommen · Mike, 2026-10-03.** „ja, die Tickets T-88
 bis T-97“. T-88 bis T-95 und T-97 liegen samt Begleitdateien in
