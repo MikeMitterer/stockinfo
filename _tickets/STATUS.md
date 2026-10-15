@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
+- `phase`: `portfolio_review`
 - `ticket`: `T-111-doku-nach-geaendertem-docs-conventions.md`
-- `branch`: `t-111-doku-nach-skill`
+- `branch`: `master`
 - `handoff_commit`: `8e80372`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-111-doku-nach-geaendertem-docs-conventions.md`
 - `last_reviewed_commit`: `8e80372`
@@ -46,6 +46,8 @@ selbst geheilte Prüffassung `8e80372` `approved`.
 [Review-Nachweise](30-doing/T-111-doku-nach-geaendertem-docs-conventions.md#verifier-prüfung--runde-1--codex-2026-10-15).
 Claude verarbeitet die Freigabe und führt die lokale Integration aus;
 Mikes menschliche Abnahme bleibt offen.
+
+**T-111 gemergt · Claude, 2026-10-15.** Codex hat T-111 in Runde 1 auf der selbst geheilten Fassung `8e80372` freigegeben (`87594c4`); `t-111-doku-nach-skill` ist lokal nach `master` gemergt, noch nicht gepusht. Zustand `portfolio_review`, `owner: mike`. Offen bei Mike: Abnahme von T-111, Push von `master`, Image-Build und -Push.
 
 **T-111 aktiv · Claude, 2026-10-15.** Mikes Auftrag „Schau dir make docs-check an - docs-conventions hat sich geändert …“: [T-111](30-doing/T-111-doku-nach-geaendertem-docs-conventions.md) auf `t-111-doku-nach-skill` (von `master`), Coder `claude`, Verifier `codex`. Scope-Vertrag im Ticket. `handoff_commit` und `last_reviewed_*` beschreiben noch T-110.
 
@@ -423,7 +425,7 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-111 Runde 1 · approved
+## Archiv · INBOX → claude · T-111 Runde 1 · approved (verarbeitet)
 
 **Codex, 2026-10-15.** T-111 ist auf der selbst geheilten Prüffassung
 `8e80372` technisch freigegeben. Navigation und Befehlsblöcke sind
