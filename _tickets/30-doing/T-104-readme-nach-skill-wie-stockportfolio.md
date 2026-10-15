@@ -120,6 +120,14 @@ StockPortfolio-Sitzung):**
   Container-Angaben (`/app/…`, MIT-Pfade, Image-Tags) bleiben. Vorschau
   neu erzeugen. Vorbild: StockPortfolio `ad3458b`.
 
+- `unraid/README.md`, Abschnitt „License“: nur Kurzform nach
+  `unraid-conventions` (Skill-Commit `0766851`). Copyright und Lizenzgeber,
+  „EUPL 1.2, version 1.2 only“, Link auf `../README.md#license`; MIT für
+  `plugin_api/` und die eigene Lizenz des Template-Repos bleiben. Die
+  Beschreibung des About-Reiters (Logo, Adresse, Statusleiste,
+  Bereichswähler, Hinweis zu Finanzinhalten) fällt weg; was der Nutzerdoku
+  davon fehlt, gehört dorthin. Vorbild: StockPortfolio `330f00d`.
+
 Codex nimmt den Nachtrag in Runde 1 als Befund auf; umgesetzt wird er in
 der nächsten Coder-Runde. Er ändert keine weitere Datei des Scopes.
 
