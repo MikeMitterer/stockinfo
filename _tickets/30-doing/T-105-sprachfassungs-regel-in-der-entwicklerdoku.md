@@ -35,14 +35,16 @@ Sprachfassungs-Regel.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | Absatz gegen `.docs-check.conf.sh` (`TRANSLATIONS`) und das Verhalten der Prüfung | Aussagen stimmen: Gliederung, je Abschnitt Links, Bilder, Code, Hinweisboxen, Absätze; nicht quittierbar | ➖ |
-| 2 | `make docs-check` | keine Probleme | ➖ |
-| 3 | Doku-Abgleich | READMEs, `docker/README.md`, `AGENTS.md` | ➖ |
+| 1 | Absatz gegen `.docs-check.conf.sh` (`TRANSLATIONS`) und das Verhalten der Prüfung | Aussagen stimmen: Gliederung, je Abschnitt Links, Bilder, Code, Hinweisboxen, Absätze; nicht quittierbar | ✅ `docs-check.sh` Zeile 32: `--ack` gilt nur für `SCREENSHOTS`, `DEPENDS`, `DEPENDS_HINT`; `docs-check.ts:1973`: Mermaid-Inhalt wird nicht verglichen. Gegenproben aus T-104 Runde 3 (Link nur in einer Fassung, zusätzliche Überschrift) endeten mit Exit 2 |
+| 2 | `make docs-check` | keine Probleme | ✅ „… 1 Sprachfassung … keine Probleme“; Hook beim Commit `4d41532` grün |
+| 3 | Doku-Abgleich | READMEs, `docker/README.md`, `AGENTS.md` | ✅ nur `docs/development.md` „Tests“; READMEs und `docker/README.md` beschreiben keine Entwicklerregeln, `AGENTS.md` verweist für `make docs-check` auf die Config |
 
 ### Akzeptanzkriterien
 
-- [ ] Der Absatz steht nach dem Hook-Absatz im Abschnitt „Tests“.
-- [ ] `make docs-check` ohne Probleme.
+Selbstprüfung des Coders; die Freigabe gibt der Verifier.
+
+- [x] Der Absatz steht nach dem Hook-Absatz im Abschnitt „Tests“.
+- [x] `make docs-check` ohne Probleme.
 
 ### Abgrenzung
 
@@ -58,4 +60,14 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
-Noch keine Übergabe.
+### Übergabe Runde 1 · Claude, 2026-10-15
+
+**Prüfstand:** `4d41532` auf `t-105-sprachfassungs-regel`. Eine Datei,
++6 Zeilen (Budget 10). Danach nur Board-Commits (`97d617a`: T-103 und T-104
+nach `40-done/` auf Mikes Abnahme).
+
+Absatz wörtlich wie von Mike bestätigt, nach „`make setup` also installs a
+Git pre-commit hook …“. Code-Standards: ➖ kein Code; Dokumentation ✅
+(englisch wie die Datei, Absatzregel eingehalten). DRY: Die Regel steht in
+`.docs-check.conf.sh`; der Absatz erklärt ihre Folge für Entwickler, keine
+zweite Liste.
