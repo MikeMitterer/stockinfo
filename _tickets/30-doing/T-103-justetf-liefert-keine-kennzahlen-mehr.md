@@ -106,20 +106,23 @@ nicht“ behandelt.
 
 ### Verify
 
-Stand `86d0e15`, Claude, 2026-10-15.
+Stand `558add9`, Claude, 2026-10-15 (Runde 1).
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
 | 1 | `.venv/bin/pytest -q tests/test_plugin_justetf_integration.py` | beide Tests grün | ✅ alter Pin: 2 failed; neuer Pin (nach `pip install --force-reinstall --no-deps`): 2 passed |
 | 2 | Direktaufruf für `IE00B4L5Y983` | TER, Fondsgröße, Anbieter, Replikation, Volatilität gefüllt | ✅ `ter 0.2`, `fund_size_eur 133518.0`, `fund_provider 'iShares'`, `replication 'Physical(Optimized sampling)'`, `volatility_1y 10.48`, `fund_domicile 'Ireland'`, `fund_currency 'USD'`, `distribution_policy 'Accumulating'`, `currency_hedged False` |
-| 3 | `make test` | grün | ✅ Exit 0: docs-check ohne Probleme, Backend 1319 passed (inkl. Online-Tests), Plugin-API 324, Beispiel 50, Dashboard 399 |
-| 4 | Instrument mit gespeicherten Kennzahlen aktualisieren, während justETF nichts liefert | gespeicherte Werte bleiben erhalten (oder das Ticket nennt das beschlossene Verhalten) | ⚠️ **nicht erfüllt, am Code belegt**: siehe [Scope-Checkpoint](#scope-checkpoint-runde-0--claude-2026-10-15) |
+| 3 | `make test` | grün | ✅ Exit 0 auf `558add9`: docs-check ohne Probleme, Backend 1321 passed (inkl. Online-Tests), Plugin-API 324, Beispiel 50, Dashboard 399. `make check` Exit 0, Ruff grün |
+| 4 | Instrument mit gespeicherten Kennzahlen aktualisieren, während justETF nichts liefert | gespeicherte Werte bleiben erhalten (oder das Ticket nennt das beschlossene Verhalten) | ✅ `tests/test_quote_cache.py::test_justetf_ohne_kennzahlen_leert_den_gespeicherten_stand_nicht`: echte Kette (`wire_real_chain` mit echtem `JustEtfProvider`, ersetzt nur `get_etf_overview`), `refresh_one` → `ter 0.2` in Antwort und Datenbank, `provider 'Vanguard'`. Am alten Provider rot (`assert None == 0.2`, `metadata_complete=True`) |
+| 5 | Neuer Pin in einer bestehenden venv (Prüfpunkt aus dem Scope-Checkpoint) | `make setup` installiert ihn | ✅ alter Pin von Hand in `.venv` installiert, `make setup` Exit 0, danach `freeze` = Fork-Commit, Online-Tests 2 passed; zweiter Vergleich „aktuell“, keine Neuinstallation. Vorher: `pip install -r` und `pip install --upgrade -r` behielten beide den alten Commit (Scratch-venv) |
 
 ### Akzeptanzkriterien
 
-- [ ] justETF liefert für einen bekannten UCITS-Fonds wieder Kennzahlen.
-- [ ] Die justETF-Online-Tests und `make test` sind grün.
-- [ ] Das Verhalten bei leerer justETF-Antwort ist geklärt und belegt.
+Selbstprüfung des Coders; die Freigabe gibt der Verifier.
+
+- [x] justETF liefert für einen bekannten UCITS-Fonds wieder Kennzahlen.
+- [x] Die justETF-Online-Tests und `make test` sind grün.
+- [x] Das Verhalten bei leerer justETF-Antwort ist geklärt und belegt.
 
 ### Abgrenzung
 
@@ -127,6 +130,76 @@ Stand `86d0e15`, Claude, 2026-10-15.
 - Kein Wechsel auf eine andere Datenquelle ohne eigene Entscheidung.
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+### Übergabe Runde 1 · Claude, 2026-10-15
+
+**Prüfstand:** `558add9` auf `t-103-justetf-kennzahlen`. Produkt-Commits
+`86d0e15` (Pin) und `558add9` (Schutz, Tests, `make setup`). Fork-Commit
+`1e804a8` mit PR druzsan/justetf-scraping#59.
+
+**Umfang geplant / tatsächlich:**
+
+| Größe | Vertrag + Checkpoint | Tatsächlich | Abweichung |
+|---|---|---|---|
+| Fachliche Änderungen | 3 | 4 | `make setup` übernimmt geänderte Git-Pins; Codex' Prüfpunkt „wirksame Installation in bestehender Umgebung“ verlangt es, im Checkpoint stand „keine Änderung geplant“ |
+| Produktdateien StockInfo | 2 | 3 (`requirements.txt`, `app/providers/justetf_provider.py`, `Makefile`) | `Makefile` wie oben |
+| Testdateien StockInfo | 1 | 3 (`tests/test_providers.py`, `tests/test_quote_cache.py`, `tests/boundaries.py`) | Akzeptanztest über die echte Kette statt nur Provider-Test; `wire_real_chain` nimmt dafür optional eine ETF-Quelle, statt die Verdrahtung ein zweites Mal zu bauen |
+| Diff StockInfo ohne `_tickets/` | ≈ 60 | 112 (+106/−6) | Makefile 7, Akzeptanztest 30, Kommentare |
+
+**Akzeptanzfälle (rot → grün):**
+
+| Fall | Test | Rot am alten Stand |
+|---|---|---|
+| Übersicht nur mit Name ist keine Antwort | `test_providers.py::test_justetf_ohne_kennzahlen_gilt_als_keine_antwort` | `assert EtfDetails(… name='iShares …', ter=None …) is None` |
+| Refresh hält TER und Anbieter in Antwort und DB | `test_quote_cache.py::test_justetf_ohne_kennzahlen_leert_den_gespeicherten_stand_nicht` | `assert None == 0.2`, Antwort mit `metadata_complete=True` |
+| Fork: Stammdaten aus der Basistabelle | `test_etf_profile.py::test_basic_data_from_basics_table` (Fork) | `assert None == 133518.0` |
+
+**Negative Mutanten** (einzeln, Datei danach per `diff` als wiederhergestellt
+geprüft):
+
+| Mutant | Ergebnis |
+|---|---|
+| `name` zählt als Kennzahl | beide neuen Tests rot |
+| Prüfung `_has_metrics` ausgeschaltet | beide neuen Tests rot |
+| keine Kennzahl zählt | 10 bestehende Provider-Tests rot |
+
+Ein erster Mutantenlauf war ungültig: `cp` ist hier auf `cp -i` gesetzt, die
+Wiederherstellung griff nicht, die Mutanten stapelten sich. Die Datei wurde
+aus der Sicherung wiederhergestellt und gegengeprüft; die Tabelle oben
+stammt aus dem Wiederholungslauf mit `command cp -f`.
+
+**Angepasster Bestandstest:** `test_unbekannte_ausschuettungspolitik_bleibt_unbekannt`
+fütterte eine Übersicht nur mit `distribution_policy` — nach der neuen Regel
+keine Antwort. Die Übersicht trägt jetzt zusätzlich `ter: 0.2`; die
+Zusicherung (`accumulating is None`) ist unverändert.
+
+**Code-Standards** (gelesen: `~/.claude/skills/code-standards/SKILL.md`,
+`references/python.md`, `references/quality.md`, `references/shell.md`):
+
+| Referenz | Ergebnis |
+|---|---|
+| Projektstruktur | ➖ nicht berührt |
+| Architektur (DRY, Namen) | ✅ neue Bezeichner englisch (`_NOT_METRICS`, `_has_metrics`, `details`, `etf_source`, `PIN`); Kennzahlen aus `fields(EtfDetails)` abgeleitet statt als zweite Liste; Kettenverdrahtung über `wire_real_chain`, Fakes aus `tests/test_quote_service.py` importiert |
+| Shell (Makefile-Rezept) | ✅ Variable groß (`PIN`), `read -r`, Pin in Anführungszeichen |
+| Python | ✅ Typen, Docstrings, Logmeldung `justetf_no_metrics` als stabile Kennung |
+| Qualität (Tests) | ✅ Akzeptanztest am öffentlichen Eintritt `refresh_one`, rot/grün und Mutanten oben |
+| Persistenz | ➖ nicht berührt (vorhandener Schutz über `metadata_complete`) |
+| Frontend, CLI | ➖ nicht berührt |
+
+**DRY:** Die Schutzregel steht einmal in `JustEtfProvider`; der Composite
+und `_enrich_etf` behandeln `None` wie bisher. Der Plugin-Weg
+(`justetf_metadata.py`) hatte den Schutz schon über `as_readings(...) or
+None` und bleibt unverändert. Die Pin-Prüfung in `make setup` liest die
+Pins aus `requirements.txt`, keine zweite Liste.
+
+**Doku-Abgleich:** `README.md`, `README.de.md`, `docker/README.md`,
+`unraid/README.md` nennen `justetf-scraping` nur als Bibliothek ohne Quelle
+oder Version und beschreiben `make setup` als Einrichtung der venv; beides
+bleibt richtig, keine Änderung. Das Verhalten bei leerer Quellenantwort
+steht in keiner Anleitung. `requirements.txt` erklärt den Fork-Pin.
+
+**Offen außerhalb:** Rückkehr auf Upstream nach Merge von #59; neues
+Docker-Image für Unraid (eigener Auftrag).
 
 ### Scope-Checkpoint Runde 0 · Codex, 2026-10-15
 
