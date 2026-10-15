@@ -203,8 +203,9 @@ Links und Anker; Verweise auf andere Dokumente deshalb als Link schreiben.
   `./.libs/ProjectTools/src/bash/docs-check.sh --ack <datei>` ausführen und
   `.docs-check.ack` mitcommitten. Ungesehen quittieren ist kein Weg, eine
   Meldung loszuwerden.
-- **Hook:** `make setup` aktiviert `.githooks/pre-commit`; er bricht einen
-  Commit mit Problemen ab und lässt Hinweise durch. `--no-verify` nur im
+- **Hook:** `make setup` aktiviert `.githooks/pre-commit`. Er prüft den
+  vorgemerkten Stand, bricht einen Commit mit Problemen ab und lässt
+  Hinweise durch. `--no-verify` nur im
   Notfall und mit Begründung im Bericht.
 - **Grenze:** Einstellungen der Settings-Klasse in `app/config.py` erkennt
   die Prüfung nicht; neue Einstellungen von Hand in `README.md` und

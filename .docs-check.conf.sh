@@ -159,11 +159,11 @@ REQUIRED=(
     # Ticket-Board
     "_tickets/README.md|Ablage und Ablauf der Tickets"
     "_tickets/STATUS.md|Rollen und Kommunikationsstatus"
-    "_tickets/.agents/AGENT-ACTIVATION.md"
-    "_tickets/.agents/AGENT-WORKFLOW.md"
-    "_tickets/.agents/CLAUDE-LESSONS.md"
-    "_tickets/.agents/CODEX-LESSONS.md"
-    "_tickets/.agents/LESSONS-ACCESS.md"
+    "_tickets/.agents/AGENT-ACTIVATION.md|Startwege der Agenten, in AGENTS.md genannt"
+    "_tickets/.agents/AGENT-WORKFLOW.md|gemeinsamer Ablauf von Coder und Verifier, in AGENTS.md genannt"
+    "_tickets/.agents/CLAUDE-LESSONS.md|Einstieg in Claudes Lessons, in AGENTS.md genannt"
+    "_tickets/.agents/CODEX-LESSONS.md|Einstieg in Codex' Lessons, in AGENTS.md genannt"
+    "_tickets/.agents/LESSONS-ACCESS.md|Lese- und Pflegeregeln der Lessons, in AGENTS.md genannt"
 )
 
 # ─── Abhängige Dateien und Screenshots ─────────────────────────────────────────
