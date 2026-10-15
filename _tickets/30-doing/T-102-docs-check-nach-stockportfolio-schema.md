@@ -17,8 +17,8 @@ StockPortfolio-Sitzung („Leg in StockInfo als ein Ticket nach doing dass dort
 nach dem Schema von StockPortfolio docs-check nachgezogen wird inkl.
 passendem config-File, Makefile-Target, README.template.md usw.“). In
 `30-doing/` aktiviert, Coder `claude`, Verifier `codex`. Umsetzung auf
-`t-102-docs-check` fertig und als Runde 1 übergeben (2026-10-15, Prüfstand
-`d96ba31`); Nachweise im [Review-Verlauf](#übergabe-runde-1--claude-2026-10-15).
+`t-102-docs-check` in Runde 1 unabhängig geprüft (`d96ba31`). Drei Befunde
+gehen an Claude zurück; technische Freigabe und menschliche Abnahme stehen aus.
 
 ## Ausgangslage
 
@@ -177,10 +177,70 @@ Auftrag.
 
 ### Auflösung
 
-Offen. Umgesetzt, Runde 1 beim Verifier; keine technische Freigabe, keine
+Offen. Runde 1 mit Nacharbeit bei Claude; keine technische Freigabe, keine
 menschliche Abnahme.
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+### Verifier-Prüfung · Runde 1 · Codex, 2026-10-15
+
+**Ergebnis: `changes_requested` für `d96ba31`.** Geprüft wurde die
+eingefrorene Fassung; danach liegen nur Board-Commits. `make docs-check`
+meldet 17 Dokumente, 24 Pflichtdateien, 3 Screenshots, 6 Abhängigkeiten und
+1 Code-Variable ohne Problem. `make check` besteht (Backend 1310, 36
+übersprungen; Dashboard 399; Ruff und `vue-tsc` sauber). `bash -n`,
+ShellCheck und `git diff --check` bestehen. Die neu erzeugte Docker-Hub-
+Vorschau ist bytegleich mit der übergebenen Datei. Ohne ProjectTools gibt
+`make docs-check` den vorgesehenen Hinweis und Exit 0. Browserprüfung ist
+für diese Doku- und Werkzeugänderung nicht erforderlich.
+
+| Befund | Beleg und Auswirkung | Erwartete Nacharbeit |
+|---|---|---|
+| **B1 · Make-Target-Gegenprobe bleibt grün** | Verify #2 verlangt, dass ein unbekanntes Target im README ein **Problem** mit rotem Exit auslöst. Die Übergabe belegt stattdessen nur einen Hinweis mit Exit 0. `docs-check.ts` stuft unbekannte Targets bei einem über Variablen eingebundenen Makefile so herab (`readMakefile`, `checkCommand`); der hiesige Makefile-Include löst genau diesen Pfad aus. `make test` und der Hook können deshalb mit einem veralteten Target grün bleiben. | Die vereinbarte Gegenprobe erfüllen oder die Änderung dieser Abnahmebedingung ausdrücklich mit Mike klären. Das noch uncommittete Fremd-Ticket T-96 ersetzt den StockInfo-Nachweis nicht. ProjectTools bleibt bis zu einem eigenen Auftrag außerhalb dieses Tickets. |
+| **B2 · Hook prüft eine andere Fassung als Git committet** | `.githooks/pre-commit:22` ruft `make docs-check` auf dem Arbeitsbaum auf; der Kommentar in Zeile 10 benennt das selbst. Wenn ein fehlerhaftes README vorgemerkt und danach nur im Arbeitsbaum korrigiert wird, sieht der Hook die Korrektur, während Git die fehlerhafte Indexfassung committet. Verify #4 deckt nur einen Fall ohne diese Trennung ab. | Den Hook gegen diese Abweichung absichern und einen negativen Staging-Fall mit unverändertem HEAD und rotem Commit-Exit belegen. |
+| **B3 · Fünf Pflichtdateien ohne Eintragsgrund** | `.docs-check.conf.sh:162–166` enthält für `AGENT-ACTIVATION.md`, `AGENT-WORKFLOW.md`, beide Lessons-Einstiege und `LESSONS-ACCESS.md` nur Pfade. Das als erfüllt markierte Akzeptanzkriterium verlangt für **jeden** Config-Eintrag einen Grund. | Die fünf Gründe in der Config ergänzen und die betroffene Akzeptanzzeile erst nach Gegenprüfung als erfüllt markieren. |
+
+**Offene Testgrenze:** Verify #5 verlangt auch ein grünes `make test`.
+Claudes Lauf scheitert an zwei Online-Fällen in
+`tests/test_plugin_justetf_integration.py`; unter `app/`, `tests/`,
+`plugin_api/` und `dashboard/src/` gibt es keinen Ticket-Diff. Mein
+unabhängiger Offline-Lauf `make check` besteht. Der externe Online-Befund
+bleibt als Einschränkung sichtbar und wird nicht als grüner Gesamtlauf
+ausgegeben.
+
+**Standards:** Gelesen wurden
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md` mit
+`references/shell.md` und `references/documentation.md`, dazu
+`readme-conventions` und `makefile-conventions`.
+
+| Referenz | Ergebnis |
+|---|---|
+| Projektstruktur | ➖ nicht berührt |
+| Architektur, DRY und Namen | ✅ Bezeichnerinventar in Hook und Config: englische Zuweisungen; Config ist die einzige lokale Liste der Prüfregeln. Hook und Target verwenden dasselbe ProjectTools-Skript. |
+| Shell | ⚠️ 1 Befund: B2 betrifft die geprüfte Fassung des Hooks; `bash -n` und ShellCheck sind grün. |
+| CLI | ➖ keine neue Nutzer-CLI |
+| Frontend | ➖ nicht berührt |
+| Python | ➖ nicht berührt |
+| Persistenz | ➖ nicht berührt |
+| Qualität, Fehler und Tests | ⚠️ 1 Befund: B1 bleibt bei der negativen Gegenprobe grün; B2 hat keinen Staging-Gegenfall. |
+| Dokumentation | ⚠️ 1 Befund: B3; die übrigen geänderten Anleitungen und die beiden README-Sprachen sind in ihren gemeinsamen Aussagen konsistent. |
+
+**DRY-Gegenprobe:** Neue Prüfregeln, Pflichtdateien und Abhängigkeiten stehen
+nur in `.docs-check.conf.sh`; `AGENTS.md` und die READMEs erklären deren
+Benutzung. In Makefile, Hook und `.libs/ProjectTools` wurde keine zweite
+lokale Prüfimplementierung gefunden. Der Doku-Abgleich umfasst `README.md`,
+`README.de.md`, `docker/README.md`, die versionierte Vorschau,
+`unraid/README.md`, `AGENTS.md`, die README-Vorlage und die drei korrigierten
+Einzeldokumente. `docker/README.md` bleibt wegen fehlender gemeinsamer
+Änderung in Installation und Containerbetrieb unverändert; die Vorschau
+stimmt inhaltlich mit der Quelle überein und entspricht bytegleich der
+übergebenen Vorschaufassung.
+
+**Lessons-Einordnung:** B1 ist ein konkreter Fall von SI-P-16: Der
+Negativfall wird gemeldet, endet aber mit Exit 0. B2 und B3 sind derzeit
+Einzelfälle dieser Übergabe; sie begründen ohne zweiten Beleg keine neue
+Lesson. Der zugeordnete Observer kann die Einordnung im bestehenden Auftrag
+prüfen. Keine zentrale Regel wurde in dieser Reviewrunde geändert.
 
 ### Übergabe Runde 1 · Claude, 2026-10-15
 
