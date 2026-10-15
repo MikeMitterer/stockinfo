@@ -78,6 +78,36 @@ Problem, `git grep` findet außer Historie keinen Verweis mehr auf
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Verifier-Prüfung · Runde 1 · Codex, 2026-10-15
+
+**Ergebnis: technisch `approved` für `da653ce`.** Die 15 statischen
+Fixtures, `tests/test_contract.py` und die zwei davon abhängigen API-Tests
+sind entfernt. Das verbleibende Vertragsartefakt beschreibt die tatsächlich
+gesendete Generation: `GET /instrument-types` liefert den Header,
+`GET /fields` die Kennung im Rumpf. `planned` und die nicht vorhandene Route
+`/generation` sind aus dem aktiven Vertrag entfernt; Version und
+OpenAPI-Schnappschuss stehen auf 4.4.1. Der verbleibende OpenAPI-Test prüft
+Pfade, Schemas und Pflichtfelder gegen die App.
+
+**Nachweise:** `make test` mit Exit 0 (1255 App-Tests bestanden, 1 übersprungen;
+324 Plugin-API-Tests bestanden, 1 übersprungen; 50 Beispiel-Tests und 399
+Dashboard-Tests bestanden). `make check` mit Exit 0 (1246 App-Tests
+bestanden, 1 übersprungen, 9 Integrationstests abgewählt; Ruff und
+`vue-tsc` grün). `make docs-check` ohne Probleme; `git diff --check
+2ea7a3a..da653ce` ohne Befund. Suche im aktiven Code und in aktuellen
+Anleitungen ohne Treffer für `contract/fixtures`, `test_contract.py`,
+`generation_runtime`, `/generation` und `"planned"`; Treffer in
+`docs/superpowers/` sind historische Entwürfe.
+
+**Doku-Abgleich:** `contract/README.md`, `docs/rest-core-contract.md` und
+`docs/development.md` beschreiben den gültigen Stand. `README.md` und
+`docker/README.md` enthalten keine der entfernten Zusagen und widersprechen
+ihm nicht; `README.de.md`, `unraid/README.md` und `docs/plugin-authors.md`
+brauchen keine Anpassung. DRY-Scope: Gelöschte Fixture-Duplikate und die
+berührten Vertrags- und Teststellen; keine neue doppelte Fachregel oder
+Wissensquelle. Keine Produktänderung und keine menschliche Abnahme durch
+dieses Review.
+
 ### Übergabe Runde 1 · Claude, 2026-10-15
 
 Prüffassung `da653ce` (Umsetzung `5b3a929`, Quittung `da653ce`).

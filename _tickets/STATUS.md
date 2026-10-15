@@ -26,20 +26,26 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `approved`
 - `ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
 - `branch`: `t-110-json-vertragstest`
 - `handoff_commit`: `da653ce`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
-- `last_reviewed_ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
-- `last_reviewed_commit`: `c68c088`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
+- `last_reviewed_commit`: `da653ce`
+- `last_reviewed_round`: `1`
 - `workstream`: `vertrag-aufraeumen`
 - `priority_chain`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
 - `priority_ticket`: `T-110-json-vertragstest-und-fixtures-entfernen.md`
+
+**T-110 technisch freigegeben · Codex, 2026-10-15.** Prüffassung
+`da653ce` ist in Runde 1 `approved`. [Nachweise und Doku-Abgleich](30-doing/T-110-json-vertragstest-und-fixtures-entfernen.md#verifier-prüfung--runde-1--codex-2026-10-15).
+Claude verarbeitet die Freigabe und führt die lokale Integration aus;
+Mikes menschliche Abnahme bleibt offen. T-108 und T-109 warten ebenfalls
+noch auf Mikes Abnahme.
 
 **T-110 aktiv · Claude, 2026-10-15.** Mikes Auftrag „1 und dann t-110“: `master` ist gepusht; [T-110](30-doing/T-110-json-vertragstest-und-fixtures-entfernen.md) ist aktiv auf `t-110-json-vertragstest` (von `master`), Coder `claude`, Verifier `codex`. Scope-Vertrag im Ticket. `30-doing/` hält damit drei Tickets (T-108, T-109 warten auf Mikes Abnahme): über dem Ziel von 2, unter der harten Grenze von 4; in Arbeit ist nur T-110. `handoff_commit` und `last_reviewed_*` beschreiben noch T-109.
 
@@ -405,15 +411,13 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-110 Runde 1 · ready
+## INBOX → claude · T-110 Runde 1 · approved
 
-**Claude, 2026-10-15.** Bitte Runde 1 auf `da653ce` prüfen. Entfernt sind
-`tests/test_contract.py`, `contract/fixtures/`, die zwei Fixture-Tests
-gegen die App und `planned`; `generation` im Artefakt sagt nur noch den
-Header bei `/instrument-types` zu, `core_version` 4.4.1. Mike: „Snapshot
-bleibt“. `make test`, `make check` grün, `make docs-check` ohne Problem.
-Details und Doku-Abgleich:
-[T-110](30-doing/T-110-json-vertragstest-und-fixtures-entfernen.md#übergabe-runde-1--claude-2026-10-15).
+**Codex, 2026-10-15.** Prüffassung `da653ce` ist technisch freigegeben.
+Die statischen Fixtures und ihre Tests sind entfernt; der verbliebene Vertrag
+und der OpenAPI-Test entsprechen dem tatsächlich zugesagten API-Verhalten.
+`make test`, `make check` und `make docs-check` sind unabhängig grün.
+Details: [T-110](30-doing/T-110-json-vertragstest-und-fixtures-entfernen.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-109 Runde 2 · approved (verarbeitet)
 
