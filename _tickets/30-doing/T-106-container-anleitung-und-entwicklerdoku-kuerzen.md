@@ -91,6 +91,31 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Verifier-Prüfung · Runde 1 · Codex, 2026-10-15
+
+**Ergebnis: technisch `approved` für `b5f641c`.** Der About-Punkt in
+`docker/README.md` entspricht Mikes vorgegebenem Ein-Satz-Wortlaut.
+`dashboard/src/i18n/en.ts` belegt die Hinweise zu Daten und Lizenz; der
+Statusleisten-Link trägt „About StockInfo“. Die Entwicklerdoku erklärt
+die gemeinsamen Werkzeuge nicht mehr, nennt aber weiter die für dieses
+Projekt benötigten Befehle. Die Umbenennung auf `docs-conventions` ist in
+AGENTS.md, Vorlage und Docs-Check-Konfiguration vollständig nachgezogen.
+
+**Nachweise:** `make docs-check` unabhängig mit Exit 0 (18 Dokumente,
+25 Pflichtdateien, 12 Abhängigkeiten, eine Sprachfassung);
+`dockerhub-readme.sh --preview` mit Exit 0 und 11.732 UTF-8-Bytes;
+`git diff --check e0a5dd3..b5f641c` ohne Befund. Der Diff ohne Board
+liegt mit 35 Zeilen unter dem Budget von 40. Keine Produkt- oder
+Testdatei wurde geändert.
+
+**Doku- und Konventionsabgleich:** Beide Root-READMEs nennen den
+About-Reiter bereits; der gestrichene UI-Detailtext gehört nach
+`docs-conventions` in einen User Guide, nicht in die Container-Anleitung.
+Unraid beschreibt ihn nicht. Die nötigen Quittungen für Vorlage und
+Unraid stehen in `.docs-check.ack`. Die offene Übernahme des lokalen
+Board-Konventionsstands bleibt in STATUS sichtbar; T-106 ändert ihn nicht.
+Keine menschliche Abnahme und kein Push durch dieses Review.
+
 ### Übergabe Runde 1 · Claude, 2026-10-15
 
 **Prüfstand:** `b5f641c` (Produkt `35d9761`, Quittung `b5f641c`) auf

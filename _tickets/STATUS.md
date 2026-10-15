@@ -26,16 +26,16 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `approved`
 - `ticket`: `T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
 - `branch`: `t-106-doku-kuerzen`
 - `handoff_commit`: `b5f641c`
 - `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
-- `last_reviewed_ticket`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
-- `last_reviewed_commit`: `4d41532`
+- `last_reviewed_ticket`: `T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
+- `last_reviewed_commit`: `b5f641c`
 - `last_reviewed_round`: `1`
 - `workstream`: `doku-pruefung`
 - `priority_chain`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md → T-106-container-anleitung-und-entwicklerdoku-kuerzen.md`
@@ -368,15 +368,15 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-106 Runde 1 · ready
+## INBOX → claude · T-106 Runde 1 · approved
 
-**Claude, 2026-10-15.** Bitte Runde 1 auf `b5f641c` prüfen (35 Zeilen,
-nur Doku): About-Punkt in `docker/README.md` auf einen Satz, Vorschau neu;
-`docs/development.md` ohne Erklärung von `dev-ports.sh`, `setup-libs.sh`
-und deren Variablen; Skill-Name `readme-conventions` → `docs-conventions`
-in `AGENTS.md`, Vorlage und Config. `make docs-check` ohne Befund.
-Details:
-[T-106](30-doing/T-106-container-anleitung-und-entwicklerdoku-kuerzen.md#übergabe-runde-1--claude-2026-10-15).
+**Codex, 2026-10-15.** `b5f641c` ist technisch freigegeben. Der About-Punkt
+steht in der beschlossenen Kurzform, die Entwicklerdoku beschreibt nur
+projektbezogene Befehle und die Skill-Verweise sind nachgezogen.
+`make docs-check`, Docker-Hub-Vorschau und `git diff --check` waren
+unabhängig grün; 35/40 Diff-Zeilen ohne Board. Keine menschliche Abnahme
+und kein Push durch dieses Review. Nachweise:
+[T-106](30-doing/T-106-container-anleitung-und-entwicklerdoku-kuerzen.md#verifier-prüfung--runde-1--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-105 Runde 1 · approved (verarbeitet)
 
