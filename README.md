@@ -210,4 +210,5 @@ licenses.
 Contact: **office@MangoLila.at**.
 
 Details: [LICENSE](LICENSE) · [German license text](LICENSE.de.txt) ·
-[Provider and consumer declaration](LICENSING.md)
+[Provider and consumer declaration](LICENSING.md) · [Third-party
+notices](THIRD_PARTY_NOTICES.md)

@@ -11,7 +11,9 @@ Contact: **office@MangoLila.at**.
 MangoLila GmbH licenses StockInfo's own application code and accompanying
 materials under the EUPL 1.2. Michael Mitterer retains authorship and copyright.
 Components identified as third-party materials retain their separate licenses;
-the independent [plugin API](plugin_api/LICENSE) and its
+they are listed with their license texts in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The independent
+[plugin API](plugin_api/LICENSE) and its
 [example plugin](plugin_api/examples/us-example/LICENSE) remain under MIT.
 Installed dependencies retain their own copyright and license notices.
 
@@ -35,7 +37,8 @@ Original texts: [European Commission EUPL collection](https://interoperable-euro
 Source code is available at <https://github.com/MikeMitterer/stockinfo>.
 Published Docker image tags include the source commit; check out that commit
 when rebuilding an image. The image contains the license documents at
-`/app/LICENSE`, `/app/LICENSE.de.txt` and `/app/LICENSING.md`.
+`/app/LICENSE`, `/app/LICENSE.de.txt`, `/app/LICENSING.md` and
+`/app/THIRD_PARTY_NOTICES.md`.
 When distributing a changed build or offering a covered network service,
 provide the corresponding source for that version and retain these notices.
 
