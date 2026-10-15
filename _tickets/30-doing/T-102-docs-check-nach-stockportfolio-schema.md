@@ -18,10 +18,10 @@ StockPortfolio-Sitzung („Leg in StockInfo als ein Ticket nach doing dass dort
 nach dem Schema von StockPortfolio docs-check nachgezogen wird inkl.
 passendem config-File, Makefile-Target, README.template.md usw.“). In
 `30-doing/` aktiviert, Coder `claude`, Verifier `codex`. Umsetzung auf
-`t-102-docs-check` in Runde 2 unabhängig geprüft (`e57c7f4`). B1 ist durch
-Mikes Entscheidung aufgelöst, B2/B3 sind nachgearbeitet, B4/B5 in
-`9fc2e8e`; als Runde 3 übergeben (`a2615a9`). Technische Freigabe und
-menschliche Abnahme stehen aus.
+`t-102-docs-check` in Runde 3 für `a2615a9` technisch freigegeben. B1 ist
+durch Mikes Entscheidung aufgelöst; B2–B5 sind nachgearbeitet. Die
+justETF-Online-Tests bleiben als T-103 offen. Mikes menschliche Abnahme
+steht aus.
 
 ## Ausgangslage
 
@@ -181,10 +181,53 @@ Auftrag.
 
 ### Auflösung
 
-Offen. Runde 3 beim Verifier; keine technische Freigabe, keine menschliche
-Abnahme.
+Technisch freigegeben für `a2615a9` in Runde 3. Der Coder verarbeitet die
+Freigabe und den lokalen Merge. Mikes menschliche Abnahme bleibt offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+### Verifier-Prüfung · Runde 3 · Codex, 2026-10-15
+
+**Ergebnis: `approved` für `a2615a9`.** B4 ist unabhängig gegengeprüft:
+`PROJECT_TOOLS=.libs/ProjectTools/src bash .githooks/pre-commit` und die
+Variante mit `./.libs/` führen den Check aus und melden die Ergebniszeile.
+`bash -n` und ShellCheck sind grün. Der Hook normalisiert den Pfad vor dem
+Wechsel in den Index-Snapshot; die in Runde 2 nachgewiesene Umgehung ist
+damit geschlossen. Das Verhalten bei wirklich fehlenden ProjectTools bleibt
+als sichtbarer Hinweis mit Exit 0 dokumentiert.
+
+B5 ist erledigt: `README.md` und `README.de.md` nennen Deno 2 unter
+Voraussetzungen und Tests; `docs/README.template.md` verlangt dieselbe
+Angabe. Die Anleitungen trennen den Entwickler-Check vom fertigen Container.
+`docker/README.md` und `unraid/README.md` bleiben unverändert, weil Deno
+dort keine Betriebsvoraussetzung ist. Beide README-Sprachen stimmen in der
+neuen Aussage überein. Die Docker-Hub-Vorschau blieb unverändert, weil
+`docker/README.md` nicht geändert wurde.
+
+**Prüfbelege:** `make docs-check` ohne Probleme, `make check` Exit 0
+(Backend 1310 bestanden, 36 übersprungen, 9 abgewählt; Dashboard 399
+bestanden; Ruff und `vue-tsc` bestanden), `git diff --check` ohne Befund.
+Die geänderten Bash-Zuweisungen sind englisch. Neue Prüfregeln oder doppelte
+Wissensquellen kamen nicht hinzu: der Hook ruft weiter das eine
+ProjectTools-Skript auf, die Config bleibt die einzige Liste. Die relevanten
+`code-standards`-Gruppen Shell, Qualität und Dokumentation sind damit für
+Runde 3 erfüllt; Projektstruktur, Frontend, Python und Persistenz wurden
+nicht berührt.
+
+**Grenze der Freigabe:** `make test` ist wegen zweier justETF-Online-Tests
+weiter rot. Mike hat die Reparatur ausdrücklich als T-103 **nach T-102**
+in die Prioritätskette genommen; T-103 liegt in `20-ready/`. Für T-102 ist
+der Offline- und Doku-Check grün. Diese Freigabe erklärt `make test` nicht
+für bestanden und erteilt keine menschliche Abnahme.
+
+**Doku-Abgleich:** `README.md`, `README.de.md`,
+`docs/README.template.md` und `AGENTS.md` beschreiben den gültigen
+Entwicklerweg; `docker/README.md`, die Vorschau und `unraid/README.md`
+bleiben inhaltlich passend. Der Skill `task-verification-workflow` hat den
+lokalen Board-Konventionsrest nicht automatisch übernommen; der offene
+Abgleich `2026-09-28-activity-local` bleibt in `STATUS.md` für den
+schreibberechtigten Board-Schritt sichtbar. Keine Produktdatei wurde im
+Verifier-Review geändert.
 
 ### Nacharbeit Runde 2 · Claude, 2026-10-15
 

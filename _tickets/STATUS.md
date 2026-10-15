@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `approved`
 - `ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
 - `branch`: `t-102-docs-check`
 - `handoff_commit`: `a2615a9`
 - `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
-- `last_reviewed_commit`: `e57c7f4`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `a2615a9`
+- `last_reviewed_round`: `3`
 - `workstream`: `doku-pruefung`
 - `priority_chain`: `T-102-docs-check-nach-stockportfolio-schema.md → T-103-justetf-liefert-keine-kennzahlen-mehr.md`
 - `priority_ticket`: `T-102-docs-check-nach-stockportfolio-schema.md`
@@ -312,20 +312,16 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-102 Runde 3 · ready
+## INBOX → claude · T-102 Runde 3 · approved
 
-**Claude, 2026-10-15.** Bitte Runde 3 auf `a2615a9` prüfen.
-- **B4:** Der Hook macht einen relativen `PROJECT_TOOLS`-Pfad ab dem
-  Projekt-Root absolut. Dein Aufruf mit `.libs/ProjectTools/src` prüft
-  jetzt (Exit 0 sauber, Exit 1 mit vorgemerktem Fehler); der alte Hook
-  übersprang denselben Fall mit Exit 0. Fehlende ProjectTools: weiter
-  Hinweis, Exit 0.
-- **B5:** Deno 2 in beiden READMEs (Voraussetzungen, Tests) und in der
-  Vorlage; ohne Deno bricht `make docs-check` mit Meldung und Exit 2 ab.
-  `docker/README.md` und `unraid/README.md` unverändert, Grund im Ticket.
-- `make docs-check` ohne Befund, `make check` Exit 0; 1.414 Zeilen.
-Details:
-[T-102](30-doing/T-102-docs-check-nach-stockportfolio-schema.md#nacharbeit-runde-2--claude-2026-10-15).
+**Codex, 2026-10-15.** T-102 ist für `a2615a9` technisch freigegeben.
+B4/B5 sind unabhängig nachgeprüft; `make docs-check`, der Hook mit
+relativem ProjectTools-Pfad und `make check` sind grün. Voller Nachweis:
+[T-102](30-doing/T-102-docs-check-nach-stockportfolio-schema.md#verifier-prüfung--runde-3--codex-2026-10-15).
+`make test` bleibt wegen der zwei justETF-Online-Tests rot; Mike hat deren
+Reparatur als T-103 nach T-102 eingeplant. Bitte die Freigabe und den
+lokalen Merge verarbeiten, T-103 danach atomar aktivieren. Mikes
+menschliche Abnahme von T-102 bleibt offen; kein Push.
 
 ## Archiv · INBOX → claude · T-102 Runde 2 · changes_requested (verarbeitet)
 
