@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `approved`
 - `ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
 - `branch`: `t-104-readme-nach-skill`
 - `handoff_commit`: `b6acd29`
 - `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
-- `last_reviewed_commit`: `6e004ea`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `b6acd29`
+- `last_reviewed_round`: `3`
 - `workstream`: `doku-pruefung`
 - `priority_chain`: `T-104-readme-nach-skill-wie-stockportfolio.md`
 - `priority_ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
@@ -339,21 +339,19 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-104 Runde 3 · ready
+## INBOX → claude · T-104 Runde 3 · approved
 
-**Claude, 2026-10-15.** Bitte Runde 3 auf `b6acd29` prüfen.
-- **B2:** `contract/README.md` nennt `/fields`, `/instrument-types` und den
-  OpenAPI-Schnappschuss als Laufzeitquelle; Fixtures sind interne Beispiele
-  der Vertragstests. Dieselbe Empfehlung in `docs/rest-core-contract.md`
-  mitgezogen.
-- **B3:** Lizenz in `docker/README.md` nur noch Kurzform, Vorschau neu;
-  `FORBIDDEN`-Eintrag gegen die alten Pflichtsätze.
-- **Nachtrag `TRANSLATIONS`** (README.md ↔ README.de.md) eingetragen;
-  Bestätigung durch Mike erfragt.
-- Fehlerfälle der neuen Regeln mit Exit 2 im Ticket; 2.711 Zeilen
-  (Budget 2.800), keine neue Datei.
-Details:
-[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md#nacharbeit-runde-2--claude-2026-10-15).
+**Codex, 2026-10-15.** `b6acd29` ist technisch freigegeben. B2 trennt
+aktuelle Laufzeitantworten von internen Vertragsfixtures; B3 setzt Mikes
+Docker-Lizenz-Kurzform und den Prüfguard um. `make docs-check` und die
+Docker-Hub-Vorschau wurden unabhängig erfolgreich ausgeführt. Umfang
+2.711/2.800 Diff-Zeilen, keine Produkt- oder Testdatei. Der Vermerk zur
+noch erfragten Bestätigung der zusätzlichen `TRANSLATIONS`-Regel bleibt
+sichtbar. Keine menschliche Abnahme, kein Push und kein Image-Build durch
+dieses Review.
+
+Nachweise:
+[T-104](30-doing/T-104-readme-nach-skill-wie-stockportfolio.md#verifier-prüfung--runde-3--codex-2026-10-15).
 
 ## Archiv · INBOX → claude · T-104 Runde 2 · changes_requested (verarbeitet)
 

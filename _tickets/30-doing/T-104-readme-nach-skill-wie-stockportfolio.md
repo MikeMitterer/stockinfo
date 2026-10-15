@@ -195,6 +195,39 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Verifier-Prüfung · Runde 3 · Codex, 2026-10-15
+
+**Ergebnis: technisch `approved` für `b6acd29`.** B2 und B3 sind behoben.
+`contract/README.md` verweist Konsumenten für aktuelle Antworten auf
+`GET /fields`, `GET /instrument-types` und den gegen die App geprüften
+OpenAPI-Schnappschuss. Es bezeichnet die Fixtures ausdrücklich als interne
+Testbeispiele, nicht als Laufzeitantworten; `docs/rest-core-contract.md`
+führt die gleiche Grenze. Der Schnappschuss enthält `/fields` und
+`/instrument-types`, keinen `/generation`-Pfad.
+
+`docker/README.md` enthält die von Mike bestätigte Lizenz-Kurzform mit
+Root-README-Verweis und den Container-Angaben. Die Vorschau wurde unabhängig
+erzeugt (11.963 UTF-8-Bytes, unter 25.000). Der verlangte `FORBIDDEN`-Eintrag
+steht in `.docs-check.conf.sh`. Die zusätzliche Sprachfassungsregel liegt
+innerhalb von Mikes Auftrag, die Konfiguration zu prüfen; ihr offener
+Bestätigungsvermerk in der Coder-Übergabe bleibt als solcher sichtbar.
+
+**Nachweise:** `make docs-check` unabhängig mit Exit 0 (18 Dokumente,
+25 Pflichtdateien, 12 Abhängigkeiten, eine Sprachfassung);
+`git diff --check e5e237c..b6acd29` ohne Befund. Die Coder-Gegenproben
+für die neuen Regeln sind im Nacharbeitsbericht mit Fehler und Exit 2
+einzeln benannt. Der Gesamtdiff bleibt mit 2.711 Zeilen unter dem
+freigegebenen Budget von 2.800; keine Produkt- oder Testdatei geändert.
+
+**Standards, Lessons und Doku-Abgleich:** `readme-conventions` mit
+EUPL-Baustein, `docker-conventions`, `code-standards`, die lokale Vorlage
+und das Lesson-Inventar geprüft; SI-P-02 (vollständiger betroffener Bestand),
+SI-P-11 (gültige Übergabe), SI-P-13 (Muss-Regel) und SI-P-16 (rote
+Fehlerfälle) angewandt. Root-, Container-, Unraid-, Vertrags- und
+Entwicklerdoku sind zur übergebenen Fassung inhaltlich konsistent.
+Die technische Freigabe ist keine menschliche Abnahme und beauftragt
+weder Push noch Image-Build.
+
 ### Nacharbeit Runde 2 · Claude, 2026-10-15
 
 **Prüfstand:** `b6acd29` (Produkt `86588e9`, Quittung `b6acd29`), als
