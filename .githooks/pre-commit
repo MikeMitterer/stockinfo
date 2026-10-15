@@ -29,7 +29,11 @@ if [[ -n "${GIT_INDEX_FILE:-}" && "${GIT_INDEX_FILE}" != /* ]]; then
 fi
 
 # ProjectTools liegt unter .libs/ (von git ignoriert) und fehlt im Snapshot.
+# Ein gesetzter relativer Pfad gilt ab dem Projekt-Root, wie bei make.
 export PROJECT_TOOLS="${PROJECT_TOOLS:-${ROOT}/.libs/ProjectTools/src}"
+if [[ "${PROJECT_TOOLS}" != /* ]]; then
+    PROJECT_TOOLS="${ROOT}/${PROJECT_TOOLS}"
+fi
 
 SNAPSHOT="$(mktemp -d "${TMPDIR:-/tmp}/docs-check-index.XXXXXX")"
 readonly SNAPSHOT

@@ -88,7 +88,9 @@ ETFs außerhalb Europas und der Hinweis zu Währung und Börse. Quellen:
 ## 7. Voraussetzungen und Schnellstart
 
 Python- und Node-Version aus `Makefile` (`PYTHON_BOOTSTRAP`) und
-`dashboard/package.json`, dann die Schritte vom Klonen bis zum laufenden
+`dashboard/package.json`, Deno 2 für `make docs-check` (Voraussetzung laut
+`.libs/ProjectTools/src/bash/docs-check.sh`, nur mit ProjectTools nötig),
+dann die Schritte vom Klonen bis zum laufenden
 Backend und Dashboard. Adressen aus `make hints`.
 
 ## 8. Sicherheitsmodell
@@ -113,8 +115,9 @@ Unraid: ein Satz und der Link auf `unraid/README.md`.
 
 ## 11. Tests
 
-Welche Make-Targets welche Teile prüfen, inklusive `make docs-check`, und was
-die Online-Tests (`integration`) von `make check` unterscheidet.
+Welche Make-Targets welche Teile prüfen, inklusive `make docs-check` samt
+Voraussetzungen (ProjectTools, Deno 2) und Pre-Commit-Hook, und was die
+Online-Tests (`integration`) von `make check` unterscheidet.
 
 ## 12. Releases und Changelog
 

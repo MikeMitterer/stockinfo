@@ -174,6 +174,10 @@ Beides weicht vom REST-Artefakt ab; siehe die
 - optional **Docker** (um den Container zu betreiben)
 - **Node.js 24+ mit npm** (`make setup` installiert die Dashboard-Pakete; das
   Backend und das fertige Docker-Image brauchen kein Node.js auf dem Host)
+- **Deno 2** für `make docs-check`, nur wenn ProjectTools unter `.libs/`
+  verlinkt ist; `make setup` installiert es nicht. Ohne ProjectTools wird die
+  Prüfung übersprungen, dann brauchen `make test`, `make check` und der
+  Pre-Commit-Hook kein Deno
 
 **Für die Entwicklung brauchst du nichts unter `.libs/`.** `make setup`, die
 `dev-*`-Targets, `make test`, `make check` und `make up`/`down` funktionieren
@@ -590,8 +594,9 @@ make check                      # alles, was ohne Netz läuft, dazu Ruff und Typ
 ```
 
 `make docs-check` prüft die Nutzerdoku gegen das Projekt; die Regeln stehen in
-`.docs-check.conf.sh`. Es braucht ProjectTools unter `.libs/`; ohne sie gibt
-das Target einen Hinweis aus, und die übrigen Tests laufen trotzdem.
+`.docs-check.conf.sh`. Es braucht ProjectTools unter `.libs/` und Deno 2;
+ohne ProjectTools gibt das Target einen Hinweis aus, und die übrigen Tests
+laufen trotzdem.
 `make setup` installiert außerdem einen Git-Pre-Commit-Hook, der die Prüfung
 ausführt und einen Commit anhält, wenn sie Probleme meldet.
 

@@ -163,6 +163,10 @@ splits and dividends. Both behaviors differ from the REST artifact; see the
 - optional **Docker** (to run the container)
 - **Node.js 24+ with npm** (`make setup` installs the dashboard packages;
   the backend and prebuilt Docker image do not use Node.js on the host)
+- **Deno 2** for `make docs-check`, only when ProjectTools is linked under
+  `.libs/`; `make setup` does not install it. Without ProjectTools the check
+  is skipped, so `make test`, `make check` and the pre-commit hook do not
+  need Deno
 
 **You do not need anything under `.libs/` to develop.** `make setup`, the
 `dev-*` targets, `make test`, `make check` and `make up`/`down` work on a plain
@@ -554,8 +558,9 @@ make check                      # everything that works offline, plus Ruff and t
 ```
 
 `make docs-check` checks the user documentation against the project; its
-rules are in `.docs-check.conf.sh`. It needs ProjectTools under `.libs/`;
-without it, the target prints a note and the other tests still run.
+rules are in `.docs-check.conf.sh`. It needs ProjectTools under `.libs/`
+and Deno 2; without ProjectTools, the target prints a note and the other
+tests still run.
 `make setup` also installs a Git pre-commit hook that runs the check and
 stops a commit when it reports problems.
 
