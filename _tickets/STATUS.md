@@ -26,20 +26,27 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `portfolio_review`
-- `ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
-- `branch`: `master`
+- `phase`: `claude_working`
+- `ticket`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
+- `branch`: `t-105-sprachfassungs-regel`
 - `handoff_commit`: `b6acd29`
-- `review_round`: `3`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
-- `owner`: `mike`
+- `owner`: `claude`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
 - `last_reviewed_commit`: `b6acd29`
 - `last_reviewed_round`: `3`
 - `workstream`: `doku-pruefung`
-- `priority_chain`: `T-104-readme-nach-skill-wie-stockportfolio.md`
-- `priority_ticket`: `T-104-readme-nach-skill-wie-stockportfolio.md`
+- `priority_chain`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
+- `priority_ticket`: `T-105-sprachfassungs-regel-in-der-entwicklerdoku.md`
+
+**T-105 aktiv · Claude, 2026-10-15.** Auf Mikes Bestätigung („Ja, der ist
+auch von mir“) zum Vorschlag der StockPortfolio-Sitzung: neue Kette mit
+[T-105](30-doing/T-105-sprachfassungs-regel-in-der-entwicklerdoku.md) auf
+`t-105-sprachfassungs-regel` (von `master`), Coder `claude`, Verifier
+`codex`. Die übrigen offenen Punkte aus dem folgenden Vermerk bleiben bei
+Mike.
 
 **T-104 gemergt, Kette abgeschlossen · Claude, 2026-10-15.** Codex hat
 T-104 in Runde 3 freigegeben (`d71c5ee`); `t-104-readme-nach-skill` ist
@@ -2586,15 +2593,11 @@ T-70 ist keine zweite fortgeschriebene Fassung des Haupttickets.
 
 Die [Aufnahmeregel](.agents/AGENT-WORKFLOW.md#ticketgrenzen) erlaubt höchstens
 zwei zusätzliche Tickets bei begründetem Bedarf. Andere Ordner haben kein Limit.
-Aktuelle Ausnahmen: `30-doing` mit fünf Tickets (T-88, T-89, T-90, T-91,
-T-92), eins über der harten Obergrenze. Bedarf: Mike nimmt die Tickets erst
-ab, wenn die SQL-Umstellung fertig ist und die visuellen Tests bestanden
-sind, und hat T-90 bis T-92 als Kette beauftragt (2026-10-02). T-88 bis
-T-91 sind technisch erledigt; T-92 ist aktiv.
-Mike erlaubt T-92 ausdrücklich als fünftes Ticket über der harten
-Obergrenze (2026-10-02, siehe „T-92 startet trotz Doing-Grenze“) und hat
-die Obergrenze danach für T-93 und Folgetickets aus dessen Tests temporär
-ausgesetzt, bis zur Abnahme der SQL-Umstellung. Bei einer Überschreitung hier Ordner, betroffene
+Aktuelle Ausnahmen: `30-doing` mit drei Tickets (T-103, T-104, T-105), eins
+über der Zielgrenze, unter der harten Obergrenze. Bedarf: T-103 und T-104
+sind technisch freigegeben und gemergt und warten nur auf Mikes Abnahme;
+T-105 ist ein kleiner Folgeauftrag zu T-104 (Mike, 2026-10-15). Bei einer
+Überschreitung hier Ordner, betroffene
 Tickets und konkreten Bedarf nennen; nach Rückkehr zur Zielgrenze entfernen.
 Der Bestand wird aus den Ticketdateien ermittelt, nicht als Zähler gepflegt.
 
