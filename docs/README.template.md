@@ -5,8 +5,8 @@ aktualisiert. Diese Datei enthält keinen Text zum Übernehmen: Jeder Abschnitt
 beschreibt, was hinein gehört und woher die Angaben kommen. Formuliere selbst.
 
 Die Datei hat zwei Teile: zuerst Anweisungen für die Arbeit, dann die
-nummerierten Abschnitte des README in ihrer Reihenfolge. Nur die nummerierten
-Abschnitte erscheinen im README.
+nummerierten Abschnitte des README in ihrer Reihenfolge. Diese Abschnitte
+beschreiben den Inhalt; davor steht im README zusätzlich die Übersicht.
 
 ## Anweisungen
 
@@ -32,6 +32,10 @@ genau einem dieser Dokumente; das README verlinkt nur:
 | Quellenketten, Dateiquelle, Plugins | `docs/plugins.md`, `docs/plugin-authors.md` |
 | Zusagen der REST-API | `docs/rest-core-contract.md` |
 | Neuerungen eines Release | `docs/release-notes.md`, `CHANGELOG.md` |
+
+**Übersicht.** Zwischen Abschnitt 3 und 4 steht die Übersicht nach dem Skill
+(`## Contents` beziehungsweise `## Übersicht`) mit allen `##`-Abschnitten ab
+Abschnitt 4. Nach jedem dieser Abschnitte folgt der Rücksprung dorthin.
 
 **Funktionsliste.** Quelle sind die Seiten der Navigation
 (`dashboard/src/components/AppHeader.vue`), die Bereiche der Einstellungen

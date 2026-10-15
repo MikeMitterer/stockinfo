@@ -8,6 +8,19 @@ Stock and ETF quotes, price history and a web dashboard in one container. By def
 
 ![StockInfo dashboard](https://raw.githubusercontent.com/MikeMitterer/stockinfo/master/unraid/screenshots/dashboard.png)
 
+## Contents
+
+- [StockPortfolio: the companion app](#stockportfolio-the-companion-app)
+- [Quick start](#quick-start)
+- [Docker Compose](#docker-compose)
+- [What you get](#what-you-get)
+- [Storage and permissions](#storage-and-permissions)
+- [Configuration](#configuration)
+- [Security](#security)
+- [Updates, backups and troubleshooting](#updates-backups-and-troubleshooting)
+- [Unraid](#unraid)
+- [Support and license](#support-and-license)
+
 ## StockPortfolio: the companion app
 
 StockInfo works on its own. Scripts, spreadsheets and other apps can use its quotes through the REST API; no second container is needed.
@@ -17,6 +30,8 @@ StockInfo works on its own. Scripts, spreadsheets and other apps can use its quo
 To use both, start StockInfo first, then the `mangolila/stockportfolio` container with `STOCKINFO_API_URL` set to your StockInfo address.
 
 Details are in its [Docker guide](https://hub.docker.com/r/mangolila/stockportfolio) ([source code](https://github.com/MikeMitterer/stockportfolio)).
+
+[↑ Contents](#contents)
 
 ## Quick start
 
@@ -38,6 +53,8 @@ curl http://localhost:8000/quote/IE00B3RBWM25
 ```
 
 The example exposes the service only on the Docker host. To reach it from your home network, replace `127.0.0.1:8000:8000` with `8000:8000` and use the host's address in your browser. Keep that port inside your home network.
+
+[↑ Contents](#contents)
 
 ## Docker Compose
 
@@ -62,7 +79,15 @@ volumes:
   stockinfo-data:
 ```
 
-Start it with `docker compose up -d`. This is an alternative to the `docker run` example; Compose creates its own project-scoped data volume.
+Start it from that directory:
+
+``` bash
+docker compose up -d
+```
+
+This is an alternative to the `docker run` example; Compose creates its own project-scoped data volume.
+
+[↑ Contents](#contents)
 
 ## What you get
 
@@ -88,6 +113,8 @@ Online sources need outbound internet access and can impose rate limits or retur
 
 **No official APIs.** The default sources justETF and Yahoo Finance do not offer a public API for this data. StockInfo reads their public web pages through the open-source libraries `justetf-scraping` and `yfinance`. justETF's terms of use, for example, forbid automated price queries and excessive load. StockInfo fetches no prices from justETF, only fund data: once per ETF every `METADATA_TTL_DAYS` (default 7), plus when you refresh a single instrument by hand. Whoever runs StockInfo is responsible for using these sources in line with the providers' terms. To avoid them, remove them from `/data/sources.yaml` or use a file-only source profile.
 
+[↑ Contents](#contents)
+
 ## Storage and permissions
 
 Mount persistent storage at **`/data`**. It contains the SQLite database (`/data/stockinfo.db`), source configuration and other application data. Keep this volume when replacing or updating the container.
@@ -101,6 +128,8 @@ The container starts as root only to prepare `/data`, then runs the application 
 - With `--user UID:GID` it skips the ownership step and only checks that `/data` is writable for that user.
 
 Source chains live in `/data/sources.yaml` and are loaded at startup. Restart the container after editing them. See the [source configuration guide](https://github.com/MikeMitterer/stockinfo/blob/master/docs/plugins.md) for file-based sources and plugins; paths described there beside the database belong under `/data` in the container.
+
+[↑ Contents](#contents)
 
 ## Configuration
 
@@ -118,7 +147,11 @@ Pass settings with `docker run -e NAME=value`, an `--env-file`, or Compose's `en
 | `OPENFIGI_API_KEY` | Empty | Optional key for a higher OpenFIGI rate limit |
 | `CORS_ORIGINS` | `["http://localhost:5173"]` | Web pages on another address that may call the API, as a JSON list; see [Security](#security) |
 
-The container listens on **port 8000**. To use a different host port, change only the left-hand port in the mapping, for example `127.0.0.1:8080:8000`. Dashboard and API share an origin; no separate frontend container is needed.
+The container listens on **port 8000**. Dashboard and API share an origin; no separate frontend container is needed.
+
+To use a different host port, change only the left-hand port in the mapping, for example `127.0.0.1:8080:8000`.
+
+[↑ Contents](#contents)
 
 ## Security
 
@@ -137,6 +170,8 @@ Every host address the port is published on can reach it. To use StockInfo only 
 
 Two limits exist, and they are about load rather than access: the global refresh takes a non-blocking lock so two runs cannot overlap, and justETF is only scraped once every `METADATA_TTL_DAYS` (an explicit single refresh still forces it).
 
+[↑ Contents](#contents)
+
 ## Updates, backups and troubleshooting
 
 For Compose installations:
@@ -151,11 +186,23 @@ For `docker run` installations, pull the new image, stop and remove the old cont
 
 Back up the whole `/data` volume before updating. For a filesystem copy, stop the container first so that the SQLite database and its journal files stay consistent. Keep the backup outside the container and its data volume.
 
-For the `docker run` example, view logs with `docker logs --tail=100 stockinfo`. The image includes a healthcheck against `/operational`; `/health` checks that the process is running, and `/ready` reports whether normal requests are allowed. If the service waits for a migration or reports a source error, inspect the logs and dashboard before restarting repeatedly.
+For the `docker run` example, view the logs with:
+
+``` bash
+docker logs --tail=100 stockinfo
+```
+
+The image includes a healthcheck against `/operational`; `/health` checks that the process is running, and `/ready` reports whether normal requests are allowed.
+
+If the service waits for a migration or reports a source error, inspect the logs and dashboard before restarting repeatedly.
+
+[↑ Contents](#contents)
 
 ## Unraid
 
 See the [Unraid guide](https://github.com/MikeMitterer/stockinfo/blob/master/unraid/README.md) for installation, configuration and operation.
+
+[↑ Contents](#contents)
 
 ## Support and license
 
@@ -174,3 +221,5 @@ StockInfo is licensed under the **[EUPL 1.2](https://github.com/MikeMitterer/sto
 In the dashboard, **Settings → About** links to the EUPL in the selected UI language and to the consumer declaration.
 
 The image includes `/app/LICENSE`, `/app/LICENSE.de.txt`, `/app/LICENSING.md`, the [third-party notices](https://github.com/MikeMitterer/stockinfo/blob/master/THIRD_PARTY_NOTICES.md) at `/app/THIRD_PARTY_NOTICES.md`, and the MIT licenses of the plugin API at `/app/plugin_api/LICENSE` and `/app/plugin_api/examples/us-example/LICENSE`. Image tags identify the source commit in the [source repository](https://github.com/MikeMitterer/stockinfo).
+
+[↑ Contents](#contents)

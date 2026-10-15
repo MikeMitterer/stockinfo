@@ -31,6 +31,18 @@ Kursverlauf der gewählten Zeile ist unten angedockt._
 > oder löschen. Stell es nicht ins Internet. Betreibe es nur im Heimnetz und
 > verbinde dich von außen per VPN, zum Beispiel mit WireGuard oder Tailscale.
 
+## Übersicht
+
+- [Funktionen](#funktionen)
+- [Datenquellen](#datenquellen)
+- [StockPortfolio: die Schwester-App](#stockportfolio-die-schwester-app)
+- [Schnellstart](#schnellstart)
+- [Konfiguration](#konfiguration)
+- [Entwicklung](#entwicklung)
+- [Weitere Dokumentation](#weitere-dokumentation)
+- [Support](#support)
+- [Lizenz](#lizenz)
+
 ## Funktionen
 
 - **Kurse per ISIN oder Symbol** – europäische und US-Aktien und -ETFs; die
@@ -70,6 +82,8 @@ außerhalb Europas, die keine freie Quelle verlässlich angibt.
 
 ![Detailbereich](unraid/screenshots/detail-area.png)
 
+[↑ Übersicht](#übersicht)
+
 ## Datenquellen
 
 Die Standardeinrichtung nutzt diese kostenlosen Quellen:
@@ -83,6 +97,7 @@ Die Standardeinrichtung nutzt diese kostenlosen Quellen:
 
 Die Quellen stehen in `sources.yaml` neben der Datenbank. Eine mitgelieferte
 Dateiquelle kann selbst gepflegte Daten liefern, als Rückfall oder allein.
+
 Siehe [Quellenkonfiguration](docs/plugins.md) und die
 [Anleitung für Plugin-Autoren](docs/plugin-authors.md).
 
@@ -94,10 +109,16 @@ Kursabfragen und übermäßige Last.
 
 StockInfo holt von justETF keine Kurse, nur Fondsdaten: einmal je ETF alle
 `METADATA_TTL_DAYS` (Vorgabe 7) und zusätzlich, wenn du ein einzelnes
-Instrument von Hand aktualisierst. Wer StockInfo betreibt, ist dafür
+Instrument von Hand aktualisierst.
+
+Wer StockInfo betreibt, ist dafür
 verantwortlich, diese Quellen im Rahmen der Bedingungen der Anbieter zu
-nutzen. Wer sie vermeiden will, nimmt sie aus `sources.yaml` heraus oder
+nutzen.
+
+Wer sie vermeiden will, nimmt sie aus `sources.yaml` heraus oder
 verwendet das reine Dateiprofil.
+
+[↑ Übersicht](#übersicht)
 
 ## StockPortfolio: die Schwester-App
 
@@ -128,6 +149,8 @@ Richte zuerst StockInfo ein, dann StockPortfolio.
 Wie du StockPortfolio auf deine StockInfo-Adresse zeigen lässt, erklärt
 dessen [Einrichtungsanleitung](https://github.com/MikeMitterer/stockportfolio#setup).
 
+[↑ Übersicht](#übersicht)
+
 ## Schnellstart
 
 Du brauchst Docker. Das Image enthält Backend, Dashboard und alle
@@ -157,6 +180,8 @@ Sicherheit.
 
 Für Unraid siehe die [Unraid-Anleitung](unraid/README.md) (englisch).
 
+[↑ Übersicht](#übersicht)
+
 ## Konfiguration
 
 | Einstellung | Vorgabe | Bedeutung |
@@ -169,11 +194,15 @@ Für Unraid siehe die [Unraid-Anleitung](unraid/README.md) (englisch).
 
 Alle Einstellungen beschreibt die [Docker-Anleitung](docker/README.md#configuration).
 
+[↑ Übersicht](#übersicht)
+
 ## Entwicklung
 
 Einrichtung, Befehle, die Referenz der REST-API, Tests und der
 Release-Ablauf stehen in der [Entwicklerdoku](docs/development.md)
 (englisch).
+
+[↑ Übersicht](#übersicht)
 
 ## Weitere Dokumentation
 
@@ -185,6 +214,8 @@ Release-Ablauf stehen in der [Entwicklerdoku](docs/development.md)
 - [Entwicklerdoku](docs/development.md) – Einrichtung, REST-API, Tests und Releases (englisch)
 - [Changelog](CHANGELOG.md) und [Release Notes](docs/release-notes.md) – Änderungen je Release
 
+[↑ Übersicht](#übersicht)
+
 ## Support
 
 StockInfo ist für den Eigengebrauch des Autors gebaut und wird kostenlos
@@ -192,6 +223,8 @@ geteilt.
 
 [Issues](https://github.com/MikeMitterer/stockinfo/issues) und Pull Requests
 werden gelesen, ohne Zusage auf Antwort, Fehlerbehebung oder neue Funktion.
+
+[↑ Übersicht](#übersicht)
 
 ## Lizenz
 
@@ -222,3 +255,5 @@ Kontakt: **office@MangoLila.at**.
 Details: [LICENSE](LICENSE) · [Deutscher Lizenztext](LICENSE.de.txt) ·
 [Anbieter- und Verbrauchererklärung](LICENSING.md) · [Hinweise zu
 Fremdkomponenten](THIRD_PARTY_NOTICES.md)
+
+[↑ Übersicht](#übersicht)

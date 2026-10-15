@@ -35,9 +35,12 @@ Installing and running the finished container is described in the
 `dev-*` targets, `make test`, `make check` and `make up`/`down` work on a plain
 clone. Targets marked **[Maintainer]** in `make help` (`build`, `push`,
 `status`, `tag-*`, `version`) need the author's private BashLib and stop with a
-note without it. To build the image yourself, run
-`docker build -f docker/Dockerfile -t mangolila/stockinfo:latest .` instead of
-`make build`.
+note without it. To build the image yourself, run this instead of
+`make build`:
+
+```bash
+docker build -f docker/Dockerfile -t mangolila/stockinfo:latest .
+```
 
 For the maintainer, `make setup` also links the shared libraries under
 `.libs/`. The Docker image needs none of this.
@@ -92,7 +95,8 @@ versions and cause. See [plugin data migrations](plugin-authors.md#plugin-data-m
 
 ## Configuration (.env)
 
-All values can be overridden via `.env` (`cp .env.example .env`):
+All values can be overridden in `.env`; step 1 of the setup above creates it
+from `.env.example`:
 
 | Variable | Meaning | Default |
 |---|---|---|
@@ -385,8 +389,11 @@ the working database; additional test databases belong under `tmp_path`.
 `make changelog` regenerates [CHANGELOG.md](../CHANGELOG.md) locally from release
 tags and Conventional Commits. It does not commit or push. The generated file
 is replaced on the next run; its content comes from commit and release tag
-messages. Use `make changelog PYTHON=/path/to/python3`
-to select another Python interpreter (Python 3.9+).
+messages. To select another Python interpreter (Python 3.9+):
+
+```bash
+make changelog PYTHON=/path/to/python3
+```
 
 `make tag-major`, `make tag-minor` and `make tag-patch` bump the version,
 commit, tag and push it, then generate, commit and push the changelog. Pass
@@ -394,8 +401,11 @@ commit, tag and push it, then generate, commit and push the changelog. Pass
 working tree and the shared BashLib and ProjectTools libraries.
 
 If the changelog step fails after the tag has been pushed, fix the cause and
-run `python3 .libs/ProjectTools/src/python/changelog.py --publish` to retry
-without bumping the version again.
+retry without bumping the version again:
+
+```bash
+python3 .libs/ProjectTools/src/python/changelog.py --publish
+```
 
 [↑ Contents](#contents)
 

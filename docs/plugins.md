@@ -7,6 +7,15 @@ Repository anfasst.
 
 Es gibt zwei Wege, und beide landen in derselben Registry.
 
+## Übersicht
+
+- [1. Eine Datei im Datenvolume — zum Ausprobieren](#1-eine-datei-im-datenvolume--zum-ausprobieren)
+- [2. Ein installiertes Paket — zum Weitergeben](#2-ein-installiertes-paket--zum-weitergeben)
+- [Auswählen: `sources.yaml`](#auswählen-sourcesyaml)
+- [Was die App mit einem fremden Plugin macht](#was-die-app-mit-einem-fremden-plugin-macht)
+- [Datenversion und Migration beim Start](#datenversion-und-migration-beim-start)
+- [Wer selbst eine Quelle schreibt](#wer-selbst-eine-quelle-schreibt)
+
 ## 1. Eine Datei im Datenvolume — zum Ausprobieren
 
 Lege eine `*.py` in `data/plugins/` und exportiere `SOURCES`:
@@ -51,6 +60,8 @@ Nach einem Neustart steht `meine-quelle` in `GET /sources` und lässt sich in
 
 Dateien mit führendem `_` werden übersprungen — so bleiben Hilfsmodule und
 Editor-Reste außen vor.
+
+[↑ Übersicht](#übersicht)
 
 ## 2. Ein installiertes Paket — zum Weitergeben
 
@@ -99,6 +110,8 @@ Zurückrollen ist damit ein Zeileneditat.
 > ausdrücklich und nicht eine Konfigurationsdatei im Hintergrund. Wer selbst
 > hostet, hat ohnehin ein Container-Image installiert, dem er vertraut — diese
 > Entscheidung soll bewusst bleiben und nicht beiläufig passieren.
+
+[↑ Übersicht](#übersicht)
 
 ## Auswählen: `sources.yaml`
 
@@ -158,6 +171,8 @@ Drei Feinheiten, die man beim Eintragen kennen sollte:
 - `GET /fx` nennt die Quelle, die den Kurs **geliefert** hat, nicht die, die
   vorne steht.
 
+[↑ Übersicht](#übersicht)
+
 ## Was die App mit einem fremden Plugin macht
 
 | Lage | Verhalten |
@@ -174,6 +189,8 @@ synchronen Python-Code im selben Prozess gibt es keine harte Zeitgrenze; ein
 Timeout ließe den Aufrufer zurückkehren, der Thread liefe weiter. Zeitgrenzen
 setzt deshalb das Plugin bei seinen eigenen I/O-Aufrufen — der Vertrag verlangt
 es, erzwingen kann er es nicht.
+
+[↑ Übersicht](#übersicht)
 
 ## Datenversion und Migration beim Start
 
@@ -199,6 +216,8 @@ Der [Autorenvertrag](plugin-authors.md#plugin-data-migrations) beschreibt den
 Kontext und ein ausführbares Beispiel. Die vorhandene Sicherungsfunktion wird
 wiederverwendet; StockInfo führt keine automatische Datenbankrotation aus.
 
+[↑ Übersicht](#übersicht)
+
 ## Wer selbst eine Quelle schreibt
 
 Ab hier ist die Anleitung **englisch** und steht in
@@ -217,3 +236,5 @@ Ein vollständiges, baubares Beispielpaket liegt daneben in
 mitgelieferte `yaml-file` in
 [`plugin_api/examples/yaml_file.py`](../plugin_api/examples/yaml_file.py)
 zeigt eine Quelle in allen fünf Rollen.
+
+[↑ Übersicht](#übersicht)

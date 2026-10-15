@@ -3,6 +3,8 @@
 Curated summaries of selected releases. Every tagged change is in the
 [changelog](../CHANGELOG.md).
 
+## Contents
+
 - [1.5.0](#whats-new-in-150)
 - [1.1.0](#whats-new-in-110)
 - [1.0.0](#whats-new-in-100)
@@ -23,6 +25,8 @@ Curated summaries of selected releases. Every tagged change is in the
 - A mistyped ISIN such as `DE000110253X` is rejected with `400` and
   `code: invalid_isin_format` instead of being looked up as a symbol.
 
+[↑ Contents](#contents)
+
 ## What's new in 1.1.0
 
 - `GET /instrument-types` lists the asset types declared by the configured
@@ -30,6 +34,8 @@ Curated summaries of selected releases. Every tagged change is in the
 - `GET /fields` describes core and plugin fields in English, independently of
   the dashboard language or `Accept-Language`.
 - The dashboard development proxy also forwards `/instrument-types`.
+
+[↑ Contents](#contents)
 
 ## What's new in 1.0.0
 
@@ -41,6 +47,8 @@ Curated summaries of selected releases. Every tagged change is in the
   `make push` accepts only the checked image from the current source commit.
 - The Docker source-profile command writes to the named volume used by
   `make up`, including before the first container start.
+
+[↑ Contents](#contents)
 
 ## What's new in 0.6.0
 
@@ -70,3 +78,5 @@ Curated summaries of selected releases. Every tagged change is in the
 - **Stricter API contract** — symbols and time ranges are validated (`422`
   instead of a wrong result), and an unresolvable ISIN answers `404` instead of
   `502`.
+
+[↑ Contents](#contents)

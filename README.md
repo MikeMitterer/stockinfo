@@ -30,6 +30,18 @@ price history of the selected row is docked at the bottom._
 > data. Do not put it on the internet. Run it only in your home network and
 > connect from outside through a VPN, for example WireGuard or Tailscale.
 
+## Contents
+
+- [Features](#features)
+- [Data sources](#data-sources)
+- [StockPortfolio: the companion app](#stockportfolio-the-companion-app)
+- [Quick start](#quick-start)
+- [Configuration](#configuration)
+- [Development](#development)
+- [Further documentation](#further-documentation)
+- [Support](#support)
+- [License](#license)
+
 ## Features
 
 - **Quotes by ISIN or symbol** – European and US stocks and ETFs; the
@@ -67,6 +79,8 @@ which no free source states reliably.
 
 ![Detail area](unraid/screenshots/detail-area.png)
 
+[↑ Contents](#contents)
+
 ## Data sources
 
 The default setup uses these free sources:
@@ -79,8 +93,9 @@ The default setup uses these free sources:
 | **Yahoo search** | fallback when OpenFIGI cannot resolve an instrument |
 
 Sources are set in `sources.yaml` next to the database. A bundled file source
-can supply data you maintain yourself, as a fallback or on its own. See
-[source configuration](docs/plugins.md) and the
+can supply data you maintain yourself, as a fallback or on its own.
+
+See [source configuration](docs/plugins.md) and the
 [plugin author guide](docs/plugin-authors.md).
 
 **No official APIs.** justETF and Yahoo Finance offer no public API for this
@@ -90,9 +105,15 @@ example, forbid automated price queries and excessive load.
 
 StockInfo fetches no prices from justETF, only fund data: once per ETF every
 `METADATA_TTL_DAYS` (default 7), plus when you refresh a single instrument by
-hand. Whoever runs StockInfo is responsible for using these sources in line
-with the providers' terms. To avoid them, remove them from `sources.yaml` or
+hand.
+
+Whoever runs StockInfo is responsible for using these sources in line
+with the providers' terms.
+
+To avoid them, remove them from `sources.yaml` or
 use the file-only profile.
+
+[↑ Contents](#contents)
 
 ## StockPortfolio: the companion app
 
@@ -123,6 +144,8 @@ Set up StockInfo first, then StockPortfolio.
 StockPortfolio's [setup guide](https://github.com/MikeMitterer/stockportfolio#setup)
 explains how to point it at your StockInfo address.
 
+[↑ Contents](#contents)
+
 ## Quick start
 
 You need Docker. The image contains the backend, the dashboard and all
@@ -151,6 +174,8 @@ Docker Compose, data and permissions, updates, backups and security.
 
 For Unraid, see the [Unraid guide](unraid/README.md).
 
+[↑ Contents](#contents)
+
 ## Configuration
 
 | Setting | Default | Meaning |
@@ -163,10 +188,14 @@ For Unraid, see the [Unraid guide](unraid/README.md).
 
 All settings are described in the [Docker guide](docker/README.md#configuration).
 
+[↑ Contents](#contents)
+
 ## Development
 
 Setup, commands, the REST API reference, tests and the release process are
 described in the [developer guide](docs/development.md).
+
+[↑ Contents](#contents)
 
 ## Further documentation
 
@@ -178,12 +207,16 @@ described in the [developer guide](docs/development.md).
 - [Developer guide](docs/development.md) – setup, REST API, tests and releases
 - [Changelog](CHANGELOG.md) and [release notes](docs/release-notes.md) – changes per release
 
+[↑ Contents](#contents)
+
 ## Support
 
 StockInfo is built for its author's own use and shared free of charge.
 
 [Issues](https://github.com/MikeMitterer/stockinfo/issues) and pull requests
 are read, but there is no promise of a reply, a fix or a new feature.
+
+[↑ Contents](#contents)
 
 ## License
 
@@ -212,3 +245,5 @@ Contact: **office@MangoLila.at**.
 Details: [LICENSE](LICENSE) · [German license text](LICENSE.de.txt) ·
 [Provider and consumer declaration](LICENSING.md) · [Third-party
 notices](THIRD_PARTY_NOTICES.md)
+
+[↑ Contents](#contents)
