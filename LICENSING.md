@@ -25,8 +25,9 @@ Installed dependencies retain their own copyright and license notices.
 
 - [LICENSE](LICENSE): unmodified official English EUPL 1.2 text.
 - [LICENSE.de.txt](LICENSE.de.txt): unmodified official German EUPL 1.2 text.
-- [README.md](README.md#quick-start): instructions for running and rebuilding
-  the supplied source; [Docker builds](README.md#docker) use the same checkout.
+- [Developer guide](docs/development.md#set-up-and-start): instructions for
+  running and rebuilding the supplied source;
+  [Docker builds](docs/development.md#docker-image) use the same checkout.
 
 The official language versions have equal legal value under Article 13.
 Original texts: [European Commission EUPL collection](https://interoperable-europe.ec.europa.eu/collection/eupl/eupl-text-eupl-12).

@@ -36,10 +36,8 @@ vollständige, leere und unvollständige HTTP-Auskünfte. Semantik und Statuswer
 
 ## Für Konsumenten
 
-**Vertragsbeispiele sind nicht durchgehend Laufzeitnachweise.** Die allgemeine
-Generation-Auskunft unter `/generation`, Header auf jeder Antwort und deren
-CORS-Freigabe sind weiterhin geplant (`planned.generation_runtime`).
-`/fields` liefert bereits eine persistierte `generation_id`;
+**Vertragsbeispiele sind nicht durchgehend Laufzeitnachweise.**
+`/fields` liefert eine persistierte `generation_id`;
 `/instrument-types` sendet dieselbe UUID als `StockInfo-Generation`.
 Bekannte Abweichungen bei Tageskursen und Pence-Währungen stehen in der
 [REST-Referenz](../docs/rest-core-contract.md#die-begriffe-die-sich-sonst-niemand-erschließt).
@@ -98,8 +96,8 @@ Pflichtfelder ihres Modells, jede `/generation`-Fixture hält Header und Rumpf
 zusammen.
 
 Diese Prüfung läuft **ohne die App** und weist nur die Konsistenz der
-Vertragsdateien nach. Sie bestätigt weder die Verfügbarkeit geplanter Routen
-noch die fachliche Übereinstimmung jeder Fixture mit einer Live-Antwort.
+Vertragsdateien nach. Sie bestätigt nicht die fachliche Übereinstimmung
+jeder Fixture mit einer Live-Antwort.
 
 ```bash
 .venv/bin/pytest tests/test_contract.py -q

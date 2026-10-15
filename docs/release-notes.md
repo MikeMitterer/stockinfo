@@ -1,10 +1,27 @@
-# Earlier release notes
+# Release notes
 
-[Current README](../README.md)
+Curated summaries of selected releases. Every tagged change is in the
+[changelog](../CHANGELOG.md).
 
+- [1.5.0](#whats-new-in-150)
 - [1.1.0](#whats-new-in-110)
 - [1.0.0](#whats-new-in-100)
 - [0.6.0](#whats-new-in-060)
+
+## What's new in 1.5.0
+
+- **Volatility for every instrument type.** Stocks and funds now show the
+  1-year volatility computed from daily closes, with source and date in the
+  detail area. ETFs keep justETF's value when it has one.
+- **Fund size is always in millions.** Values from justETF are in EUR; values
+  you enter by hand keep the currency you entered.
+- **New storage layer on SQLModel.** Existing databases are read unchanged;
+  a comparison against a copy of a real database found no differences.
+- `GET /fx` reports the source's own timestamp in `quote_time` where the
+  source provides one, for example `as_of` in a YAML file. Yahoo has none;
+  there `quote_time` stays the fetch time.
+- A mistyped ISIN such as `DE000110253X` is rejected with `400` and
+  `code: invalid_isin_format` instead of being looked up as a symbol.
 
 ## What's new in 1.1.0
 

@@ -125,7 +125,8 @@ Rückfall, `sources-standalone.yaml` mit `assets-standalone.yaml` für eine
 Instanz ohne Netz.
 
 Für den Wechsel zwischen diesen beiden Profilen im Docker-Container siehe
-[Docker](../README.md#docker) und [Unraid](../README.md#unraid). Der Pfad für
+[Docker-Image](development.md#docker-image) und die
+[Unraid-Anleitung](../unraid/README.md#data-and-source-profiles). Der Pfad für
 `make up` ist ein benanntes Volume; Unraid verwendet ein Host-Verzeichnis.
 
 **Eine Quelle darf in mehreren Rollen stehen.** Das mitgelieferte `yaml-file`

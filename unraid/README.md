@@ -10,7 +10,9 @@ uses `mangolila/stockinfo:latest`, port **8000** and persistent storage at
 
 StockInfo runs on its own. The optional companion app
 [StockPortfolio](https://github.com/MikeMitterer/stockportfolio) manages
-portfolios and rebalancing and gets its prices from StockInfo; see
+portfolios and rebalancing and gets its prices from StockInfo.
+
+How the two apps work together is described in
 [StockPortfolio: the companion app](../README.md#stockportfolio-the-companion-app).
 
 ## Contents
@@ -38,14 +40,17 @@ installation:
 
 If Community Applications is not installed, follow the
 [Unraid setup instructions](https://docs.unraid.net/community-applications/#installing-the-plugin).
+
 If the application is not listed yet, the manual procedure below can be used
 for testing; it is not the standard installation path.
 
 **Do not put StockInfo on the internet.** It has no login; anyone who can
 reach it can change or delete your data. Use it only in your home network.
 From outside, connect to your home network with a VPN, for example
-WireGuard or Tailscale. See the
-[security model](../README.md#security-model).
+WireGuard or Tailscale.
+
+The Docker guide's [security section](../docker/README.md#security) lists
+what an open port allows.
 
 [↑ Contents](#contents)
 
@@ -108,11 +113,11 @@ works without changes. When the directory is not writable, the container stops w
 path and IDs.
 
 The template uses a host directory, whereas the local container from the
-[Docker section of the project README](../README.md#docker) uses a named
-Docker volume. Data is not copied between them automatically.
+[developer guide](../docs/development.md#docker-image) uses a named Docker
+volume. Data is not copied between them automatically.
 
 To select the file-only source profile, run the following from a StockInfo
-checkout with its [development prerequisites](../README.md#quick-start) set up,
+checkout with its [development prerequisites](../docs/development.md#requirements) set up,
 on the server that owns the appdata directory. Stop an existing StockInfo
 container first, or do this before its first start:
 

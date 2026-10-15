@@ -4,663 +4,211 @@
 
 # StockInfo
 
-**Stock and ETF quotes via a REST API, cached in SQLite**
+**Self-hosted stock and ETF quotes with a REST API and a web dashboard.**
 
 English · [Deutsch](README.de.md)
 
+[Features](#features) · [Quick start](#quick-start) · [Configuration](#configuration) · [Docker guide](docker/README.md) · [Developer guide](docs/development.md)
+
 </div>
 
-A small app that serves **stock and ETF quotes via a REST API** and caches them in a
-**SQLite database**. Query by **ISIN** or by **symbol + exchange**; the response is
-**JSON** with price, currency, timestamp, name and — for ETFs — extras such as TER,
+StockInfo fetches stock and ETF quotes, keeps them in a local database and
+serves them as JSON. You query by ISIN or by symbol and exchange; the answer
+contains price, currency, time, name and, for ETFs, metrics such as TER,
 provider and fund size.
 
-Docker image: [mangolila/stockinfo on Docker Hub](https://hub.docker.com/repository/docker/mangolila/stockinfo/general).
-Tagged changes: [changelog](CHANGELOG.md). Curated older summaries:
-[release notes](docs/release-notes.md).
-
-The **web dashboard** provides an asset overview, price charts, manual ETF
-metrics and source configuration, with German and English UI.
+A web dashboard shows your instruments, price charts and fund metrics, in
+English and German. Scripts, spreadsheets and other apps use the REST API.
 
 ![StockInfo dashboard](unraid/screenshots/dashboard.png)
 
-### StockPortfolio: the companion app
+_The **Assets** page: every instrument with its latest price and metrics. The
+price history of the selected row is docked at the bottom._
 
-StockInfo works on its own. Scripts, spreadsheets and other apps can use its
-quotes through the REST API; nothing else needs to be installed.
+> [!WARNING]
+> StockInfo has no login: anyone who can reach it can change or delete its
+> data. Do not put it on the internet. Run it only in your home network and
+> connect from outside through a VPN, for example WireGuard or Tailscale.
 
-[StockPortfolio](https://github.com/MikeMitterer/stockportfolio) is an
-optional addition for managing your own portfolio. It was built as a
-companion to StockInfo: it values your positions, shows how far they are from
-their target allocation and calculates rebalancing trades. Prices, exchange
-rates and fund metrics come from StockInfo.
+## Features
 
-|  | StockInfo | StockPortfolio |
-|---|---|---|
-| Purpose | Quotes, price history, ETF metrics | Portfolios, valuation, rebalancing |
-| Runs without the other app | Yes | No, it needs StockInfo for prices |
-| Docker image | [`mangolila/stockinfo`](https://hub.docker.com/r/mangolila/stockinfo) | [`mangolila/stockportfolio`](https://hub.docker.com/r/mangolila/stockportfolio) |
+- **Quotes by ISIN or symbol** – European and US stocks and ETFs; the
+  preferred exchange is configurable (default Xetra).
+- **Automatic updates** – a background job refreshes all known instruments
+  at a set interval; repeated requests are answered from the local database.
+- **Price history** – an intraday curve and end-of-day closes from one week
+  to "max".
+- **Fund and stock metrics** – volume and 1-year volatility; for ETFs also
+  TER, provider, replication, fund size, domicile, fund currency and
+  distribution policy.
+- **[Your own values](#your-own-values)** – fill in what no source provides;
+  a source value always takes precedence.
+- **Assets page** – sortable columns, links to each instrument's profile on
+  extraETF and Yahoo Finance, and the JSON answer of each request to copy.
+- **Exchange rates** – the **FX** page and `GET /fx` convert between
+  currencies.
+- **Live analysis** – the **Analysis** page measures each configured source
+  role by role, bypassing the cache.
+- **Trading venues** – the **Exchanges** page lists exchange suffixes, regions
+  and currencies.
+- **Settings** – **Appearance** (14 themes), **Language** (English, German,
+  or follow the browser), **API & Links**, **Backups** of the database,
+  **Environment** (current configuration) and **About**.
+- **Configurable sources and plugins** – replace or extend the default
+  sources, or run on a file you maintain yourself.
 
-To use both, set up StockInfo first, then StockPortfolio. StockPortfolio's
-[setup guide](https://github.com/MikeMitterer/stockportfolio#setup) explains
-how to point it at your StockInfo address.
+### Your own values
 
-### Release highlight: 1.5.0
+Whatever the sources do not deliver can be entered by hand in the expandable
+detail area of a row. A manual value fills a gap and never overwrites a
+source value; it applies again as soon as the source stops providing one.
+This is the intended route for TER and fund size of ETFs outside Europe,
+which no free source states reliably.
 
-- **Volatility for every instrument type.** Stocks and funds now show the
-  1-year volatility computed from daily closes, with source and date in the
-  detail area. ETFs keep justETF's value when it has one.
-- **Fund size is always in millions.** Values from justETF are in EUR; values
-  you enter by hand keep the currency you entered.
-- **New storage layer on SQLModel.** Existing databases are read unchanged;
-  a comparison against a copy of a real database found no differences.
-- `GET /fx` reports the source's own timestamp in `quote_time` where the
-  source provides one, for example `as_of` in a YAML file. Yahoo has none;
-  there `quote_time` stays the fetch time.
-- A mistyped ISIN such as `DE000110253X` is rejected with `400` and
-  `code: invalid_isin_format` instead of being looked up as a symbol.
+![Detail area](unraid/screenshots/detail-area.png)
 
-## Contents
+## Data sources
 
-- [What can it do?](#what-can-it-do)
-- [How quotes are fetched](#how-quotes-are-fetched)
-- [Requirements](#requirements)
-- [Quick start](#quick-start)
-- [Security model](#security-model)
-- [The REST API](#the-rest-api)
-- [Configuration (.env)](#configuration-env)
-- [Dashboard](#dashboard)
-- [Docker](#docker)
-- [Unraid](#unraid)
-- [Tests](#tests)
-- [Releases and changelog](#releases-and-changelog)
-- [Project layout](#project-layout)
-- [Support](#support)
-- [License](#license)
-
----
-
-## What can it do?
-
-- **Fetch quotes** — European **and** US stocks/ETFs, by ISIN or symbol.
-- **Cache** — every response is stored in SQLite; repeated requests are served from
-  the cache instead of hitting the internet again.
-- **Stay up to date automatically** — a background job refreshes all known
-  instruments at a configurable interval.
-- **History** — two views: the **intraday curve** built from collected ticks, and
-  real **end-of-day closes** (EOD from Yahoo, cached incrementally — each request
-  only fetches the missing delta).
-- **Rich data** — besides price and timestamp: name, currency, volume, volatility,
-  and for ETFs TER, provider, replication method, fund size, fund domicile,
-  fund currency and accumulating/distributing.
-- **Fill the gaps yourself** — whatever the sources do not deliver can be entered by
-  hand in the expandable detail area of a row. The source always wins: a manual
-  value fills a gap, it never overwrites. It stays stored while the source covers
-  it and applies again as soon as the source goes quiet. This is the intended route
-  for TER and fund size of non-European ETFs, which no free source states reliably.
-
-  ![Detail area](unraid/screenshots/detail-area.png)
-
-- **Dashboard** — overview with column sorting, docked price chart, 8 themes,
-  German/English UI, exchange legend, profile links, JSON export.
-
-[↑ Contents](#contents)
-
----
-
-## How quotes are fetched
-
-The default online chains use these **free** data sources:
+The default setup uses these free sources:
 
 | Source | Used for |
 |---|---|
-| **yfinance** (Yahoo Finance) | price, currency, volume, name, EOD closes (basis of the computed volatility) — stocks & ETFs, EU & US. Also the fund provider for **non-European ETFs**, which justETF does not list |
-| **justETF** | ETF extras for **European** (UCITS) funds: TER, provider, replication, fund size (in millions of EUR), 1-year volatility, distribution policy |
-| **OpenFIGI** | resolves an ISIN to the listing at your preferred exchange (default: Xetra → EUR) |
-| **Yahoo search** | fallback for resolving instruments when OpenFIGI cannot resolve them |
+| **Yahoo Finance** | prices, currency, volume, name and daily closes for stocks and ETFs; fund provider for ETFs outside Europe |
+| **justETF** | metrics of European (UCITS) ETFs: TER, provider, replication, fund size in millions of EUR, 1-year volatility, distribution policy |
+| **OpenFIGI** | finds the listing of an ISIN at your preferred exchange |
+| **Yahoo search** | fallback when OpenFIGI cannot resolve an instrument |
 
-Source chains are configurable in `sources.yaml` beside the database.
-The bundled `yaml-file` plugin can supply manually maintained data as a
-fallback or as a file-only profile. See [source configuration](docs/plugins.md)
-and the [plugin author guide](docs/plugin-authors.md).
+Sources are set in `sources.yaml` next to the database. A bundled file source
+can supply data you maintain yourself, as a fallback or on its own. See
+[source configuration](docs/plugins.md) and the
+[plugin author guide](docs/plugin-authors.md).
 
-**No official APIs.** The default sources justETF and Yahoo Finance do not
-offer a public API for this data. StockInfo reads their public web pages through the open-source
+**No official APIs.** justETF and Yahoo Finance offer no public API for this
+data. StockInfo reads their public web pages through the open-source
 libraries `justetf-scraping` and `yfinance`. justETF's terms of use, for
-example, forbid automated price queries and excessive load. StockInfo fetches
-no prices from justETF, only fund data: once per ETF every `METADATA_TTL_DAYS`
-(default 7), plus when you refresh a single instrument by hand. Whoever runs
-StockInfo is responsible for using these sources in line with the providers'
-terms. To avoid them, remove them from `sources.yaml` or use the file-only
-profile.
+example, forbid automated price queries and excessive load.
 
-**ETFs outside Europe.** justETF is a database of European UCITS funds, so a US or
-Canadian ETF finds nothing there. For those, Yahoo supplies the fund provider —
-and deliberately nothing else: it reports the expense ratio in two fields with two
-different units (`0.03` vs `0.0003` for the same fund) and the fund size as an
-absolute amount, while this app keeps fund sizes in millions (in EUR from justETF,
-in your chosen currency when you enter one by hand). A wrong number would be worse than
-none, because a value from a source *hides* one you entered by hand instead of
-leaving the gap open. So TER, fund size and domicile stay empty for those funds —
-enter them yourself and they stay put.
+StockInfo fetches no prices from justETF, only fund data: once per ETF every
+`METADATA_TTL_DAYS` (default 7), plus when you refresh a single instrument by
+hand. Whoever runs StockInfo is responsible for using these sources in line
+with the providers' terms. To avoid them, remove them from `sources.yaml` or
+use the file-only profile.
 
-**A note on currency:** the exchange suffix selects the exchange; the currency
-comes from the quote. The current Yahoo plugin rejects pence codes such as
-`GBp` instead of converting them to `GBP`. Yahoo daily prices are adjusted for
-splits and dividends. Both behaviors differ from the REST artifact; see the
-[known contract differences](docs/rest-core-contract.md#die-begriffe-die-sich-sonst-niemand-erschließt).
+## StockPortfolio: the companion app
 
-[↑ Contents](#contents)
+StockInfo works on its own. The optional
+[StockPortfolio](https://github.com/MikeMitterer/stockportfolio) manages your
+own portfolios: it values your positions, shows how far they are from their
+target allocation and calculates rebalancing trades. It needs StockInfo for
+every price, exchange rate and fund metric.
 
----
+```mermaid
+flowchart LR
+    Browser --> SP["StockPortfolio"]
+    Browser --> SI["StockInfo<br/>(dashboard + REST API)"]
+    Scripts["Scripts, spreadsheets"] --> SI
+    SP -- "prices, FX rates,<br/>fund data, history" --> SI
+    SI --> DB[("SQLite<br/>/data")]
+    SI --> SRC["Yahoo Finance, justETF,<br/>OpenFIGI, your files"]
+```
 
-## Requirements
+| | StockInfo | StockPortfolio |
+|---|---|---|
+| Purpose | Quotes, price history, fund metrics | Portfolios, valuation, rebalancing |
+| Runs on its own | Yes | No – needs StockInfo |
+| Docker image | [`mangolila/stockinfo`](https://hub.docker.com/r/mangolila/stockinfo) | [`mangolila/stockportfolio`](https://hub.docker.com/r/mangolila/stockportfolio) |
 
-- **Python 3.11+** (`make setup` creates the project `.venv`; override the
-  interpreter with `PYTHON_BOOTSTRAP=python3.12 make setup`)
-- **make** (drives setup and start/stop of the services)
-- **overmind** and **tmux** for `make dev-up` (backend and dashboard together)
-- optional **Docker** (to run the container)
-- **Node.js 24+ with npm** (`make setup` installs the dashboard packages;
-  the backend and prebuilt Docker image do not use Node.js on the host)
-- **Deno 2** for `make docs-check`, only when ProjectTools is linked under
-  `.libs/`; `make setup` does not install it. Without ProjectTools the check
-  is skipped, so `make test`, `make check` and the pre-commit hook do not
-  need Deno
+Set up StockInfo first, then StockPortfolio.
 
-**You do not need anything under `.libs/` to develop.** `make setup`, the
-`dev-*` targets, `make test`, `make check` and `make up`/`down` work on a plain
-clone. Targets marked **[Maintainer]** in `make help` (`build`, `push`,
-`status`, `tag-*`, `version`) need the author's private BashLib and stop with a
-note without it. To build the image yourself, run
-`docker build -f docker/Dockerfile -t mangolila/stockinfo:latest .` instead of
-`make build`.
-
-For the maintainer, `make setup` also links the shared helpers under `.libs/`
-(MakeLib, BashLib, ProjectTools) via `scripts/setup-libs.sh`. It finds them
-through `DEV_MAKE`, `BASH_LIBS` (BashLib `src`) and `PROJECT_TOOLS`
-(ProjectTools `src`) and installs the Python part of ProjectTools from
-`requirements-maintainer.txt`. The Docker image needs none of this.
-
-[↑ Contents](#contents)
-
----
+StockPortfolio's [setup guide](https://github.com/MikeMitterer/stockportfolio#setup)
+explains how to point it at your StockInfo address.
 
 ## Quick start
 
+You need Docker. The image contains the backend, the dashboard and all
+dependencies.
+
 ```bash
-# 1. Create the configuration
-cp .env.example .env
-
-# 2. Install dependencies (Python .venv, dashboard packages)
-make setup
-
-# 3. Start backend :8000 and dashboard :5173 with auto-reload
-make dev-up         # stop with make dev-down · logs with make dev-logs
+docker run -d \
+  --name stockinfo \
+  --restart unless-stopped \
+  -p 127.0.0.1:8000:8000 \
+  -v stockinfo-data:/data \
+  mangolila/stockinfo:latest
 ```
 
-`make dev-up` runs both in the background via
-[overmind](https://github.com/DarthSim/overmind) (needs overmind and tmux).
-
-`make dev-down` also cleans up after a crash: it ends leftover overmind, tmux
-and app processes of this project, removes a stale `.overmind.sock` and frees
-ports 5173 and 8000. It uses `dev-ports.sh` from ProjectTools with the ports in
-`.dev-ports.conf.sh`, only ends your own processes inside this project and can
-be run as often as you like.
-
-The server then runs at `http://localhost:8000`. Interactive API docs (Swagger UI,
-dark theme) live at `http://localhost:8000/docs` (use `http://` in the browser, not
-`https://`).
-
-First query:
+Open <http://localhost:8000/> for the dashboard and
+<http://localhost:8000/docs> for the interactive API documentation. A first
+query:
 
 ```bash
 curl http://localhost:8000/quote/IE00B3RBWM25
 ```
 
-`make help` lists all available commands, `make hints` shows useful URLs.
+The example is reachable only from the Docker host. The
+[Docker guide](docker/README.md) explains access from your home network,
+Docker Compose, data and permissions, updates, backups and security.
 
-Plugin data migrations run automatically before normal operation when an
-active source increases its `data_version`. StockInfo backs up first and commits
-each migration together with its new version. Failed or missing migrations
-block business requests and refreshes; the server log identifies the plugin,
-versions and cause. See [plugin data migrations](docs/plugin-authors.md#plugin-data-migrations).
+For Unraid, see the [Unraid guide](unraid/README.md).
 
-[↑ Contents](#contents)
+## Configuration
 
----
-
-## Security model
-
-**StockInfo has no authentication, and it is not meant to have one.** Every
-endpoint is open to anyone who can reach the port — including the ones that
-change or destroy data:
-
-- `POST /backups/{name}/restore` replaces the whole database with a backup.
-- `DELETE /instruments/{isin}` and `DELETE /instruments/by-symbol/{symbol}`
-  remove an instrument together with its entire price history.
-- `POST /instruments/intake`, `PUT /instruments/by-symbol/{symbol}/isin`,
-  `PUT /instruments/by-symbol/{symbol}/overrides` and
-  `PATCH /instruments/by-id/{listing_id}/details` add or change stored data.
-- `POST /refresh` (also for one instrument) fetches live data from Yahoo and
-  justETF and writes it to the database; `GET /analyze` triggers live
-  requests without storing them.
-
-The default bind address is `0.0.0.0`. Started natively, StockInfo is then
-reachable from your network; in Docker, every host address the port is
-published on can reach it.
-
-**Do not put StockInfo on the internet.** Use it only in your home network.
-From outside, connect to your home network with a VPN, for example
-WireGuard or Tailscale. Never open StockInfo's port on your router.
-
-To use it only on your own computer: started natively, set
-`HOST=127.0.0.1`. In Docker, publish the port with `-p 127.0.0.1:8000:8000`
-and leave `HOST` unchanged; `HOST=127.0.0.1` inside the container makes the
-port unreachable.
-
-`CORS_ORIGINS` is **not** a protection. It restricts what a browser on another
-origin may do — it does nothing about `curl`, a script, or any server-to-server
-call. It does keep other web pages open in your browser from reading
-StockInfo's answers or deleting data, so list only the addresses you need
-instead of `*`.
-
-Two limits do exist, and they are about load rather than access: the global
-refresh takes a non-blocking lock so two runs cannot overlap, and justETF is
-only scraped once every `METADATA_TTL_DAYS` (an explicit single refresh still
-forces it).
-
-[↑ Contents](#contents)
-
----
-
-## The REST API
-
-![Swagger UI (dark)](unraid/screenshots/swagger.png)
-
-| Method & path | Purpose |
-|---|---|
-| `GET /health` | liveness — answers as long as the process is alive |
-| `GET /ready` | readiness — is normal operation released? `503` with `status` = `degraded` (database unreachable **or** startup failed, told apart by `database`), `migration_pending` or `starting` |
-| `GET /operational` | can the process do its current job? The Docker healthcheck hangs on this one. `200` while a migration is pending or the service is starting, `503`/`degraded` only when something is broken |
-| `GET /migration` | what a confirmed migration would do — without changing anything |
-| `POST /migration/confirm` | run it, once, on explicit confirmation |
-| `GET /migration/report` | what actually happened, still available long after |
-| `GET /quote/{isin}` | quote by ISIN (prefers Xetra/EUR) |
-| `GET /quote?symbol=VGWL.DE` | quote by full Yahoo symbol (suffix = exchange) |
-| `GET /quote/{isin}/history` | intraday history (collected ticks) |
-| `GET /quote/{isin}/daily?period=1w\|1m\|3m\|1y\|max` | real end-of-day closes (EOD, cached) |
-| `GET /fx?base=EUR&quote=USD` | exchange rate: 1 `base` = rate `quote`; `quote_time` is the time the source states, or the fetch time if it states none |
-| `GET /instruments` | all cached instruments with their latest quote |
-| `POST /instruments/intake` | resolve an identifier and add the instrument; optionally confirm a different exchange before saving |
-| `GET /fields` | core and plugin field descriptions, detail schema and schema versions |
-| `GET /instrument-types` | declared asset types from the running plugin configuration, including completeness and source status |
-| `GET /sources` | configured source chains and local source diagnostics |
-| `GET /env` | current configuration (secrets masked) |
-| `POST /refresh` · `POST /refresh/{isin}` | refresh all / a single instrument |
-| `PUT /instruments/by-symbol/{symbol}/isin` | add an ISIN after the fact |
-| `PATCH /instruments/by-id/{listing_id}/details` | set or remove manual detail values |
-| `DELETE /instruments/{isin}` | delete an instrument including its history |
-| `GET /backups` · `POST /backups` · `POST /backups/{name}/restore` | list backups / create one / schedule a restore (`202`; it takes effect on the next restart) |
-
-For instruments **without an ISIN**, use `GET /quote?symbol=…` for a quote.
-History, daily, refresh and delete have `…/by-symbol/{symbol}` variants.
-An ambiguous symbol returns `409` with the candidate listings.
-
-For dynamic type filters, read `GET /instrument-types` instead of collecting
-types from stored instruments. New plugin types appear without a fixed client
-enumeration. Known types remain listed during source outages; `complete: false`
-indicates missing or invalid declarations. See the
-[type catalog contract](docs/rest-core-contract.md#asset-typen-aus-der-plugin-konfiguration).
-
-**Example response excerpt** (`GET /quote/IE00B3RBWM25`; optional fields omitted):
-
-```json
-{
-  "identity": {
-    "kind": "listed",
-    "ticker": "VGWL",
-    "mic": "XETR",
-    "isin": "IE00B3RBWM25"
-  },
-  "symbol": "VGWL.DE",
-  "exchange": "Xetra",
-  "name": "Vanguard FTSE All-World UCITS ETF",
-  "type": "etf",
-  "currency": "EUR",
-  "price": 160.98,
-  "quote_time": "2026-07-10T15:35:46+00:00",
-  "volume": 14403,
-  "ter": 0.19,
-  "provider": "Vanguard",
-  "replication": "Physical(Optimized sampling)",
-  "volatility": 9.95,
-  "accumulating": false,
-  "source": "yfinance+justetf",
-  "cached": false,
-  "stale": false,
-  "fetched_at": "2026-07-12T18:16:28+00:00"
-}
-```
-
-Read `identity.kind` before accessing identity fields: listed instruments carry
-`ticker` and `mic`, pairs carry `base` and `quote_currency`, and ISIN-only
-instruments carry `isin`. Quote and instrument responses also contain a
-`details` map with values, units, currencies and provenance. Instruments have
-a persistent `listing_id`. See the [REST reference](docs/rest-core-contract.md)
-and [detail fields](docs/plugin-authors.md#open-detail-fields).
-
-`volatility` is the 1-year volatility in percent — from justETF for ETFs, otherwise
-computed (annualized) from the cached EOD closes. `accumulating` states whether an
-ETF accumulates (`true`) or distributes (`false`).
-
-Fields that cannot be determined are `null` (e.g. `ter` for individual stocks). If a
-live fetch fails but an old value exists in the cache, that value is returned with
-`"stale": true` instead of an error. Unknown ISIN → `404`.
-
-[↑ Contents](#contents)
-
----
-
-## Configuration (.env)
-
-All values can be overridden via `.env` (`cp .env.example .env`):
-
-| Variable | Meaning | Default |
+| Setting | Default | Meaning |
 |---|---|---|
-| `HOST` / `PORT` | server address | `0.0.0.0` / `8000` |
-| `DATABASE_PATH` | path of the SQLite file | `data/stockinfo.db` |
-| `CACHE_TTL_HOURS` | age at which a quote is re-fetched on request | `6` |
-| `REFRESH_INTERVAL_HOURS` | interval of the background refresh | `6` |
-| `METADATA_TTL_DAYS` | refresh cadence for ETF metadata | `7` |
-| `DEFAULT_EXCHANGE` | preferred exchange for ISIN queries (MIC) | `XETR` (Xetra) |
-| `STRICT_EXCHANGE` | require the preferred exchange when resolving an ISIN | `false` |
-| `FX_TTL_HOURS` | cache lifetime for exchange rates | `1` |
-| `OPENFIGI_API_KEY` | optional key for a higher OpenFIGI rate limit | empty |
-| `EXTRAETF_ETF_URL` / `EXTRAETF_STOCK_URL` | profile link templates (placeholder `{isin}`) | extraetf.com/… |
-| `YAHOO_URL` | Yahoo link template (placeholder `{symbol}`) | de.finance.yahoo.com/… |
-| `CORS_ORIGINS` | web pages on another address that may call the API, as a JSON list | `["http://localhost:5173"]` |
+| Port `8000/tcp` | `8000` | Dashboard and REST API; map it to any host port |
+| `/data` volume | – | Database, source configuration and backups; keep it when updating |
+| `DEFAULT_EXCHANGE` | `XETR` | Preferred exchange for ISIN queries (MIC code) |
+| `REFRESH_INTERVAL_HOURS` | `6` | Interval of the background refresh |
+| `OPENFIGI_API_KEY` | empty | Optional key for a higher OpenFIGI rate limit |
 
-[↑ Contents](#contents)
+All settings are described in the [Docker guide](docker/README.md#configuration).
 
----
+## Development
 
-## Dashboard
+Setup, commands, the REST API reference, tests and the release process are
+described in the [developer guide](docs/development.md).
 
-A standalone web frontend lives in [`dashboard/`](dashboard/) (Vue 3 + Vite +
-TypeScript + SCSS) with a fixed header (deep-linkable tab navigation, **DE/EN
-language switch** — persisted, initial language follows the browser) and a status
-bar (**health traffic light** green/orange/red + version):
+## Further documentation
 
-- **Assets** — overview with the latest quote and **sortable columns** (click a
-  header: ascending → descending → off; persisted); add (ISIN/symbol), refresh,
-  delete, **add ISIN**; per row links to **extraETF**, **Yahoo Finance** and a
-  **JSON popup** (URL + result copyable — works on plain `http://` too).
-  A short note below the table (or the card list on narrow screens) states
-  the limits of the displayed prices and metrics.
-- **Chart** — selecting a row docks the price history at the bottom of the
-  viewport (always visible, even with long asset lists). Range switch
-  `1D · 1W · 1M · 3M · 1Y · Max`: `1D` = intraday curve (collected ticks), the rest
-  are real end-of-day closes (EOD). True time axis, compact ticks.
-- **Exchanges** — legend of the Yahoo suffixes (exchange, region, currency).
-- **Environment** — current configuration incl. a note on the automatic refresh;
-  **Themes** — 8 selectable, persisted themes.
-- **About** — open it from Settings or the **About StockInfo** status bar link.
-  It explains the limits of displayed data and links to the EUPL in the selected language and to the
-  provider's consumer declaration. A separate link opens MangoLila's financial
-  content notice for its website and publications. MangoLila GmbH's logo,
-  postal address and website link appear beside the About text.
-  On narrow screens, choose the Settings section from the selector above its
-  content.
-
-```bash
-cd dashboard
-npm install
-npm run dev                # http://localhost:5173
-```
-
-The Vite dev proxy forwards API requests to the backend (`http://localhost:8000`)
-automatically — `VITE_API_BASE_URL` is not needed in dev (optionally overridable,
-see `dashboard/vite.config.ts`).
-
-The backend must run in parallel. Both together: **`make dev-up`** (see Quick start).
-
-[↑ Contents](#contents)
-
----
-
-## Docker
-
-Container installation and operation: [Docker guide](docker/README.md).
-
-StockInfo has no login. Do not forward the container port to the internet;
-the [security model](#security-model) lists safe ways to reach it.
-
-Published image: [mangolila/stockinfo on Docker Hub](https://hub.docker.com/repository/docker/mangolila/stockinfo/general).
-
-Backend **and** dashboard run in a single image on one port. Built with
-`docker/build.sh` (ecosystem convention, versioned via `gitDockerTag`):
-
-```bash
-make build     # build the image (docker/build.sh --build)
-make up        # start the container → http://localhost:8000/
-make down      # stop & remove
-make docker-logs   # follow logs
-```
-
-On ARM Macs, the dashboard build runs natively; the final image still uses the
-platform selected by `PLATFORM` (`linux/amd64` by default for Unraid;
-`PLATFORM=arm` selects `linux/arm64`). The checked build publishes one platform
-at a time.
-
-FastAPI serves the dashboard itself (relative API calls) — no separate web server
-required. The cache lives in the `stockinfo-data` volume (`/data` inside the
-container). The app runs as a non-root user (UID 99 / GID 100 — Unraid's
-`nobody:users`). `docker/entrypoint.sh`
-prepares `/data` and stops with a clear message if it is not writable; see the
-[Docker guide](docker/README.md#storage-and-permissions).
-
-To select the file-only source profile **before the first start**, build the
-image and write the profile to the same named volume that `make up` mounts:
-
-```bash
-make build
-./scripts/sources-profile.sh --yaml --target docker
-make up
-```
-
-Use `--online --target docker` to restore the online chains with a YAML
-fallback. The script copies the matching example asset file only if it is
-missing, backs up an existing `sources.yaml`, and leaves the application
-container untouched. If the container is already running, restart it after
-switching; the source chains are loaded at startup. The named-volume route
-needs Docker access and a locally available `mangolila/stockinfo:latest`
-image. For a different `make up DATA_VOLUME=other-volume`, pass
-`--volume other-volume` to the script as well. No data is moved between
-named volumes and host directories.
-If `make up` uses a different `IMAGE_NAME`, set `STOCKINFO_IMAGE` to that
-image with the `:latest` tag when running the script.
-
-**Push to a registry:**
-
-```bash
-make build                   # Docker Hub image, checked locally
-make push                    # push that exact build to Docker Hub
-TARGET=ghcr make build       # alternatively build for GitHub Container Registry
-TARGET=ghcr make push        # push to the same target used for the build
-```
-
-`make build` copies the [EUPL license](LICENSE), its [German text](LICENSE.de.txt),
-[licensing and provider declaration](LICENSING.md), the
-[`plugin_api` MIT license](plugin_api/LICENSE), and the example plugin's MIT
-license into the image. It checks the files, their SHA-256 hashes, the target
-architecture, and the OCI license and source labels before recording a build as
-ready to push. No manual license-copy step is needed. A failed build clears the
-previous push marker; `make push` also rejects an image from a different source
-commit or registry target. The versioned image tag contains the source commit
-hash; publish that commit before publishing the image so recipients can obtain
-the corresponding source.
-
-After a successful Docker Hub image push, `make push` uploads
-[`docker/README.md`](docker/README.md), the container-specific description,
-with absolute GitHub links for documents and images. Other registries skip
-this step. Install Python 3.11+ and [Pandoc](https://pandoc.org/installing.html).
-The Bash entry point installs its dependencies in its own user-cache environment,
-leaving the project `.venv` untouched. Links use the published `master` branch.
-
-Set `DOCKER_PW_FILE` to a Docker Hub token file outside the repository
-(default: `${DOCKER_CONFIG:-$HOME/.docker}/dockerhub.sec`). The token needs
-Read, Write, Delete permissions. The script checks README and token-file
-readability first; only Docker Hub receives the credentials.
-
-Preview without Docker Hub credentials (initial setup may download packages):
-
-```bash
-./.libs/ProjectTools/src/bash/dockerhub-readme.sh --preview
-# Output: docker/preview/README.md
-```
-
-The preview is versioned and belongs in the same commit as the change to
-`docker/README.md`; otherwise `make docs-check` reports a problem.
-
-If the README upload fails, `make push` fails too, but the image is already
-published. Retry only the description with:
-
-```bash
-./.libs/ProjectTools/src/bash/dockerhub-readme.sh --publish
-```
-
-Defaults: repository from project settings, branch `master`. Override with
-`--repository`, `--ref`, or `--output`. Use `--username` for an organization
-login and `--description` to change the short summary. The script verifies the saved overview and enforces the 25,000-byte
-limit without truncation. Run without arguments for help.
-
-[↑ Contents](#contents)
-
----
-
-## Unraid
-
-See the [Unraid guide](unraid/README.md) for installation, configuration and operation.
-
-[↑ Contents](#contents)
-
----
-
-## Tests
-
-```bash
-make test                       # documentation, backend, plugin API, example plugin and dashboard
-make test-backend               # backend only (pytest)
-make test-dashboard             # dashboard only (ESLint and Vitest)
-make docs-check                 # documentation only: links, commands, variables, dependent files
-make check                      # everything that works offline, plus Ruff and type checks
-```
-
-`make docs-check` checks the user documentation against the project; its
-rules are in `.docs-check.conf.sh`. It needs ProjectTools under `.libs/`
-and Deno 2; without ProjectTools, the target prints a note and the other
-tests still run.
-`make setup` also installs a Git pre-commit hook that runs the check and
-stops a commit when it reports problems.
-
-The normal backend run includes tests marked `integration` that call real
-external APIs or the package index. `make check` leaves them out and adds
-`ruff` and the dashboard type check (`vue-tsc`). To exclude only the online
-tests:
-
-```bash
-.venv/bin/pytest -m "not integration"
-```
-
-Backend tests use temporary databases. The test setup blocks connections to
-the working database; additional test databases belong under `tmp_path`.
-
-[↑ Contents](#contents)
-
----
-
-## Releases and changelog
-
-`make changelog` regenerates [CHANGELOG.md](CHANGELOG.md) locally from release
-tags and Conventional Commits. It does not commit or push. The generated file
-is replaced on the next run; its content comes from commit and release tag
-messages. Use `make changelog PYTHON=/path/to/python3`
-to select another Python interpreter (Python 3.9+).
-
-`make tag-major`, `make tag-minor` and `make tag-patch` bump the version,
-commit, tag and push it, then generate, commit and push the changelog. Pass
-`MSG="Release summary"` for the release tag message. A release needs a clean
-working tree and the shared BashLib and ProjectTools libraries. If the
-changelog step fails after the tag has been pushed, fix the cause and run
-`python3 .libs/ProjectTools/src/python/changelog.py --publish` to retry
-without bumping the version again.
-
-[↑ Contents](#contents)
-
----
-
-## Project layout
-
-```
-app/                    # FastAPI backend
-  main.py               #   app setup, routes, scheduler startup
-  config.py             #   configuration (.env)
-  persistence/          #   SQLite via SQLModel: schema, migrations, data access (only here)
-  resolver.py           #   ISIN → symbol/exchange (OpenFIGI + Yahoo)
-  providers/            #   data sources: yfinance, justETF, OpenFIGI
-  plugins/              #   bundled sources implementing the plugin API
-  services/             #   quote fetching + cache/TTL logic
-  scheduler.py          #   periodic background refresh
-  routers/              #   HTTP endpoints (quotes, dashboard)
-  docs.py               #   dark-themed Swagger UI (/docs)
-dashboard/              # Vue dashboard (standalone app)
-plugin_api/             # independent plugin contract, examples and role tests
-contract/               # REST contract, HTTP fixtures and OpenAPI snapshot
-examples/               # source profiles and manually maintained asset examples
-tests/                  # backend tests (pytest)
-docker/                 # Dockerfile, build.sh (single-image build)
-unraid/                 # Unraid guide and screenshots (README + CA template)
-Makefile                # service start/stop (make help)
-CHANGELOG.md            # generated history of tagged releases
-```
-
-Current references: [REST API](docs/rest-core-contract.md),
-[source configuration](docs/plugins.md), [plugin development](docs/plugin-authors.md)
-and [contract checks](contract/README.md). Historical designs and plans live
-under [`docs/superpowers/`](docs/superpowers/).
-
-[↑ Contents](#contents)
-
----
+- [Docker guide](docker/README.md) – container setup, configuration, security, backups and updates
+- [Unraid guide](unraid/README.md) – installation through Unraid Apps
+- [Source configuration](docs/plugins.md) – source chains, file source and plugins (German)
+- [Plugin author guide](docs/plugin-authors.md) – writing your own source
+- [REST contract](docs/rest-core-contract.md) – what the API promises (German)
+- [Developer guide](docs/development.md) – setup, REST API, tests and releases
+- [Changelog](CHANGELOG.md) and [release notes](docs/release-notes.md) – changes per release
 
 ## Support
 
 StockInfo is built for its author's own use and shared free of charge.
+
 [Issues](https://github.com/MikeMitterer/stockinfo/issues) and pull requests
 are read, but there is no promise of a reply, a fix or a new feature.
 
-[↑ Contents](#contents)
-
----
-
 ## License
 
-StockInfo's application code is licensed under the
-**[European Union Public Licence 1.2 only](LICENSE)** (`EUPL-1.2`).
-Personal and commercial use, modification, redistribution, sale and hosting
-are permitted under its terms without an additional paid license. Preserve
-required notices and meet the source-code and copyleft requirements,
-including those for covered network services. See [licensing and source
-information](LICENSING.md) and the [German license text](LICENSE.de.txt).
+Copyright © 2026 Michael Mitterer. **MangoLila GmbH** is the provider and
+licensor.
 
-Copyright © 2026 **Michael Mitterer**, author and copyright holder.
-**MangoLila GmbH** is the provider and licensor. Its separate
-[declaration for consumers](LICENSING.md#mangolilas-declaration-for-consumers)
-applies alongside the unchanged EUPL text.
+StockInfo is licensed under the **[EUPL 1.2](LICENSE)**, version 1.2 only.
+It permits personal and commercial use, changes, redistribution, sale and
+hosting without a paid license.
+
+If you change or redistribute StockInfo, keep the copyright and license
+notices, mark your changes and provide the corresponding source under the
+license's copyleft rules. This also applies when you offer StockInfo as a
+network service.
+
+The warranty and liability exclusions in EUPL Articles 7 and 8 also apply to
+consumers, as far as the law permits. Mandatory rights remain unaffected,
+including liability for intent, gross negligence, personal injury and product
+liability. No additional guarantee is given.
 
 The independent [`plugin_api/`](plugin_api/) package and its example plugin
 remain under [MIT](plugin_api/LICENSE). Third-party components retain their
 own licenses.
 
-[↑ Contents](#contents)
+Contact: **office@MangoLila.at**.
+
+Details: [LICENSE](LICENSE) · [German license text](LICENSE.de.txt) ·
+[Provider and consumer declaration](LICENSING.md)
