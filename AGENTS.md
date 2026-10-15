@@ -154,10 +154,6 @@ Für alle übrigen Dokumente unter `docs/` gilt: für normale Programmierer
 ohne Vorwissen über dieses Projekt schreiben. Dokumentation beschreibt nur,
 was es gibt; geplante Funktionen gehören in Tickets, nicht in die Doku.
 
-**Lokale Ausnahme zu `docker-conventions`:** Die Vorschau
-`docker/preview/README.md` ist versioniert und gehört in denselben Commit wie
-die Änderung an `docker/README.md`.
-
 **`make docs-check` prüft die Doku gegen das Projekt** (läuft auch in
 `make test`, `make check` und vor jedem Commit über `.githooks/pre-commit`,
 das `make setup` aktiviert). Welche Dokumente, verbotenen Begriffe,
