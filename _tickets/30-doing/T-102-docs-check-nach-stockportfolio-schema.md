@@ -17,7 +17,8 @@ StockPortfolio-Sitzung („Leg in StockInfo als ein Ticket nach doing dass dort
 nach dem Schema von StockPortfolio docs-check nachgezogen wird inkl.
 passendem config-File, Makefile-Target, README.template.md usw.“). In
 `30-doing/` aktiviert, Coder `claude`, Verifier `codex`. Umsetzung auf
-`t-102-docs-check` begonnen (2026-10-15); Scope-Vertrag unten.
+`t-102-docs-check` fertig und als Runde 1 übergeben (2026-10-15, Prüfstand
+`d96ba31`); Nachweise im [Review-Verlauf](#übergabe-runde-1--claude-2026-10-15).
 
 ## Ausgangslage
 
@@ -131,29 +132,32 @@ Docker-Hub-Update.
 
 ### Verify
 
-Legende: ➖ noch keine Live-Verifikation.
+Legende: ✅ belegt · ⚠️ belegt mit Abweichung · ➖ noch keine
+Live-Verifikation. Stand `d96ba31`, Claude, 2026-10-15.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | `make docs-check` im Projekt-Root | Ergebniszeile ohne Probleme; jeder verbliebene Hinweis ist im Ticket begründet | ➖ |
-| 2 | Gegenprobe: im README ein nicht vorhandenes Make-Target nennen, `make docs-check` | Problem mit Zeile und Target; danach zurücksetzen | ➖ |
-| 3 | Gegenprobe: `docker/README.md` ändern, ohne die Vorschau neu zu erzeugen | Problem „gehört in denselben Commit“; danach zurücksetzen | ➖ |
-| 4 | `make setup`, dann ein Commit mit Problem | Hook bricht den Commit ab und zeigt die Befunde | ➖ |
-| 5 | `make test` und `make check` | Beide grün, `docs-check` läuft mit | ➖ |
-| 6 | Lauf ohne `.libs/ProjectTools` (Symlink kurz entfernt oder `PROJECT_TOOLS` auf leeren Pfad) | Verständliche Meldung, übrige Tests laufen | ➖ |
-| 7 | `README.md` und `README.de.md` nebeneinander | Gleiche Gliederung und Aussagen, Sprachlinks im Kopf | ➖ |
-| 8 | Doku-Abgleich | Betroffene Dateien und Abschnitte im Ticket genannt | ➖ |
+| 1 | `make docs-check` im Projekt-Root | Ergebniszeile ohne Probleme; jeder verbliebene Hinweis ist im Ticket begründet | ✅ „17 Dokumente, 24 Pflichtdateien, 3 Screenshots, 6 Abhängigkeiten und 1 Code-Variable geprüft · keine Probleme“, keine Hinweise, Exit 0 |
+| 2 | Gegenprobe: im README ein nicht vorhandenes Make-Target nennen, `make docs-check` | Problem mit Zeile und Target; danach zurücksetzen | ⚠️ `make no-such-target` in `README.md`: nur **Hinweis** mit Zeile und Target, Exit 0. Ursache in ProjectTools: Das Makefile bindet MakeLib über `${DEV_MAKE}` ein, das Werkzeug stuft dann unbekannte Targets herab. StockPortfolio verhält sich gleich. `DEV_MAKE` ist ein dokumentierter Override, deshalb kein Umbau hier; Werkzeugticket StockPortfolio T-96 |
+| 3 | Gegenprobe: `docker/README.md` ändern, ohne die Vorschau neu zu erzeugen | Problem „gehört in denselben Commit“; danach zurücksetzen | ✅ „docker/README.md → docker/preview/README.md … gehört in denselben Commit“, 1 Problem, `make` Exit 2; zurückgesetzt |
+| 4 | `make setup`, dann ein Commit mit Problem | Hook bricht den Commit ab und zeigt die Befunde | ✅ `core.hooksPath` vorher leer, nach `make setup` `.githooks`. Commit mit geänderter `docker/README.md`: Befund und „Commit abgebrochen“, `git commit` Exit 1, HEAD unverändert. Gegenfall nur mit Hinweis: Hook Exit 0 |
+| 5 | `make test` und `make check` | Beide grün, `docs-check` läuft mit | ⚠️ `make check` Exit 0: docs-check ohne Probleme, Plugin-API 324, Beispiel 50, Dashboard 399 Tests, Backend 1310 passed, Ruff „All checks passed“. `make test` Exit 2: docs-check läuft zuerst und ist grün; rot sind zwei Online-Tests `tests/test_plugin_justetf_integration.py` (justETF liefert für den bekannten Fonds nichts), reproduzierbar im Einzellauf. Der Branch ändert nichts unter `app/`, `tests/`, `plugin_api/`, `dashboard/src/`; Befund außerhalb dieses Tickets |
+| 6 | Lauf ohne `.libs/ProjectTools` (Symlink kurz entfernt oder `PROJECT_TOOLS` auf leeren Pfad) | Verständliche Meldung, übrige Tests laufen | ✅ `PROJECT_TOOLS=/nonexistent make docs-check`: „⚠ ProjectTools nicht verfügbar — Doku nicht geprüft (make setup)“, Exit 0. `PROJECT_TOOLS=/nonexistent make check`: dieselbe Meldung, alle übrigen Läufe grün, Exit 0 |
+| 7 | `README.md` und `README.de.md` nebeneinander | Gleiche Gliederung und Aussagen, Sprachlinks im Kopf | ✅ 23 Überschriften paarweise gleich, je 24 Codeblöcke, 49 Tabellenzeilen, 74 Links, 3 Bilder; Kopf „English · [Deutsch]“ bzw. „[English] · Deutsch“. `DEPENDS` README.md → README.de.md „nachgezogen“ |
+| 8 | Doku-Abgleich | Betroffene Dateien und Abschnitte im Ticket genannt | ✅ siehe [Übergabe Runde 1](#übergabe-runde-1--claude-2026-10-15) |
 
 ### Akzeptanzkriterien
 
-- [ ] `.docs-check.conf.sh` in der Gliederung von StockPortfolio, jeder Eintrag mit Grund.
-- [ ] `make docs-check` vorhanden, Teil von `make test` und `make check`.
-- [ ] Pre-Commit-Hook aktiv nach `make setup`.
-- [ ] `docs/README.template.md` vorhanden; `README.md` und `README.de.md` folgen ihr.
-- [ ] `docker/preview/README.md` versioniert und aktuell.
-- [ ] Screenshots unter `unraid/screenshots/` gegen den UI-Code geprüft.
-- [ ] `AGENTS.md` beschreibt Prüfung, Abhängigkeiten und Quittung.
-- [ ] Erste Prüfung ohne Probleme; Quittungen begründet.
+Selbstprüfung des Coders; die Freigabe gibt der Verifier.
+
+- [x] `.docs-check.conf.sh` in der Gliederung von StockPortfolio, jeder Eintrag mit Grund.
+- [x] `make docs-check` vorhanden, Teil von `make test` und `make check`.
+- [x] Pre-Commit-Hook aktiv nach `make setup`.
+- [x] `docs/README.template.md` vorhanden; `README.md` und `README.de.md` folgen ihr.
+- [x] `docker/preview/README.md` versioniert und aktuell.
+- [x] Screenshots unter `unraid/screenshots/` gegen den UI-Code geprüft.
+- [x] `AGENTS.md` beschreibt Prüfung, Abhängigkeiten und Quittung.
+- [x] Erste Prüfung ohne Probleme; Quittungen begründet.
 
 ### Abgrenzung
 
@@ -173,9 +177,83 @@ Auftrag.
 
 ### Auflösung
 
-Offen. Noch keine Umsetzung oder Verifikation.
+Offen. Umgesetzt, Runde 1 beim Verifier; keine technische Freigabe, keine
+menschliche Abnahme.
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+### Übergabe Runde 1 · Claude, 2026-10-15
+
+**Prüfstand:** `d96ba31` auf `t-102-docs-check`. Produkt-Commits
+`bc8e0c8` (Einrichtung, Befunde), `2cdc039` (Quittungen), `2b0953d`
+(`README.de.md`, Kopf), `d96ba31` (Quittung).
+
+**Umfang geplant / tatsächlich:**
+
+| Größe | Geplant | Tatsächlich | Abweichung |
+|---|---|---|---|
+| Fachliche Änderungen | 3 | 3 | — |
+| Produktdateien | 5 | 5 | — |
+| Doku-Dateien | 10 | 9 | — |
+| Diff-Zeilen (ohne `_tickets/`) | ≈ 1.600, Budget nach Checkpoint 1.600 | 1.371 (+1.353/−18) | im Budget |
+
+**Code-Standards** (gelesen: `~/.claude/skills/code-standards/SKILL.md`,
+`references/shell.md`, `references/documentation.md`; dazu Skill
+`readme-conventions`):
+
+| Referenz | Ergebnis |
+|---|---|
+| Projektstruktur | ➖ nicht berührt |
+| Architektur (DRY, Namen) | ✅ englische Bezeichner: einzige Bash-Zuweisung im Hook ist `OUTPUT` (Inventar: `grep -nE '^[[:space:]]*[A-Za-z_]+=' .githooks/pre-commit`); Make-Target `docs-check` |
+| Shell | ✅ `set -euo pipefail`, Variable groß und `readonly`, Aufräumen per `trap`. BashLib-Farben bewusst nicht: Der Hook muss ohne `.libs/` laufen, sonst sperrt er Commits in einem frischen Klon |
+| CLI | ➖ nicht berührt |
+| Frontend | ➖ nicht berührt |
+| Python | ➖ nicht berührt |
+| Persistenz | ➖ nicht berührt |
+| Qualität (Fehler, Tests) | ✅ jeder Fehlerfall von Target und Hook rot gelaufen, siehe unten |
+| Dokumentation | ✅ `README.de.md` mit Inhaltsverzeichnis und Rücklinks wie `README.md`; neue Abschnitte in `AGENTS.md` unter bestehender Übersicht |
+
+**Fehlerfälle von Target und Hook** (Pflicht nach SI-P-16):
+
+| Fall | Eingebauter Fehler | Exit-Code |
+|---|---|---|
+| Problem in der Doku | `docker/README.md` geändert, Vorschau nicht | `make docs-check` 2 |
+| Hook bei Problem | dieselbe Änderung, `git commit` | 1, HEAD unverändert |
+| Hook bei bloßem Hinweis | `make no-such-target` in `README.md` | 0 (soll durchlassen) |
+| ProjectTools fehlt | `PROJECT_TOOLS=/nonexistent` | 0 mit Meldung (soll nicht abbrechen) |
+
+**DRY:** geprüft wurden Config, Make-Target und Hook gegen den Bestand.
+`.githooks/` und `docs-check` gab es in StockInfo vorher nicht. Hook und
+Target folgen StockPortfolio im Wortlaut; das sind zwei Repos ohne
+gemeinsamen Code außer ProjectTools, und ProjectTools bietet keinen Hook an.
+Innerhalb von StockInfo steht jede Regel einmal: Dokumente, Begriffe und
+Abhängigkeiten nur in `.docs-check.conf.sh`. `AGENTS.md` beschreibt das
+Verfahren und verweist auf die Config, die Vorlage verweist für verbotene
+Begriffe ebenfalls dorthin.
+
+**Doku-Abgleich:**
+
+| Datei | Abschnitt | Ergebnis |
+|---|---|---|
+| `README.md` | Kopf, Schnellstart, Docker, Tests | Kopf nach Vorlage; Migrationsabsatz stand zwischen zwei Abschnitten und gehört jetzt zum Schnellstart; Tests nennen `make docs-check` und den Hook; Docker nennt die versionierte Vorschau |
+| `README.de.md` | ganz | neu, dieselbe Gliederung und Aussagen; Bedienelemente aus `dashboard/src/i18n/de.ts` (Assets, Börsen, Environment, Themes, Kurshistorie, ISIN nachtragen, Einstellungen, About, Über StockInfo) |
+| `docker/README.md` | — | unverändert: keine Entwickler-, Test- oder Kopfinhalte; Lizenzabschnitt verlinkt die Erklärung nur. Beides quittiert |
+| `docker/preview/README.md` | — | neu erzeugt, 10.455 Bytes, unter 25.000 |
+| `unraid/README.md` | Speicher | `make up` durch Link auf den Docker-Abschnitt des Root-README ersetzt |
+| `AGENTS.md` | Dokumentation gehört zur Änderung | Vorschau im selben Commit; neuer Absatz zu `make docs-check`, Abhängigkeiten, Screenshots, Quittung, Hook, Grenze bei Settings |
+| `docs/README.template.md` | ganz | neu; Abweichung vom Skill (Entwickleranleitung bleibt im README) mit Grund aus `AGENTS.md` |
+| `docs/markdown-styles/README.md`, `docs/rest-core-contract.md`, `docs/stockportfolio-quote-projection-review.md` | Einzelstellen | Befunde des ersten Laufs, siehe Checkpoint unten |
+| `LICENSING.md`, `contract/README.md`, übrige `docs/` | — | unverändert, Prüfung ohne Befund |
+
+**Offene Punkte außerhalb dieses Tickets:**
+
+- ProjectTools-Grenzen (Anker mit `_`, Make-Includes über Variablen,
+  pydantic-Settings): Ticket
+  `StockPortfolio/_tickets/10-backlog/T-96-docs-check-anker-make-includes-pydantic-settings.md`
+  angelegt, dort noch nicht committet (fremdes Repo, Commit braucht Mikes
+  Zustimmung).
+- `tests/test_plugin_justetf_integration.py`: zwei Online-Tests rot, ohne
+  Codeänderung auf diesem Branch. Kein Ticket angelegt; Einordnung bei Mike.
 
 ### Scope-Checkpoint · Codex, 2026-10-15
 
