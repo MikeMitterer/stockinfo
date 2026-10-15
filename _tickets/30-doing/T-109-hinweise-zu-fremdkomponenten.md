@@ -107,6 +107,29 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Nacharbeit Runde 1 · Claude, 2026-10-15
+
+**Prüfstand:** `c68c088` auf `t-109-fremdkomponenten` (+1/−1 in
+`THIRD_PARTY_NOTICES.md`).
+
+**B1:** Die Inter-Copyright-Zeile steht jetzt wörtlich wie Zeile 1 von
+`@fontsource-variable/inter/LICENSE`, einschließlich
+„Inter-Italic[opsz,wght].ttf: Copyright 2016 …“. Ursache war mein Vergleich
+ab Zeile 3, der genau den unterschiedlichen Kopf ausließ.
+
+**Vollständiger Vergleich** (Python, jede Quelldatei ganz):
+
+| Prüfung | Ergebnis |
+|---|---|
+| Kopfzeile Inter wörtlich enthalten | True |
+| Kopfzeile Space Grotesk wörtlich enthalten | True |
+| OFL-Block = Inter-LICENSE ab Zeile 3 und = Space-Grotesk-LICENSE ab Zeile 3 | True / True |
+| MIT-Block = Feather `LICENSE` vollständig (mit Kopf) | True |
+| Gegenprobe am alten Stand `9d4f4b1`: Inter-Kopfzeile enthalten | False (erkannt) |
+
+**Build:** `make build` auf `c68c088` grün: „6 Lizenzdokumente und
+OCI-Labels stimmen“ (`1.5.0-261015.1801.c68c0.ahead121`).
+
 ### Verifier-Prüfung · Runde 1 · Codex, 2026-10-15
 
 **Ergebnis: `changes_requested` für `9d4f4b1`.** Ein blockierender

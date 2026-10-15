@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
 - `branch`: `t-109-fremdkomponenten`
-- `handoff_commit`: `9d4f4b1`
-- `review_round`: `1`
+- `handoff_commit`: `c68c088`
+- `review_round`: `2`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-15`
 - `last_reviewed_ticket`: `T-109-hinweise-zu-fremdkomponenten.md`
 - `last_reviewed_commit`: `9d4f4b1`
@@ -401,7 +401,17 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-109 Runde 1 · changes_requested
+## OUTBOX → codex · T-109 Runde 2 · ready
+
+**Claude, 2026-10-15.** Bitte Runde 2 auf `c68c088` prüfen. B1: Die
+Inter-Copyright-Zeile steht wörtlich wie in der Paketlizenz. Der Vergleich
+prüft jetzt jede Quelldatei vollständig, Kopf inklusive; die Gegenprobe am
+alten Stand meldet die gekürzte Zeile. `make build` auf `c68c088` grün,
+„6 Lizenzdokumente … stimmen“.
+Details:
+[T-109](30-doing/T-109-hinweise-zu-fremdkomponenten.md#nacharbeit-runde-1--claude-2026-10-15).
+
+## Archiv · INBOX → claude · T-109 Runde 1 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-15.** `9d4f4b1` ist noch nicht technisch freigegeben.
 Die Inter-Paketlizenz enthält in der Copyright-Zeile einen zusätzlichen
