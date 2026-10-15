@@ -177,6 +177,32 @@ Offen.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Nacharbeit Runde 1 · Claude, 2026-10-15
+
+**Prüfstand:** `6e004ea`, als Runde 2 übergeben. Umfang gesamt 15 Dateien,
++1.093/−1.605 = 2.698 Zeilen (Budget nach Codex' Erweiterung 2.800); keine
+neue Datei.
+
+| Befund / Nachtrag | Umsetzung |
+|---|---|
+| B1 Vorlage | `docs/README.template.md` Abschnitt 13 verweist nur auf `templates/license-eupl.md`, Werte aus `LICENSING.md` (Wortlaut wie StockPortfolio `486d760`) |
+| B1 READMEs | Lizenzabschnitt in beiden Sprachen wortgleich zum Baustein: Pflichtensatz „If you redistribute StockInfo or a changed version, or offer it as a network service, …“ / „Wer StockInfo oder eine geänderte Fassung weitergibt oder als Netzwerkdienst anbietet, …“; Teillizenz-Satz im Wortlaut des Bausteins (`plugin_api/` als Paket). Entfallen nach den Bedingungen des Bausteins: Hinweise zu Fremdkomponenten und `SOURCE.md` (Dateien gibt es nicht); belegt und drin: „sale/Verkauf“, „version 1.2 only“, Verbraucherabsatz, Komponenten Dritter, Kontakt (`LICENSING.md:3–16`, `:46`) |
+| B1 / Nachtrag Container | `docker/README.md` „Support and license“: Kernaussagen des Bausteins mit Bedingungssatz, Copyright und Lizenz vor den Angaben zum About-Reiter, `LICENSE.de.txt` verlinkt, Container-Angaben (`/app/…`, MIT-Pfade, Image-Tags) bleiben. Überschrift unverändert (Anker). Vorschau neu: 12.797 Bytes |
+| Nachtrag Unraid | `unraid/README.md` „License“ nur Kurzform nach `unraid-conventions` (Vorbild StockPortfolio `330f00d`): Copyright und Lizenzgeber, „EUPL 1.2, version 1.2 only“, Link auf `../README.md#license`; MIT für Plugin-API und Template-Repo (Lizenz geprüft: `Templates/LICENSE` ist MIT). Die Beschreibung des About-Reiters entfällt; README (Funktionen) und `docker/README.md` nennen den Reiter |
+| B2 | `contract/README.md` „Für Konsumenten“: Strukturbeispiel ohne `StockInfo-Generation`, Regeln auf „nur `contract_compliant: true` ist eine Beispielantwort“ und „unbekannte Felder ignorieren“ reduziert; „Für dieses Repo“ ohne `/generation`-Fixture. Restliche `generation`-Treffer in der Doku betreffen nur `generation_id` von `/fields` und den Header von `/instrument-types` |
+
+**Befund zu B2 für Mike (verstärkt Punkt 1 der Übergabe):** Alle 15
+Fixtures unter `contract/fixtures/` tragen den Header
+`StockInfo-Generation`, auch für Routen, die ihn nicht senden; beide
+Fixtures mit `contract_compliant: false` prüfen nur Generation-Regeln
+(`generation.rule`, `generation.required_on_every_response`). Die Doku
+nennt das nicht mehr; Fixtures und Artefakt bleiben nach Mikes Entscheidung
+unverändert.
+
+**Nachweise:** `make docs-check` ohne Probleme und Hinweise; Hook beim
+Commit grün. `git grep -n 'README.md#\|support-and-license'` ohne toten
+Anker.
+
 ### Verifier-Prüfung · Runde 1 · Codex, 2026-10-15
 
 **Ergebnis: `changes_requested` für `e5e237c`.** Der Doku-Umbau ist
