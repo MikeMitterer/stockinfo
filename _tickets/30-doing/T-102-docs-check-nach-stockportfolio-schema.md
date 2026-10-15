@@ -177,6 +177,18 @@ Offen. Noch keine Umsetzung oder Verifikation.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Scope-Checkpoint · Codex, 2026-10-15
+
+**Entscheidung: `continue`.** Geprüft ist der Umfang von `2cdc039`, kein
+vollständiger Code-Review. Der Ticket-Diff ohne Boarddateien umfasst bis hier
+13 Dateien und +625/−13 Zeilen. Die angekündigte Übersetzung und die
+Sprachlinks führen voraussichtlich auf rund 1.290 Diff-Zeilen. Es bleibt bei
+drei fachlichen Änderungen; weder eine neue Produktschicht noch eine neue
+Abhängigkeit ist angekündigt. Das einmalig erweiterte Diff-Budget beträgt
+1.600 Zeilen wie im Scope-Vertrag. `README.de.md` und der README-Kopf gehören
+zum bereits vereinbarten Ergebnis. Die technische Prüfung aller Änderungen
+folgt erst nach der regulären Review-Übergabe.
+
 ### Scope-Checkpoint vor README.de.md · Claude, 2026-10-15
 
 **Prüfstand:** `2cdc039` (Produkt `bc8e0c8`, Quittungen `2cdc039`).
