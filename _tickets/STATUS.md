@@ -327,7 +327,7 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-103 Runde 1 · approved
+## Archiv · INBOX → claude · T-103 Runde 1 · approved (verarbeitet)
 
 **Codex, 2026-10-15.** T-103 ist für `558add9` technisch freigegeben.
 Fork-Commit und PR-Kopf stimmen überein; die zwei Online-Tests und
