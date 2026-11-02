@@ -12,9 +12,11 @@ dort keine Zusage.
 
 ## Sensible Daten
 
-- **Zugangsdaten:** nur der optionale OpenFIGI-Schlüssel
-  (`openfigi_api_key` in `app/config.py`). Weitere Zugangsdaten hat die App
-  nicht.
+- **Zugangsdaten:** der optionale OpenFIGI-Schlüssel (`openfigi_api_key` in
+  `app/config.py`) und jeder Wert, den ein Abschnitt unter `providers` in
+  `sources.yaml` einer Quelle mitgibt, etwa der Schlüssel eines Plugins, ob
+  im Klartext oder als `${NAME}` aus der Umgebung (siehe
+  [Geheimnisse](#geheimnisse)).
 - **Persönliche Daten:** keine Benutzerkonten, keine Namen oder Adressen.
 - **Geschäftsdaten:** die Liste der beobachteten Wertpapiere (ISINs, Symbole,
   Börsen) samt eigenen Detailwerten. Sie verrät, wofür sich der Betreiber
@@ -31,18 +33,50 @@ dort keine Zusage.
   (`docker/entrypoint.sh`, `docker/Dockerfile`).
 - **Sicherungen:** Kopien der Datenbank neben ihr, höchstens zehn; die elfte
   verdrängt die älteste (`app/services/backup.py`, `app/routers/backups.py`).
-- **Quellenkonfiguration:** `sources.yaml` im Daten-Volume. Sie enthält
-  Ketten und Reihenfolgen, Schlüssel nur als Verweis `${OPENFIGI_API_KEY}`,
-  damit man die Datei weitergeben kann (`app/sources_config.py`).
+- **Quellenkonfiguration:** `sources.yaml` im Daten-Volume, mit Ketten,
+  Reihenfolgen und je Quelle einem Abschnitt unter `providers`. Ein Wert dort
+  wird im Klartext angenommen: `_resolve` ersetzt nur einen Wert der Form
+  `${NAME}` und gibt jeden anderen Text unverändert weiter
+  (`app/sources_config.py:146-161`). Dass Schlüssel nur als Verweis wie
+  `${OPENFIGI_API_KEY}` dort stehen, damit man die Datei weitergeben kann, ist
+  eine Konvention aus dem Modulkopf (`app/sources_config.py:12-15`), keine
+  Prüfung.
+- **Offen:** ob ein Schlüssel im Klartext in `sources.yaml` abgewiesen werden
+  soll.
 - **Plugin-Pakete:** `data/plugin-env/<hash>/` (`app/plugin_env.py`).
-- **Browser:** im `localStorage` liegt nur die Themenwahl
-  (`dashboard/src/composables/useTheme.ts`); keine Cookies.
-- **Nie** ins Repository: `.env` und `data/`. **Nie** im Klartext in
-  `sources.yaml`, in API-Antworten oder im Browser: der OpenFIGI-Schlüssel.
-  Die API meldet nur, ob er gesetzt ist (`openfigi_key_set` in
-  `app/routers/dashboard.py`).
-- **Offen:** ob der Schlüssel in Logs auftauchen darf, ist nicht festgelegt
-  und nicht geprüft.
+- **Browser:** drei Einträge im `localStorage`, alle über `safeStorage` aus
+  ux-foundation: `stockinfo-theme` mit der Themenwahl
+  (`dashboard/src/composables/useTheme.ts:22`), `stockinfo-sort` mit Spalte
+  und Richtung der Tabellensortierung
+  (`dashboard/src/composables/useTableSort.ts:22`) und `stockinfo-lang` mit
+  der Sprache (`dashboard/src/i18n/index.ts:21`, geschrieben über
+  `persistLocale`). Keine Cookies, weder im Dashboard noch vom Backend; kein
+  `sessionStorage`, kein IndexedDB, kein Cache-Speicher, kein Service Worker.
+  ux-foundation selbst greift nur über `safeStorage` auf den Speicher zu.
+- **Repository:** `.env` und `data/` stehen in `.gitignore`.
+- **API-Antworten:** Kein Endpunkt gibt einen Schlüssel oder einen
+  `providers`-Abschnitt aus. `GET /env` meldet nur, ob der OpenFIGI-Schlüssel
+  gesetzt ist (`openfigi_key_set`); `GET /sources` nennt je Quelle Name,
+  Rolle, Rang, Datenversion, ob sie arbeiten kann, einen Grund und die
+  Kostenart, nicht
+  ihren Abschnitt (`app/routers/dashboard.py`, `SourceEntry` in
+  `app/models.py:785`).
+- **Logs:** Kein Log-Aufruf der App übergibt Header, Schlüssel oder den
+  Inhalt eines `providers`-Abschnitts. Belegt ist das mit einem
+  `ast`-Inventar aller Argumente der 104 Log-Aufrufe in `app/`. Aus der
+  Konfiguration erscheinen nur `database_path`, `strict_exchange` und die
+  Namen von Rollen und Abschnitten (`sources_config_loaded`,
+  `app/sources_config.py:265`). Der OpenFIGI-Schlüssel geht im Header
+  `X-OPENFIGI-APIKEY` hinaus, nicht in der URL
+  (`app/providers/openfigi_provider.py:148-150`). Tracebacks enthalten keine
+  lokalen Variablen: structlog läuft unkonfiguriert, `rich` ist nicht
+  installiert.
+- **Lücke bei den Logs:** 22 Aufrufe übernehmen den Text einer Ausnahme
+  wörtlich (`error=str(exc)` und ähnliche), darunter `source_raised` im
+  Plugin-Guard (`app/plugin_guard.py:240-244`). Schreibt eine Quelle oder ein
+  Plugin seinen Schlüssel in eine Ausnahme, steht er im Log.
+- **Offen:** ob Logs Schlüssel aktiv herausfiltern sollen, statt sich darauf
+  zu verlassen, dass keiner hineingeschrieben wird.
 
 ## Geheimnisse
 
@@ -50,7 +84,22 @@ dort keine Zusage.
   `OPENFIGI_API_KEY` oder `.env`, gelesen von `pydantic-settings`
   (`app/config.py`). Ohne Schlüssel läuft die App mit niedrigerem
   Rate-Limit.
-- Lesen darf ihn der Prozess der App und damit jedes geladene Plugin.
+- **Welcher Wert welche Quelle erreicht:** Jede Quelle bekommt nur ihren
+  eigenen Abschnitt unter `providers`, nicht die Einstellungen der App und
+  nicht die Abschnitte der anderen (`config_for`,
+  `app/sources_config.py:93-111`). Ein `${NAME}` darin löst gegen alle
+  Text-Einstellungen aus `Settings` und gegen die gesamte Prozessumgebung auf;
+  ein echter Umgebungseintrag gewinnt (`environment_from`,
+  `app/sources_config.py:114-143`). Die eingebaute OpenFIGI-Quelle nimmt
+  ohne eigenen `api_key` den Schlüssel aus den Einstellungen
+  (`app/sources_registry.py:144-147`).
+- **Folge:** Eine `sources.yaml`, die jemand übernimmt, etwa aus einem Issue,
+  kann über `${NAME}` jede Umgebungsvariable des Prozesses in den Abschnitt
+  einer Quelle oder eines Plugins leiten.
+- **Offen:** ob `${NAME}` auf eine erlaubte Liste von Namen beschränkt werden
+  soll.
+- Lesen kann den Schlüssel der Prozess der App und damit auch jedes geladene
+  Plugin: Es läuft im selben Prozess und erreicht `os.environ` ohnehin.
 - Agenten lesen `.env` nicht (Regel `sensible-dateien`).
 
 ## Anmeldung
@@ -78,8 +127,12 @@ dort keine Zusage.
   Rechten der App. `app/plugin_guard.py` fängt Fehler ab und öffnet nach
   drei Fehlschlägen in Folge einen Schutzschalter. Einen hängenden Aufruf
   bricht er nicht ab; das ist eine dokumentierte Grenze.
-- **`sources.yaml`:** vom Betreiber geschrieben; `${NAME}` ist die einzige
-  Ersetzung, keine Vorlagensprache.
+- **`sources.yaml`:** vom Betreiber geschrieben oder von ihm übernommen; die
+  App vertraut dem Inhalt. `${NAME}` ist die einzige Ersetzung, keine
+  Vorlagensprache, darf aber jede Umgebungsvariable nennen (siehe
+  [Geheimnisse](#geheimnisse)). Paketnamen unter `plugins.packages` müssen die
+  Form `name==version` haben (`_PIN`, `app/sources_config.py:190`), sonst
+  werden sie abgewiesen.
 
 ## Ausführung
 
