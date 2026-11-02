@@ -86,7 +86,9 @@ First query:
 curl http://localhost:8000/quote/IE00B3RBWM25
 ```
 
-`make help` lists all available commands, `make hints` shows useful URLs.
+`make help` lists all available commands. `make hints` shows links, the local
+URLs with their ports and everyday tips; `make info` shows paths, ports and
+whether the tools are current.
 
 Plugin data migrations run automatically before normal operation when an
 active source increases its `data_version`. StockInfo backs up first and commits

@@ -28,10 +28,10 @@ if [[ -n "${GIT_INDEX_FILE:-}" && "${GIT_INDEX_FILE}" != /* ]]; then
     export GIT_INDEX_FILE="${ROOT}/${GIT_INDEX_FILE}"
 fi
 
-# docs-check kommt aus dem pipx-Paket von ProjectTools (make install-tools). Fehlt
-# es, warnt der Hook nur: make docs-check, test und check scheitern dann ohnehin laut.
-if ! command -v docs-check >/dev/null; then
-    echo "⚠ docs-check fehlt — Doku nicht geprüft; einrichten mit: make install-tools" >&2
+# Ohne ProjectTools in Mindestversion nur warnen: make check bleibt die harte Grenze,
+# ein Commit auf einem Rechner ohne die Werkzeuge soll nicht daran scheitern.
+if ! make --no-print-directory -s require-tools >/dev/null 2>&1; then
+    echo "⚠ ProjectTools fehlt oder ist zu alt — Doku nicht geprüft; einrichten mit: make install-tools" >&2
     exit 0
 fi
 
