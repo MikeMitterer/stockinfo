@@ -26,24 +26,21 @@ Installing and running the finished container is described in the
 - optional **Docker** (to run the container)
 - **Node.js 24+ with npm** (`make setup` installs the dashboard packages;
   the backend and prebuilt Docker image do not use Node.js on the host)
-- **Deno 2** for `make docs-check`, only when ProjectTools is linked under
-  `.libs/`; `make setup` does not install it. Without ProjectTools the check
-  is skipped, so `make test`, `make check` and the pre-commit hook do not
-  need Deno
+- **pipx** and **Deno 2** for the checks: `make install-tools` installs
+  ProjectTools and BashLib at the versions in `.dev-tools.conf.sh`
 
-**You do not need anything under `.libs/` to develop.** `make setup`, the
-`dev-*` targets, `make test`, `make check` and `make up`/`down` work on a plain
-clone. Targets marked **[Maintainer]** in `make help` (`build`, `push`,
-`status`, `tag-*`, `version`) need the author's private BashLib and stop with a
-note without it. To build the image yourself, run this instead of
-`make build`:
+`make setup`, the `dev-*` targets and `make up`/`down` work on a plain clone.
+`make test`, `make check`, `make docs-check`, `make status` and
+`make changelog` need ProjectTools; without it they stop and print the install
+command. Targets marked **[Maintainer]** in `make help` (`build`, `push`,
+`tag-*`, `version`) also need BashLib. To build the image yourself, run this
+instead of `make build`:
 
 ```bash
 docker build -f docker/Dockerfile -t mangolila/stockinfo:latest .
 ```
 
-For the maintainer, `make setup` also links the shared libraries under
-`.libs/`. The Docker image needs none of this.
+The Docker image needs none of these tools.
 
 [↑ Contents](#contents)
 
@@ -56,14 +53,20 @@ cp .env.example .env
 # 2. Install dependencies (Python .venv, dashboard packages, Git hook)
 make setup
 
-# 3. Start backend :8000 and dashboard :5173 with auto-reload
+# 3. Install the tools for tests and checks (once per machine, pipx)
+make install-tools
+
+# 4. Start backend :8000 and dashboard :5173 with auto-reload
 make dev-up         # stop with make dev-down · logs with make dev-logs
 ```
 
 `make setup` can be run again at any time. It keeps an existing `.venv` and
-only brings packages up to date. A package pinned to a Git commit in
-`requirements.txt` is reinstalled when the installed commit differs from the
-pin, even if the package version stayed the same.
+only installs again when `requirements.txt`, `requirements-dev.txt` or
+`dashboard/package-lock.json` changed. A package pinned to a Git commit in
+`requirements.txt` is then reinstalled when the installed commit differs from
+the pin, even if the package version stayed the same. Test targets do not set
+anything up themselves: after such a change they stop and ask for
+`make setup`. At the end, `make setup` shows whether the tools are current.
 
 `make dev-up` runs both in the background via
 [overmind](https://github.com/DarthSim/overmind) (needs overmind and tmux).
@@ -322,10 +325,12 @@ Set `DOCKER_PW_FILE` to a Docker Hub token file outside the repository
 Read, Write, Delete permissions. The script checks README and token-file
 readability first; only Docker Hub receives the credentials.
 
-Preview without Docker Hub credentials (initial setup may download packages):
+The upload script comes from a ProjectTools checkout: `PROJECT_TOOLS` points
+to its `src` folder. Preview without Docker Hub credentials (initial setup may
+download packages):
 
 ```bash
-./.libs/ProjectTools/src/bash/dockerhub-readme.sh --preview
+"$PROJECT_TOOLS/bash/dockerhub-readme.sh" --preview
 # Output: docker/preview/README.md
 ```
 
@@ -336,7 +341,7 @@ If the README upload fails, `make push` fails too, but the image is already
 published. Retry only the description with:
 
 ```bash
-./.libs/ProjectTools/src/bash/dockerhub-readme.sh --publish
+"$PROJECT_TOOLS/bash/dockerhub-readme.sh" --publish
 ```
 
 Defaults: repository from project settings, branch `master`. Override with
@@ -358,11 +363,13 @@ make check                      # everything that works offline, plus Ruff and t
 ```
 
 `make docs-check` checks the documentation against the project; its rules
-are in `.docs-check.conf.sh`. It needs ProjectTools under `.libs/` and Deno 2;
-without ProjectTools, the target prints a note and the other tests still run.
+are in `.docs-check.conf.sh`. It needs ProjectTools (`make install-tools`)
+and Deno 2; without ProjectTools, `make docs-check`, `make test` and
+`make check` stop and print the install command.
 
 `make setup` also installs a Git pre-commit hook that runs the check on the
-staged files and stops a commit when it reports problems.
+staged files and stops a commit when it reports problems. Without ProjectTools
+the hook only prints a warning.
 
 `README.md` and `README.de.md` must keep the same structure (`TRANSLATIONS` in
 `.docs-check.conf.sh`): the same headings and, per section, the same links,
@@ -389,22 +396,18 @@ the working database; additional test databases belong under `tmp_path`.
 `make changelog` regenerates [CHANGELOG.md](../CHANGELOG.md) locally from release
 tags and Conventional Commits. It does not commit or push. The generated file
 is replaced on the next run; its content comes from commit and release tag
-messages. To select another Python interpreter (Python 3.9+):
-
-```bash
-make changelog PYTHON=/path/to/python3
-```
+messages.
 
 `make tag-major`, `make tag-minor` and `make tag-patch` bump the version,
 commit, tag and push it, then generate, commit and push the changelog. Pass
 `MSG="Release summary"` for the release tag message. A release needs a clean
-working tree and the shared BashLib and ProjectTools libraries.
+working tree, BashLib and ProjectTools (`make install-tools`).
 
 If the changelog step fails after the tag has been pushed, fix the cause and
 retry without bumping the version again:
 
 ```bash
-python3 .libs/ProjectTools/src/python/changelog.py --publish
+changelog --publish
 ```
 
 [↑ Contents](#contents)

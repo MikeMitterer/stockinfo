@@ -184,9 +184,9 @@ REQUIRED=(
 # (Tippfehler im README, Codeänderung ohne sichtbare Folge), die Meldung aus
 # SCREENSHOTS, DEPENDS oder DEPENDS_HINT nach dem Prüfen quittieren:
 #
-#   .libs/ProjectTools/src/bash/docs-check.sh --ack unraid/screenshots/dashboard.png
-#   .libs/ProjectTools/src/bash/docs-check.sh --ack unraid/screenshots   # ganzer Ordner
-#   .libs/ProjectTools/src/bash/docs-check.sh --ack                      # alle offenen
+#   docs-check --ack unraid/screenshots/dashboard.png
+#   docs-check --ack unraid/screenshots   # ganzer Ordner
+#   docs-check --ack                      # alle offenen
 #
 # Das schreibt je Paar den letzten Commit der Basis nach .docs-check.ack; die
 # Datei mitcommitten. Die Quittung gilt, bis die Basis einen neueren Commit

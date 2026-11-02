@@ -423,8 +423,13 @@ push() {
 
     echo -e "\n${GREEN}Push erfolgreich: ${IMAGE}:${_tag}${NC}"
     if [[ "${TARGET}" == "dockerhub" ]]; then
+        # dockerhub-readme hat im pipx-Paket noch keinen Befehl (ProjectTools T-16).
+        if [[ ! -r "${PROJECT_TOOLS:-}/bash/dockerhub-readme.sh" ]]; then
+            echo -e "${RED}Docker-Hub-Beschreibung nicht übertragen:${NC} PROJECT_TOOLS zeigt nicht auf ProjectTools/src." >&2
+            return 1
+        fi
         if ! DOCKER_README_AFTER_PUSH=1 \
-            "${PROJECT_TOOLS:-${SCRIPTPATH}/../.libs/ProjectTools/src}/bash/dockerhub-readme.sh" \
+            "${PROJECT_TOOLS}/bash/dockerhub-readme.sh" \
             --project-dir "${SCRIPTPATH}/.." --ref master \
             --publish --repository "${NAMESPACE}/${NAME}" --token-file "${DOCKER_PW_FILE}"; then
             return 1
