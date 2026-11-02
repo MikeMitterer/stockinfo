@@ -14,6 +14,7 @@ vi.mock('consola', () => ({
 }))
 
 import { useMigration } from '../../src/composables/useMigration'
+import { translate } from '../../src/i18n'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -261,5 +262,34 @@ describe('useMigration.confirm', () => {
     await confirm()
 
     expect(phase.value).toBe('serving')
+  })
+})
+
+/*
+ * Was das Gate als Fehler zeigt, kommt aus dem Katalog. Ein roher Browser- oder
+ * Servertext („Failed to fetch", eine Proxy-Fehlerseite) erreicht die
+ * Oberfläche nicht; einen Grund liefert nur eine bekannte Fehlerkennung.
+ */
+describe('useMigration: Fehlertexte aus dem Katalog', () => {
+  it('zeigt bei einem Netzfehler den Katalogtext statt der Browsermeldung', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    const { phase, error, check } = useMigration()
+    await check()
+
+    expect(phase.value).toBe('databaseDown')
+    expect(error.value).toBe(translate('migration.downBody'))
+    expect(error.value).not.toContain('Failed to fetch')
+  })
+
+  it('zeigt bei einem gescheiterten Umzug den Katalogtext statt des Servertexts', async () => {
+    stubApi({ '/migration/confirm': { status: 500, body: 'Internal Server Error' } })
+
+    const { phase, error, confirm } = useMigration()
+    await confirm()
+
+    expect(phase.value).toBe('pending')
+    expect(error.value).toBe(translate('migration.confirmFailed'))
+    expect(error.value).not.toContain('Internal Server Error')
   })
 })

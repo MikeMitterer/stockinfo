@@ -70,13 +70,13 @@ describe('useTheme', () => {
   it('vergisst die vier Paletten, die es nur in dieser App gab', () => {
     // `earth`, `night`, `sunset` und `neon` sind mit der Umstellung entfallen —
     // wer eines davon gewählt hatte, landet auf der Vorgabe statt im Nichts.
-    for (const alt of ['earth', 'night', 'sunset', 'neon']) {
-      window.localStorage.setItem('stockinfo-theme', alt)
+    for (const legacy of ['earth', 'night', 'sunset', 'neon']) {
+      window.localStorage.setItem('stockinfo-theme', legacy)
       const { current, init } = useTheme()
 
       init()
 
-      expect(current.value, alt).toBe(DEFAULT_DARK_THEME)
+      expect(current.value, legacy).toBe(DEFAULT_DARK_THEME)
     }
   })
 

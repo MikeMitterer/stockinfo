@@ -85,10 +85,12 @@ MINIMUM_ASSETS = 15  # Mike, 2026-10-02: „mindestens 15“
 # (gemessen): ein neuer Kurspunkt samt Zähler, die daraus berechnete
 # Volatilität und am Papier Abrufzeit und Quelle der Beschreibung.
 EXPECTED_WRITES = {
-    "setzen": ["detail_overrides"],
-    "zurücksetzen": [],
-    "aktualisieren": ["detail_values", "instruments", "quotes", "sqlite_sequence"],
+    "set": ["detail_overrides"],
+    "reset": [],
+    "refresh": ["detail_values", "instruments", "quotes", "sqlite_sequence"],
 }
+# Name des Schritts in der deutschen Ausgabe.
+STEP_LABELS = {"set": "setzen", "reset": "zurücksetzen", "refresh": "aktualisieren"}
 
 
 def file_hashes(database: Path) -> dict[str, str]:
@@ -341,9 +343,9 @@ def write_path(run_dir: Path, snapshot: Path, source_dir: Path, policy: Path,
         instance.stop()
     shown = next((entry.get("latest_price") for entry in listed if entry.get("symbol") == item["symbol"]), None)
     return {
-        "setzen": (set_status, changed_tables(start, after_set)),
-        "zurücksetzen": (reset_status, changed_tables(start, after_reset)),
-        "aktualisieren": (refresh_status, changed_tables(after_reset, after_refresh)),
+        "set": (set_status, changed_tables(start, after_set)),
+        "reset": (reset_status, changed_tables(start, after_reset)),
+        "refresh": (refresh_status, changed_tables(after_reset, after_refresh)),
     }, shown == new_price
 
 
@@ -415,11 +417,12 @@ def main() -> int:
         if findings:
             problems.append(f"{len(findings)} Befunde im Vergleich")
         for step, (status, tables) in writes.items():
-            print(f"Schreibweg {step}: HTTP {status}, geänderte Tabellen {', '.join(tables) or 'keine'}")
+            label = STEP_LABELS[step]
+            print(f"Schreibweg {label}: HTTP {status}, geänderte Tabellen {', '.join(tables) or 'keine'}")
             if status != 200:
-                problems.append(f"Schreibweg {step} antwortet {status}")
+                problems.append(f"Schreibweg {label} antwortet {status}")
             if tables != EXPECTED_WRITES[step]:
-                problems.append(f"Schreibweg {step} ändert {tables or 'nichts'} statt {EXPECTED_WRITES[step] or 'nichts'}")
+                problems.append(f"Schreibweg {label} ändert {tables or 'nichts'} statt {EXPECTED_WRITES[step] or 'nichts'}")
         if not price_shown:
             problems.append("Schreibweg aktualisieren: neuer Kurs nicht in /instruments")
 

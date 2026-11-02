@@ -58,8 +58,8 @@ function apply(theme: ThemeId): void {
  * ungültiges `data-theme` am Wurzelelement und die App wäre farblos.
  */
 export function readStoredTheme(): ThemeId {
-  const gespeichert = safeStorage.read(STORAGE_KEY)
-  return isThemeId(gespeichert) ? gespeichert : systemTheme()
+  const stored = safeStorage.read(STORAGE_KEY)
+  return isThemeId(stored) ? stored : systemTheme()
 }
 
 /** Theme-Verwaltung: aktuelles Theme, Liste, Setzen und Initialisieren. */

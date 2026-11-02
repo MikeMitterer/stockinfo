@@ -2,6 +2,8 @@ import { consola } from 'consola'
 import { ref, type Ref } from 'vue'
 
 import { ApiError, apiClient } from '../api/client'
+import { describeFailure } from '../api/reason'
+import { translate } from '../i18n'
 import type { MigrationPreview, MigrationReport, ReadinessResponse } from '../types'
 
 /**
@@ -113,7 +115,7 @@ export function useMigration(): UseMigration {
         retryDelay = STARTING_RETRY_MS
       }
     } catch (err) {
-      error.value = messageOf(err)
+      error.value = describeFailure(translate('migration.downBody'), err)
       phase.value = 'databaseDown'
       consola.error('useMigration.check', err)
     }
@@ -175,7 +177,8 @@ export function useMigration(): UseMigration {
         await check()
         return
       }
-      error.value = messageOf(err)
+      const message = failed === 'startupFailed' ? 'migration.retryFailed' : 'migration.confirmFailed'
+      error.value = describeFailure(translate(message), err)
       phase.value = failed
       consola.error('useMigration.confirm', err)
     }
@@ -188,10 +191,4 @@ export function useMigration(): UseMigration {
 async function loadReport(): Promise<MigrationReport | null> {
   const stored = await apiClient.get<MigrationReport>('/migration/report')
   return stored.completed ? stored : null
-}
-
-/** Die Fehlermeldung, ohne den Aufrufer zwischen Fehlerarten unterscheiden zu lassen. */
-function messageOf(err: unknown): string {
-  if (err instanceof ApiError) return err.detail
-  return err instanceof Error ? err.message : String(err)
 }

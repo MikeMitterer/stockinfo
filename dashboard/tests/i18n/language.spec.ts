@@ -16,10 +16,10 @@ afterEach(() => vi.unstubAllGlobals())
  * Umgebungs-Erkennung greift beim Laden auf `navigator.userAgent` zu. Ein
  * Stub ohne ihn lässt schon den Import scheitern.
  */
-function pretendBrowser(...sprachen: string[]): void {
+function pretendBrowser(...languages: string[]): void {
   vi.stubGlobal('navigator', {
-    languages: sprachen,
-    language: sprachen[0] ?? '',
+    languages: languages,
+    language: languages[0] ?? '',
     userAgent: 'vitest',
   })
 }
