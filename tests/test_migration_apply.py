@@ -23,7 +23,7 @@ from app.persistence.migration import (
     harden_identity_schema,
     plan_migration,
 )
-from tests.legacy_schema import create_legacy_tables
+from tests.legacy_schema import add_prices, create_legacy_tables
 
 _STAMP = "2026-08-25T12:00:00+00:00"
 
@@ -42,24 +42,6 @@ def _legacy_database(path: str, rows: list[tuple[str, str | None]]) -> None:
             "VALUES (?, ?, ?, ?)",
             [(symbol, isin, f"Papier {symbol}", "2026-01-01T00:00:00+00:00")
              for symbol, isin in rows],
-        )
-
-
-def _add_prices(path: str, symbol: str, quotes: int, daily: int) -> None:
-    """Hängt einem Papier Kurspunkte an, damit der Verlust zählbar wird."""
-    with sqlite3.connect(path) as connection:
-        instrument_id = connection.execute(
-            "SELECT id FROM instruments WHERE symbol = ?", (symbol,)
-        ).fetchone()[0]
-        connection.executemany(
-            "INSERT INTO quotes (instrument_id, price, quote_time, fetched_at) "
-            "VALUES (?, ?, ?, ?)",
-            [(instrument_id, 1.0, f"2026-01-{day + 1:02d}T10:00:00+00:00", "x")
-             for day in range(quotes)],
-        )
-        connection.executemany(
-            "INSERT INTO daily_closes (instrument_id, date, close) VALUES (?, ?, ?)",
-            [(instrument_id, f"2026-02-{day + 1:02d}", 1.0) for day in range(daily)],
         )
 
 
@@ -89,7 +71,7 @@ def _migrate(path: str) -> None:
 
 
 @pytest.fixture
-def bestand(tmp_path) -> str:
+def populated_db(tmp_path) -> str:
     """Vier bezeichnende Fälle: zwei migrieren, zwei gehen.
 
     `GOLD.SG` trägt hier dieselben **257** Tagesschlusskurse wie im echten
@@ -106,13 +88,13 @@ def bestand(tmp_path) -> str:
             ("BRK-B.DE", None),
         ],
     )
-    _add_prices(path, "GOLD.SG", quotes=2, daily=257)
-    _add_prices(path, "VTI", quotes=1, daily=0)
-    _add_prices(path, "BRK-B.DE", quotes=4, daily=9)
+    add_prices(path, "GOLD.SG", quotes=2, daily=257)
+    add_prices(path, "VTI", quotes=1, daily=0)
+    add_prices(path, "BRK-B.DE", quotes=4, daily=9)
     return path
 
 
-def test_was_geht_hinterlaesst_seinen_bericht(bestand) -> None:
+def test_was_geht_hinterlaesst_seinen_bericht(populated_db) -> None:
     """`#2b4`: Der Eintrag bleibt, **nachdem** die aktive Zeile weg ist.
 
     Das ist der ganze Zweck des Speichers. Verschwände er mit der Zeile,
@@ -120,9 +102,9 @@ def test_was_geht_hinterlaesst_seinen_bericht(bestand) -> None:
     Benutzer stünde vor einem Bestand, aus dem etwas fehlt, ohne zu erfahren,
     was und warum.
     """
-    _migrate(bestand)
+    _migrate(populated_db)
 
-    with _connect(bestand) as connection:
+    with _connect(populated_db) as connection:
         active = [row["symbol"] for row in connection.execute(
             "SELECT symbol FROM instruments ORDER BY symbol")]
         report = [
@@ -139,16 +121,16 @@ def test_was_geht_hinterlaesst_seinen_bericht(bestand) -> None:
     ]
 
 
-def test_der_bericht_nennt_genug_zur_neuerfassung(bestand) -> None:
+def test_der_bericht_nennt_genug_zur_neuerfassung(populated_db) -> None:
     """Ein Bericht, der nur ein Symbol nennt, hilft beim Neuanlegen nicht.
 
     Die Aufforderung lautet „erfasse das Papier neu" — dafür braucht der
     Benutzer wenigstens ISIN und Namen, und beide sind nach dem Löschen der
     Zeile nirgends sonst mehr zu holen.
     """
-    _migrate(bestand)
+    _migrate(populated_db)
 
-    with _connect(bestand) as connection:
+    with _connect(populated_db) as connection:
         row = connection.execute(
             "SELECT * FROM migration_rejections WHERE symbol = 'VTI'"
         ).fetchone()
@@ -157,7 +139,7 @@ def test_der_bericht_nennt_genug_zur_neuerfassung(bestand) -> None:
     assert row["rejected_at"] == _STAMP
 
 
-def test_ein_zweiter_lauf_dupliziert_den_bericht_nicht(bestand) -> None:
+def test_ein_zweiter_lauf_dupliziert_den_bericht_nicht(populated_db) -> None:
     """`#2b4`: Idempotenz — und zwar **verhaltensmäßig**, nicht per UNIQUE.
 
     Eine Eindeutigkeitsbedingung auf `symbol` hätte denselben Test bestanden,
@@ -165,10 +147,10 @@ def test_ein_zweiter_lauf_dupliziert_den_bericht_nicht(bestand) -> None:
     verboten. Geprüft wird deshalb der Lauf selbst — er findet beim zweiten
     Mal schlicht nichts mehr abzulehnen.
     """
-    _migrate(bestand)
-    _migrate(bestand)
+    _migrate(populated_db)
+    _migrate(populated_db)
 
-    with _connect(bestand) as connection:
+    with _connect(populated_db) as connection:
         count = connection.execute(
             "SELECT COUNT(*) FROM migration_rejections"
         ).fetchone()[0]
@@ -178,13 +160,13 @@ def test_ein_zweiter_lauf_dupliziert_den_bericht_nicht(bestand) -> None:
     assert plan.needs_migration is False
 
 
-def test_ein_abbruch_laesst_alles_stehen(bestand) -> None:
+def test_ein_abbruch_laesst_alles_stehen(populated_db) -> None:
     """Bericht **und** Ablehnung in derselben Transaktion — oder keines von beidem.
 
     Ohne diese Kopplung könnte ein Abbruch dazwischen eine Zeile entfernen,
     deren Verschwinden danach niemand mehr erklären kann.
     """
-    connection = _connect(bestand)
+    connection = _connect(populated_db)
     try:
         connection.execute("BEGIN")
         apply_migration(connection, rejected_at=_STAMP)
@@ -192,7 +174,7 @@ def test_ein_abbruch_laesst_alles_stehen(bestand) -> None:
     finally:
         connection.close()
 
-    with _connect(bestand) as connection:
+    with _connect(populated_db) as connection:
         active = [row["symbol"] for row in connection.execute(
             "SELECT symbol FROM instruments ORDER BY symbol")]
         tables = {row["name"] for row in connection.execute(
@@ -202,16 +184,16 @@ def test_ein_abbruch_laesst_alles_stehen(bestand) -> None:
     assert "migration_rejections" not in tables
 
 
-def test_die_kurspunkte_der_bleibenden_ueberleben(bestand) -> None:
+def test_die_kurspunkte_der_bleibenden_ueberleben(populated_db) -> None:
     """Der gemessene Fall: `GOLD.SG` behält seine 257 Tagesschlusskurse.
 
     Und die abgelehnten Zeilen hinterlassen keine Waisen — gelöscht wird
     ausdrücklich, nicht über eine Kaskade, die beim Tabellen-Neuaufbau
     abgeschaltet ist.
     """
-    _migrate(bestand)
+    _migrate(populated_db)
 
-    with _connect(bestand) as connection:
+    with _connect(populated_db) as connection:
         gold = connection.execute(
             "SELECT COUNT(*) FROM daily_closes d JOIN instruments i "
             "ON i.id = d.instrument_id WHERE i.symbol = 'GOLD.SG'"
@@ -225,16 +207,16 @@ def test_die_kurspunkte_der_bleibenden_ueberleben(bestand) -> None:
     assert orphans == 0
 
 
-def test_nach_dem_umzug_ist_die_halbe_identitaet_unmoeglich(bestand) -> None:
+def test_nach_dem_umzug_ist_die_halbe_identitaet_unmoeglich(populated_db) -> None:
     """`#2b2`: Die Invariante steht im Schema, nicht in einer Prüfung.
 
     Eine Zählung `COUNT(*) WHERE ticker IS NULL` sagt nur, dass gerade keine
     solche Zeile *da* ist. `NOT NULL` sagt, dass keine mehr **entstehen kann**
     — auch nicht durch einen Endpunkt, den jemand übersehen hat.
     """
-    _migrate(bestand)
+    _migrate(populated_db)
 
-    with _connect(bestand) as connection:
+    with _connect(populated_db) as connection:
         open_rows = connection.execute(
             "SELECT COUNT(*) FROM instruments WHERE ticker IS NULL OR mic IS NULL"
         ).fetchone()[0]
@@ -269,7 +251,7 @@ def _columns(path: str) -> set[tuple[str, int]]:
 
 
 def test_ein_spaeter_fehler_rollt_den_ganzen_umzug_zurueck(
-    bestand, monkeypatch
+    populated_db, monkeypatch
 ) -> None:
     """`run_migration` als **ganzer** Weg — nicht nur `apply_migration`.
 
@@ -283,25 +265,25 @@ def test_ein_spaeter_fehler_rollt_den_ganzen_umzug_zurueck(
     """
     from app.persistence import db as db_module
 
-    symbols_before = _symbols(bestand)
-    columns_before = _columns(bestand)
+    symbols_before = _symbols(populated_db)
+    columns_before = _columns(populated_db)
 
     monkeypatch.setattr(
         db_module,
         "_IDENTITY_INDICES",
         (
             *db_module._IDENTITY_INDICES,
-            "CREATE UNIQUE INDEX fails ON instruments (gibt_es_nicht)",
+            "CREATE UNIQUE INDEX fails ON instruments (missing_column)",
         ),
     )
 
     with pytest.raises(sqlite3.Error):
-        run_migration(bestand, rejected_at=_STAMP)
+        run_migration(populated_db, rejected_at=_STAMP)
 
-    assert _symbols(bestand) == symbols_before, "Zeilen sind verschwunden"
-    assert _columns(bestand) == columns_before, "das Schema wurde gehärtet"
+    assert _symbols(populated_db) == symbols_before, "Zeilen sind verschwunden"
+    assert _columns(populated_db) == columns_before, "das Schema wurde gehärtet"
 
-    with _connect(bestand) as connection:
+    with _connect(populated_db) as connection:
         tables = {
             row["name"]
             for row in connection.execute(
@@ -330,9 +312,9 @@ def test_eine_gesetzte_zuordnung_ueberlebt_den_umzug(tmp_path) -> None:
     with _connect(path) as connection:
         rows = [(row["symbol"], row["ticker"], row["mic"]) for row in
                 connection.execute("SELECT symbol, ticker, mic FROM instruments")]
-        abgelehnt = connection.execute(
+        rejected_count = connection.execute(
             "SELECT COUNT(*) FROM migration_rejections"
         ).fetchone()[0]
 
     assert rows == [("AAPL", "AAPL", "XNAS")]
-    assert abgelehnt == 0
+    assert rejected_count == 0

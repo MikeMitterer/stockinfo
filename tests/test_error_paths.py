@@ -27,20 +27,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.config import get_settings
-from app.container import (
-    get_cached_quote_service,
-    get_daily_history_service,
-    get_fx_service,
-    get_sources_config,
-)
-from app.main import app
-
-_SERVICE_CACHES = (
-    get_cached_quote_service,
-    get_daily_history_service,
-    get_fx_service,
-)
+from app.container import get_sources_config
+from tests.app_client import app_on_volume, clear_service_caches
 
 SAMPLE = Path(__file__).resolve().parent / "_resources" / "assets.yaml"
 
@@ -113,13 +101,8 @@ def volume(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def client(volume: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
-    monkeypatch.setenv("DATABASE_PATH", str(volume / "stockinfo.db"))
-    for cache in (get_settings, get_sources_config, *_SERVICE_CACHES):
-        cache.cache_clear()
-    with TestClient(app) as opened:
+    with app_on_volume(volume, monkeypatch) as opened:
         yield opened
-    for cache in (get_settings, get_sources_config, *_SERVICE_CACHES):
-        cache.cache_clear()
 
 
 def _profile(volume: Path, chains: dict[str, list[str]]) -> None:
@@ -133,8 +116,7 @@ def _profile(volume: Path, chains: dict[str, list[str]]) -> None:
     lines += ["", "providers:", "  yaml-file:", f"    path: {SAMPLE}"]
     (volume / "sources.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    for cache in _SERVICE_CACHES:
-        cache.cache_clear()
+    clear_service_caches()
     get_sources_config.cache_clear()
 
 

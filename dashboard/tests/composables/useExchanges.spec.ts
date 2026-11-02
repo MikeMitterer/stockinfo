@@ -1,7 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('consola', () => ({ consola: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }))
-
 import { useExchanges } from '../../src/composables/useExchanges'
 
 afterEach(() => vi.unstubAllGlobals())

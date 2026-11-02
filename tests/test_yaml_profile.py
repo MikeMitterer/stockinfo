@@ -35,37 +35,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.config import get_settings
-from app.container import (
-    get_cached_quote_service,
-    get_daily_history_service,
-    get_fx_service,
-    get_quote_analyzer,
-    get_sources_config,
-)
-from app.main import app
-
-_SERVICE_CACHES = (
-    get_cached_quote_service,
-    get_daily_history_service,
-    get_fx_service,
-    get_quote_analyzer,
-)
-"""Jeder gecachte Dienst, der Quellen festhält — **vollständig**, nicht auf Zuruf.
-
-Ein Dienst, der hier fehlt, überlebt den Profilwechsel mit den Quellen des
-vorigen Tests. Das fällt nicht auf, solange sein Test der erste seiner Art im
-Lauf ist.
-
-**Der Analyzer gehört seit T-46 dazu.** Er bekommt die Ketten in den
-Konstruktor und ist selbst gecacht — ohne diese Zeile misst die Diagnose nach
-einem Profilwechsel weiter die Kette davor.
-
-**Die Konfiguration steht bewusst nicht dabei.** Sie wird beim Profilwechsel
-einmal neu gelesen, und die Ketten hängen daran über die **Identität** des
-Objekts. Sie danach noch einmal zu verwerfen hieße, `/sources` eine dritte
-Konfiguration unterzuschieben — die Rollen meldeten dann „noch nicht gebaut".
-"""
+from app.container import get_sources_config
+from tests.app_client import app_on_volume, clear_service_caches
 
 SAMPLE = Path(__file__).parent / "_resources" / "assets.yaml"
 
@@ -216,8 +187,7 @@ def _restart_chains() -> None:
     # Diagnose hängen an eigenen Caches; ein Test dafür wäre grün gewesen,
     # solange er zufällig der erste seiner Art im Lauf war — und beim nächsten
     # hinzugefügten Test still umgekippt.
-    for cache in _SERVICE_CACHES:
-        cache.cache_clear()
+    clear_service_caches()
     initialize_detail_catalog()
 
 
@@ -243,20 +213,9 @@ def volume(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def client(volume: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
-    """Die App auf einem frischen Volume — Lifespan inklusive.
-
-    Als Kontextmanager, damit der Lifespan wirklich läuft: Dort werden die
-    Plugins geladen. Ohne ihn prüfte der Test eine App, die den Ladevorgang nie
-    ausgeführt hat.
-    """
-    monkeypatch.setenv("DATABASE_PATH", str(volume / "stockinfo.db"))
-
-    for cache in (get_settings, get_sources_config, *_SERVICE_CACHES):
-        cache.cache_clear()
-    with TestClient(app) as opened:
+    """Die App auf einem frischen Volume — Lifespan inklusive (`app_on_volume`)."""
+    with app_on_volume(volume, monkeypatch) as opened:
         yield opened
-    for cache in (get_settings, get_sources_config, *_SERVICE_CACHES):
-        cache.cache_clear()
 
 
 # ─── Matrix #2 · eine Datei, fünf Rollen ──────────────────────────────────────

@@ -21,7 +21,7 @@ from app.persistence.migration import (
     plan_migration,
     rejection_reason,
 )
-from tests.legacy_schema import create_legacy_tables
+from tests.legacy_schema import add_prices, create_legacy_tables
 
 
 def _legacy_database(path: str, rows: list[tuple[str, str | None]]) -> None:
@@ -40,26 +40,6 @@ def _legacy_database(path: str, rows: list[tuple[str, str | None]]) -> None:
         connection.executemany(
             "INSERT INTO instruments (symbol, isin, first_seen) VALUES (?, ?, ?)",
             [(symbol, isin, "2026-01-01T00:00:00+00:00") for symbol, isin in rows],
-        )
-
-
-def _add_prices(path: str, symbol: str, quotes: int, daily: int) -> None:
-    """Hängt einem Papier Kurspunkte an, damit der Preis der Ablehnung zählbar wird."""
-    with sqlite3.connect(path) as connection:
-        instrument_id = connection.execute(
-            "SELECT id FROM instruments WHERE symbol = ?", (symbol,)
-        ).fetchone()[0]
-        connection.executemany(
-            "INSERT INTO quotes (instrument_id, price, quote_time, fetched_at) "
-            "VALUES (?, ?, ?, ?)",
-            [
-                (instrument_id, 1.0, f"2026-01-{day + 1:02d}T10:00:00+00:00", "x")
-                for day in range(quotes)
-            ],
-        )
-        connection.executemany(
-            "INSERT INTO daily_closes (instrument_id, date, close) VALUES (?, ?, ?)",
-            [(instrument_id, f"2026-02-{day + 1:02d}", 1.0) for day in range(daily)],
         )
 
 
@@ -141,9 +121,9 @@ def test_die_vorschau_trennt_migration_von_ablehnung(tmp_path) -> None:
             ("BRK-B.DE", None),
         ],
     )
-    _add_prices(path, "GOLD.SG", quotes=3, daily=257)
-    _add_prices(path, "VTI", quotes=1, daily=0)
-    _add_prices(path, "BRK-B.DE", quotes=4, daily=9)
+    add_prices(path, "GOLD.SG", quotes=3, daily=257)
+    add_prices(path, "VTI", quotes=1, daily=0)
+    add_prices(path, "BRK-B.DE", quotes=4, daily=9)
 
     with _connect(path) as connection:
         plan = plan_migration(connection)
@@ -180,7 +160,7 @@ def test_stuttgart_rettet_die_tagesschlusskurse(tmp_path) -> None:
     """
     path = str(tmp_path / "gold.db")
     _legacy_database(path, [("GOLD.SG", "DE000A0S9GB0")])
-    _add_prices(path, "GOLD.SG", quotes=0, daily=257)
+    add_prices(path, "GOLD.SG", quotes=0, daily=257)
 
     with _connect(path) as connection:
         plan = plan_migration(connection)

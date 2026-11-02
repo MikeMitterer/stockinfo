@@ -134,9 +134,9 @@ def test_suffixloses_symbol_verlaesst_den_bestand(migrated: str) -> None:
     """
     assert "AAPL" not in _instruments(migrated)
 
-    bericht = _rejections(migrated)["AAPL"]
-    assert bericht["reason"] == REASON_NO_SUFFIX
-    assert bericht["isin"] == "US0378331005"
+    rejection = _rejections(migrated)["AAPL"]
+    assert rejection["reason"] == REASON_NO_SUFFIX
+    assert rejection["isin"] == "US0378331005"
 
 
 def test_fremde_schreibweise_wird_nicht_geraten(migrated: str) -> None:
@@ -244,10 +244,10 @@ def test_die_abgelehnten_faelle_stehen_im_bericht(migrated: str) -> None:
     Ein Log wäre außerdem der falsche Ort für eine Auskunft, die das UI in DE
     und EN anzeigen muss.
     """
-    bericht = _rejections(migrated)
+    rejections = _rejections(migrated)
 
-    assert set(bericht) == {"AAPL", "BRK-B"}
-    assert all(row["rejected_at"] == _STAMP for row in bericht.values())
+    assert set(rejections) == {"AAPL", "BRK-B"}
+    assert all(row["rejected_at"] == _STAMP for row in rejections.values())
 
 
 def test_zwei_listings_mit_gleichem_symbol_ueberleben_den_neustart(tmp_path) -> None:
@@ -289,7 +289,7 @@ def test_zwei_listings_mit_gleichem_symbol_ueberleben_den_neustart(tmp_path) -> 
             "ORDER BY mic"
         ).fetchall()
         quote_count = connection.execute(
-            "SELECT COUNT(*) AS anzahl FROM quotes WHERE instrument_id IN "
+            "SELECT COUNT(*) AS quote_total FROM quotes WHERE instrument_id IN "
             "(SELECT id FROM instruments WHERE symbol = 'ABC')"
         ).fetchone()
 
@@ -298,7 +298,7 @@ def test_zwei_listings_mit_gleichem_symbol_ueberleben_den_neustart(tmp_path) -> 
         "aaaaaaaa-0000-4000-8000-000000000001",
         "aaaaaaaa-0000-4000-8000-000000000002",
     ]
-    assert quote_count["anzahl"] == 2, "abhängige Daten sind verloren gegangen"
+    assert quote_count["quote_total"] == 2, "abhängige Daten sind verloren gegangen"
 
 
 def test_echte_altduplikate_werden_weiterhin_zusammengefuehrt(tmp_path) -> None:
@@ -366,16 +366,16 @@ def test_zwei_unaufloesbare_zeilen_werden_einzeln_gemeldet(tmp_path) -> None:
 
     with sqlite3.connect(path) as connection:
         connection.row_factory = sqlite3.Row
-        eintraege = connection.execute(
+        entries = connection.execute(
             "SELECT isin FROM migration_rejections WHERE symbol = 'OPEN' "
             "ORDER BY isin"
         ).fetchall()
 
-    assert [row["isin"] for row in eintraege] == ["US1111111111", "US2222222222"]
+    assert [row["isin"] for row in entries] == ["US1111111111", "US2222222222"]
     assert _instruments(path) == {}
 
 
-def _mit_gesetzter_identitaet(
+def _with_identity(
     path: str, symbol: str, ticker: str | None, mic: str | None
 ) -> None:
     """Setzt eine Zuordnung von Hand — der Zustand *vor* dem Umzug.
@@ -404,7 +404,7 @@ def test_eine_gueltige_zuordnung_bleibt_unangetastet(tmp_path) -> None:
     """
     path = str(tmp_path / "manuell.db")
     _legacy_database(path, [("VTI", "US9229087690")])
-    _mit_gesetzter_identitaet(path, "VTI", "VTI", "XNAS")
+    _with_identity(path, "VTI", "VTI", "XNAS")
 
     init_db(path)
     run_migration(path, rejected_at=_STAMP)
@@ -427,7 +427,7 @@ def test_das_laenderpraefix_ueberlebt_die_migration_nicht(tmp_path) -> None:
     """
     path = str(tmp_path / "laenderpraefix.db")
     _legacy_database(path, [("VTI", "US9229087690")])
-    _mit_gesetzter_identitaet(path, "VTI", "VTI", "US")
+    _with_identity(path, "VTI", "VTI", "US")
 
     init_db(path)
     run_migration(path, rejected_at=_STAMP)
@@ -450,7 +450,7 @@ def test_das_laenderpraefix_ueberlebt_die_migration_nicht(tmp_path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("mic", "warum"),
+    ("mic", "reason"),
     [
         ("NOT-A-MIC", "sieht nicht einmal wie ein MIC aus"),
         ("XNAS\n", "trägt einen Zeilenumbruch"),
@@ -459,7 +459,7 @@ def test_das_laenderpraefix_ueberlebt_die_migration_nicht(tmp_path) -> None:
     ids=["unsinn", "zeilenumbruch", "laenderpraefix"],
 )
 def test_ein_untauglicher_mic_ueberlebt_den_umzug_nicht(
-    tmp_path, mic: str, warum: str
+    tmp_path, mic: str, reason: str
 ) -> None:
     """Was kein echter MIC ist, macht eine Zeile nicht vollständig.
 
@@ -475,10 +475,10 @@ def test_ein_untauglicher_mic_ueberlebt_den_umzug_nicht(
     """
     path = str(tmp_path / "untauglich.db")
     _legacy_database(path, [("VTI", "US9229087690")])
-    _mit_gesetzter_identitaet(path, "VTI", "VTI", mic)
+    _with_identity(path, "VTI", "VTI", mic)
 
     init_db(path)
     run_migration(path, rejected_at=_STAMP)
 
-    assert "VTI" not in _instruments(path), warum
+    assert "VTI" not in _instruments(path), reason
     assert _rejections(path)["VTI"]["reason"] == REASON_NO_SUFFIX

@@ -45,6 +45,7 @@ from app.plugin_adapters import DailyAdapter, MetadataAdapter, ResolverAdapter
 from app.plugin_loader import ENTRY_POINT_GROUP, load_all
 from app.providers.base import SourceAnswer
 from app.sources_registry import register_loaded, specs_by_name
+from tests.app_client import app_on_volume
 
 EXAMPLES = Path(__file__).parent.parent / "plugin_api" / "examples"
 
@@ -155,25 +156,9 @@ providers:
 
 @pytest.fixture
 def client(volume: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
-    """Die App auf einem frischen Volume — Lifespan inklusive.
-
-    `TestClient` als Kontextmanager, damit der Lifespan wirklich läuft: Dort
-    werden die Plugins geladen, und ohne ihn prüfte der Test eine App, die den
-    Ladevorgang nie ausgeführt hat.
-    """
-    monkeypatch.setenv("DATABASE_PATH", str(volume / "stockinfo.db"))
-    from app.config import get_settings
-
-    get_settings.cache_clear()
-    get_sources_config.cache_clear()
-    from app.container import get_cached_quote_service
-
-    get_cached_quote_service.cache_clear()
-    with TestClient(app) as opened:
+    """Die App auf einem frischen Volume — Lifespan inklusive (`app_on_volume`)."""
+    with app_on_volume(volume, monkeypatch) as opened:
         yield opened
-    get_settings.cache_clear()
-    get_sources_config.cache_clear()
-    get_cached_quote_service.cache_clear()
 
 
 def test_der_entry_point_ist_wirklich_installiert() -> None:
