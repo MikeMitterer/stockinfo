@@ -11,6 +11,8 @@ uvicorn.log
 docker/logs/
 docker/.last-build-tag
 docker/.last_login
+# Reste des früheren `make setup` in bestehenden Checkouts; die Werkzeuge kommen
+# über pipx (.dev-tools.conf.sh). Den Ordner darf man löschen.
 .libs/
 _tickets/ACTIVITY.md
 # Bauartefakte der Python-Pakete (`plugin_api/`, das Beispiel-Plugin).

@@ -1,7 +1,6 @@
 -r requirements.txt
-# Werkzeuge für Tests und Prüfungen. Die Maintainer-Helfer aus ProjectTools
-# stehen in requirements-maintainer.txt; `make setup` installiert sie nur,
-# wenn .libs/ProjectTools verlinkt ist.
+# Werkzeuge für Tests und Prüfungen. ProjectTools und BashLib kommen nicht in
+# die .venv, sondern über pipx (.dev-tools.conf.sh, make install-tools).
 ruff==0.15.21
 pytest==9.1.1
 pytest-asyncio==1.4.0

@@ -145,7 +145,7 @@ Pflichtdateien, Screenshots und Abhängigkeiten gelten, steht mit Grund in
 kommt dort hinein. Diese Datei und `CLAUDE.md` prüft es nur auf tote Links
 und Anker; Verweise auf andere Dokumente deshalb als Link schreiben.
 Meldungen, die nach dem Prüfen nichts verlangen, mit
-`./.libs/ProjectTools/src/bash/docs-check.sh --ack <datei>` quittieren und
+`docs-check --ack <datei>` quittieren und
 `.docs-check.ack` mitcommitten; nie ungesehen. `--no-verify` nur im Notfall
 und mit Begründung im Bericht. Einstellungen der Settings-Klasse in
 `app/config.py` erkennt die Prüfung nicht; neue Einstellungen von Hand
