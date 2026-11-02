@@ -46,8 +46,8 @@ set -uo pipefail
 
 BASH_LIBS="${BASH_LIBS:-$(bashlib-path 2>/dev/null || true)}"
 
-# Das Script steht in der Unraid-Anleitung fuer Nutzer; die private BashLib
-# haben sie nicht. Ohne sie laeuft es mit einfachen Farben weiter.
+# Das Script steht in der Unraid-Anleitung fuer Nutzer; BashLib haben sie
+# meist nicht installiert. Ohne sie laeuft es mit einfachen Farben weiter.
 if [[ -r "${BASH_LIBS}/colors.lib.sh" && -r "${BASH_LIBS}/tools.lib.sh" ]]; then
     # shellcheck source=/dev/null
     if [[ "${__COLORS_LIB__:=""}" == "" ]]; then . "${BASH_LIBS}/colors.lib.sh"; fi
@@ -100,7 +100,7 @@ readonly DOCKER_IMAGE="${STOCKINFO_IMAGE:-mangolila/stockinfo:latest}"
 readonly CONTAINER_DATA_DIR="/data"
 readonly CONTAINER_NAME="${STOCKINFO_CONTAINER:-stockinfo}"
 
-# Der Port, auf dem der Server lauscht — nur für die Lebendabfrage. `make dev`
+# Der Port, auf dem der Server lauscht — nur für die Lebendabfrage. `make dev-up`
 # und das `docker run`-Beispiel verwenden beide 8000.
 readonly PORT="${PORT:-8000}"
 readonly BASE_URL="http://127.0.0.1:${PORT}"
@@ -296,7 +296,7 @@ requireWritableTarget() {
             echo -e "      Das ist der Host-Pfad, der auf ${YELLOW}${CONTAINER_DATA_DIR}${NC} gemappt ist." >&2
             echo -e "      Anderer Pfad: ${GREEN}${APPNAME} --target docker --data-dir <pfad>${NC}\n" >&2
         else
-            echo -e "      Die Kette gehört neben die Datenbank — erst ${GREEN}make dev${NC}, dann umschalten.\n" >&2
+            echo -e "      Die Kette gehört neben die Datenbank — erst ${GREEN}make dev-up${NC}, dann umschalten.\n" >&2
         fi
         return 1
     fi

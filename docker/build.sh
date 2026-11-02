@@ -4,8 +4,9 @@
 # Build Docker-Image: mangolila/stockinfo
 #------------------------------------------------------------------------------
 
-# Vars die in .bashrc gesetzt sein müssen ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-if [[ -z ${BASH_LIBS+x} ]]; then echo "Var 'BASH_LIBS' nicht gesetzt!"; exit 1; fi
+# BashLib: make build/push setzen BASH_LIBS; direkt aufgerufen hilft bashlib-path (pipx).
+BASH_LIBS="${BASH_LIBS:-$(bashlib-path 2>/dev/null || true)}"
+if [[ -z "${BASH_LIBS}" ]]; then echo "BashLib nicht gefunden: BASH_LIBS setzen oder make install-tools"; exit 1; fi
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # -e  bricht bei erstem Fehler ab   (Ausnahme: 'command || true')
