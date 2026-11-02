@@ -13,7 +13,7 @@ durch „Codex" wurden eine „Mailbox zwischen Codex und Codex" und ein
 
 - [Bezeichner sind englisch. Ausnahmslos.](#bezeichner-sind-englisch-ausnahmslos)
 - [Vor Arbeitsbeginn](#vor-arbeitsbeginn)
-- [Ein Arbeitsort: der Projekt-Root](#ein-arbeitsort-der-projekt-root)
+- [Arbeitsort und Integration](#arbeitsort-und-integration)
 - [Tatsächlicher Entwicklungsstand](#tatsächlicher-entwicklungsstand)
 - [Dokumentation gehört zur Änderung](#dokumentation-gehört-zur-änderung)
 - [Datenbankzugriffe in Tests](#datenbankzugriffe-in-tests)
@@ -51,68 +51,51 @@ Vollständige Konventionen samt Namensschema je Sprache: Skill `code-conventions
 
 ## Vor Arbeitsbeginn
 
-**Coder und Verifier werden ausschließlich in `_tickets/STATUS.md` zugeordnet.**
-`implementer` bezeichnet den Coder, `reviewer` den Verifier, `owner` die
-Instanz, die gerade am Zug ist. Diese drei Felder prüft die eigene Instanz vor
-jedem Turn.
+**Dieses Projekt führt seine Tickets mit agent-lessons.** Board, Rollen, Regeln
+und Lessons liest und schreibst du über den MCP-Server `agent-lessons`, nicht
+von Hand in `_tickets/`.
 
-Nur der zuständige Coder implementiert, der Verifier prüft unabhängig. Wer nicht
-am Zug ist, verändert keinen Produktcode: Für die andere Instanz bleibt die
-Commit-Linie eingefroren, außer für ausdrücklich beauftragte Review- und
-Statusdateien.
+- **Zuerst `next`:** In jedem Durchlauf sagt `next`, was deine Rolle jetzt tut.
+- **Stand:** `get_status`, die Spalten mit `get_tickets`, ein Ticket mit
+  `get_ticket`.
+- **Regeln und Lessons:** `get_config` nennt Regeln und Guards mit Summary
+  (Volltext mit `get_rule`, `get_guard`), `get_lessons` die Lessons.
+- **Rollen:** Eine Sitzung mit Rolle startet Mike mit `al start ROLLE`
+  (implementer, reviewer, observer). Ohne Rolle arbeitest du nur auf
+  ausdrücklichen Auftrag.
+- **Fragen und Notizen an Mike:** `ask_user` bzw. `add_note`, nicht im eigenen
+  Gedächtnis.
 
-- `_tickets/.agents/CLAUDE-LESSONS.md` und `_tickets/.agents/CODEX-LESSONS.md`
-  sind Linkeinstiege zu den lokalen Einzel-Lessons. Der Coder liest die
-  Erfahrungen seiner Autorenschaft vor Umsetzung und Übergabe; der Verifier
-  die des Autors der Prüffassung vor dem Review. Bei gemischter Arbeit beide.
-- `_tickets/.agents/AGENT-WORKFLOW.md` enthält den gemeinsamen fachlichen Ablauf.
-- `_tickets/.agents/AGENT-ACTIVATION.md` trennt davon die laufzeitspezifischen Startwege.
+Nur der zuständige Coder (`implementer`) implementiert, der Verifier
+(`reviewer`) prüft unabhängig. Wer nicht am Zug ist, verändert keinen
+Produktcode. Ein Rollenwechsel ändert weder geprüfte Fassungen noch den
+Rundenverbrauch.
 
-Diese Regeln gelten für beide Rollen. Dateinamen und historische Akteursnamen
-sind keine Rollenverteilung. Ein Rollenwechsel wird ausdrücklich im Status
-festgehalten und ändert weder geprüfte Fassungen noch den Rundenverbrauch.
-
-Lokale Lessons liegen als Einzeldateien unter `_tickets/.agents/lessons/`.
-Die alten Sammeldateien sind Linkeinstiege. Verzeichnisinventar, gemeinsamer
-AgentLessons-Bestand und Herkunft folgen
-„Lessons lesen und pflegen“ (`_tickets/.agents/LESSONS-ACCESS.md`). Der Collector
-aktualisiert die gemeinsame Sammlung auf ausdrücklichen Aufruf; ein
-periodischer Lauf und die automatische Regelableitung sind noch nicht umgesetzt.
+Die früheren lokalen Lessons dieses Projekts (`SI-*`) stehen seit der
+Umstellung im gemeinsamen Bestand; `get_lessons` liefert sie, beim Start eines
+Tickets kommen die passenden mit.
 
 [↑ Übersicht](#übersicht)
 
-## Ein Arbeitsort: der Projekt-Root
+## Arbeitsort und Integration
 
-**Alle Instanzen arbeiten ausschließlich im Projekt-Root
-`/Volumes/DevLocal/DevWeb/Production/StockInfo`** (Mike, 2026-10-01).
-Keine `git worktree add` und keine Kopien unter `/private/tmp` oder anderswo,
-außer Mike ordnet es ausdrücklich an. Grund: Mike sieht Board und prüfbaren
-Quellstand an einer Stelle und testet genau dort.
+**Jede Sitzung arbeitet in ihrem eigenen Workspace** unter `.worktrees/`, nicht
+im Projekt-Root (Mike, 2026-11-02, mit der Umstellung auf agent-lessons; ersetzt
+die Regel vom 2026-10-01, nach der alle Instanzen nur im Root arbeiteten).
+`start_ticket` legt den Ticketbranch an und wechselt dorthin; den Branch wechselt
+keine Instanz von Hand. Mike sieht den Stand im Projekt-Root mit `al develop`
+oder `al T-NN`.
 
-- **Ein Board.** `_tickets/` gibt es nur im Root. Board-Änderungen kommen auf
-  den gerade ausgecheckten Branch. Ein Ticket im Backlog ist damit vom Root
-  aus sichtbar, auch wenn seine Umsetzung noch nicht aktiviert ist.
-- **Branch im Feld `branch`.** Der Ticketbranch wird im Root ausgecheckt
-  (`git switch`). `_tickets/STATUS.md` nennt ihn im Feld `branch`. Vor jedem
-  fachlichen Durchlauf vergleicht jede Instanz `git branch --show-current`
-  mit diesem Feld. Bei Abweichung meldet sie den Konflikt und arbeitet nicht
-  weiter.
-- **Nur der Owner schaltet den Branch.** Er setzt `branch` im selben Commit,
-  der den neuen Stand beginnt. Der Verifier prüft die Übergabe im Root und
-  wechselt den Branch nicht; ältere Fassungen liest er mit `git show` und
-  `git diff`.
-- **Früh integrieren.** Nach der technischen Freigabe mergt der Coder den
-  geprüften Ticketbranch lokal nach `master` und stellt den Root auf `master`
-  zurück. Mikes menschliche Abnahme findet auf `master` statt. Nacharbeit
-  beginnt auf einem neuen Branch von `master`. Bereits offene menschliche
-  Abnahmen bleiben offen; der Merge ersetzt sie nicht.
-- **Push ist eine eigene Entscheidung.** Weder technische Freigabe noch lokaler
-  Merge beauftragen einen Push oder eine Veröffentlichung.
-
-Lokale Ausnahme vom gemeinsamen Paket: `PROJECT-RULES.md` mergt erst nach
-Prüfung **und** menschlicher Abnahme. In StockInfo folgt der lokale Merge
-bereits auf die technische Freigabe. Die gemeinsame Übernahme ins Paket ist
-AgentLessons T-52.
+- **Ein Board.** `_tickets/` ist der Worktree des Branches `board`. Board und
+  Tickets ändern nur die Werkzeuge, nie eine Instanz von Hand.
+- **Integration über `develop`.** Die technische Freigabe des Verifiers merged
+  den Ticketbranch auf `develop`. Mit dem Abnahme-Modus `auto` übernimmt das
+  Board ein Ticket danach ohne menschliche Abnahme nach `master`, sobald der
+  Prüfbefehl grün ist (Mike, 2026-11-02: „acceptance_default auto“). Je Ticket
+  setzt Mike einen anderen Modus mit `al ticket mode ID human`; abnehmen
+  mit `al ticket accept ID`, ablehnen mit `al ticket reject ID GRUND`.
+- **Push ist eine eigene Entscheidung.** Weder Freigabe noch Abnahme
+  beauftragen einen Push oder eine Veröffentlichung.
 
 [↑ Übersicht](#übersicht)
 
