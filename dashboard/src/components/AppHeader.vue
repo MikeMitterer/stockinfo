@@ -45,7 +45,7 @@ const { t } = useI18n()
  */
 const barOverrides = useNaiveOverrides(buildBarNaiveOverrides)
 
-const aktionLabel = computed(() =>
+const actionLabel = computed(() =>
   props.refreshing ? t('toolbar.refreshing') : t('toolbar.refreshAll'),
 )
 
@@ -124,7 +124,7 @@ const tabs = computed<{ key: TabKey; label: string; icon: NavIconName }[]>(() =>
           size="small"
           :disabled="refreshing"
           :loading="refreshing"
-          :aria-label="aktionLabel"
+          :aria-label="actionLabel"
           @click="emit('refresh')"
         >
           <!--
@@ -135,7 +135,7 @@ const tabs = computed<{ key: TabKey; label: string; icon: NavIconName }[]>(() =>
             `aria-label` trägt den Namen weiter, wenn der Text verschwindet.
           -->
           <span v-if="!refreshing" aria-hidden="true">↻</span>
-          <span class="topbar-action__label">{{ aktionLabel }}</span>
+          <span class="topbar-action__label">{{ actionLabel }}</span>
         </NButton>
       </NConfigProvider>
     </template>

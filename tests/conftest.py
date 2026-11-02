@@ -35,23 +35,12 @@ sys.addaudithook(_guard_database_access)
 
 @pytest.fixture(autouse=True)
 def isolated_database(tmp_path, monkeypatch):
-    from app import container
     from app.sources_registry import close_all
-
-    cached_factories = (
-        get_settings,
-        container.get_sources_config,
-        container.get_cached_quote_service,
-        container.get_daily_history_service,
-        container.get_quote_analyzer,
-        container.get_backup_service,
-        container.get_fx_service,
-    )
+    from tests.app_client import clear_cached_factories
 
     def clear_caches():
         close_all()
-        for factory in cached_factories:
-            factory.cache_clear()
+        clear_cached_factories()
 
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "stockinfo.db"))
     clear_caches()

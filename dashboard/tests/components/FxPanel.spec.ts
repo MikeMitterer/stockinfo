@@ -1,7 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('consola', () => ({ consola: { error: vi.fn() } }))
 import { NButton, NInputNumber, NSelect } from 'naive-ui'
 
 import FxPanel from '../../src/components/FxPanel.vue'

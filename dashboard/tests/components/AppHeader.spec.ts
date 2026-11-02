@@ -50,9 +50,9 @@ describe('AppHeader', () => {
 
   it('führt der Einstellungen-Punkt zu settings — links, nicht als Zahnrad rechts', async () => {
     const wrapper = mountHeader()
-    const punkte = wrapper.findAll('.ux-navitem')
+    const navItems = wrapper.findAll('.ux-navitem')
 
-    await punkte[punkte.length - 1].trigger('click')
+    await navItems[navItems.length - 1].trigger('click')
 
     expect(wrapper.emitted('navigate')?.[0]).toEqual(['settings'])
   })
@@ -67,10 +67,10 @@ describe('AppHeader', () => {
 
   it('markiert den aktiven Bereich für Hilfstechnik', () => {
     const wrapper = mountHeader()
-    const aktiv = wrapper.findAll('[aria-current="page"]')
+    const activeItems = wrapper.findAll('[aria-current="page"]')
 
-    expect(aktiv).toHaveLength(1)
-    expect(aktiv[0].text()).toContain('Assets')
+    expect(activeItems).toHaveLength(1)
+    expect(activeItems[0].text()).toContain('Assets')
   })
 
   /*
@@ -81,11 +81,11 @@ describe('AppHeader', () => {
    */
   it('trägt die Aktualisieren-Handlung rechts, nicht zwischen den Menüpunkten', () => {
     const wrapper = mountHeader()
-    const aktionen = wrapper.find('.ux-topbar__actions')
+    const actions = wrapper.find('.ux-topbar__actions')
 
-    expect(aktionen.exists()).toBe(true)
-    expect(aktionen.text()).toContain('Alle aktualisieren')
-    expect(aktionen.find('.ux-navitem').exists()).toBe(false)
+    expect(actions.exists()).toBe(true)
+    expect(actions.text()).toContain('Alle aktualisieren')
+    expect(actions.find('.ux-navitem').exists()).toBe(false)
   })
 
   it('meldet den Klick auf Aktualisieren', async () => {
@@ -99,9 +99,9 @@ describe('AppHeader', () => {
   it('sperrt den Knopf, solange aktualisiert wird', () => {
     // Sonst stößt ein zweiter Klick denselben Lauf noch einmal an.
     const wrapper = mountHeader(true)
-    const knopf = wrapper.find('.ux-topbar__actions button')
+    const button = wrapper.find('.ux-topbar__actions button')
 
-    expect(knopf.attributes('disabled')).toBeDefined()
-    expect(knopf.text()).toContain('Aktualisiere')
+    expect(button.attributes('disabled')).toBeDefined()
+    expect(button.text()).toContain('Aktualisiere')
   })
 })

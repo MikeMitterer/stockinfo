@@ -52,10 +52,10 @@ def test_der_zweite_start_installiert_nicht_erneut(tmp_path: Path) -> None:
     """
     install = _fake_install()
 
-    erste = ensure(["meinpaket==1.0"], tmp_path, install)
-    zweite = ensure(["meinpaket==1.0"], tmp_path, install)
+    first = ensure(["meinpaket==1.0"], tmp_path, install)
+    second = ensure(["meinpaket==1.0"], tmp_path, install)
 
-    assert erste == zweite
+    assert first == second
     assert len(install.calls) == 1, "der zweite Start hat nur nachgesehen"
 
 
@@ -67,11 +67,11 @@ def test_eine_geaenderte_liste_bekommt_ein_eigenes_verzeichnis(tmp_path: Path) -
     """
     install = _fake_install()
 
-    alt = ensure(["meinpaket==1.0"], tmp_path, install)
-    neu = ensure(["meinpaket==2.0"], tmp_path, install)
+    old = ensure(["meinpaket==1.0"], tmp_path, install)
+    new = ensure(["meinpaket==2.0"], tmp_path, install)
 
-    assert alt != neu
-    assert alt.is_dir() and neu.is_dir(), "die alte Umgebung bleibt bestehen"
+    assert old != new
+    assert old.is_dir() and new.is_dir(), "die alte Umgebung bleibt bestehen"
 
 
 def test_eine_leere_liste_legt_nichts_an(tmp_path: Path) -> None:
@@ -92,12 +92,12 @@ def test_ein_fehlschlag_kostet_die_pakete_und_nicht_den_start(tmp_path: Path) ->
     warum erst in einem Zwischenordner gebaut und dann umbenannt wird.
     """
 
-    def kaputt(packages: Sequence[str], target: Path) -> None:
+    def broken(packages: Sequence[str], target: Path) -> None:
         target.mkdir(parents=True, exist_ok=True)
         (target / "halb.py").write_text("# angefangen\n", encoding="utf-8")
         raise RuntimeError("Paketindex nicht erreichbar")
 
-    assert ensure(["meinpaket==1.0"], tmp_path, kaputt) is None
+    assert ensure(["meinpaket==1.0"], tmp_path, broken) is None
 
     root = tmp_path / ENV_DIRNAME
     assert not (root / environment_hash(["meinpaket==1.0"])).exists()
@@ -115,14 +115,14 @@ def test_das_verzeichnis_kommt_vorn_in_den_suchpfad(
     import sys
 
     monkeypatch.setattr(sys, "path", list(sys.path))
-    ziel = ensure(["meinpaket==1.0"], tmp_path, _fake_install())
+    env_dir = ensure(["meinpaket==1.0"], tmp_path, _fake_install())
 
-    activate(ziel)
+    activate(env_dir)
 
-    assert sys.path[0] == str(ziel)
+    assert sys.path[0] == str(env_dir)
 
-    activate(ziel)
-    assert sys.path.count(str(ziel)) == 1, "zweimal aktivieren fügt nichts hinzu"
+    activate(env_dir)
+    assert sys.path.count(str(env_dir)) == 1, "zweimal aktivieren fügt nichts hinzu"
 
 
 def test_ein_installiertes_paket_ist_danach_importierbar(
@@ -132,11 +132,11 @@ def test_ein_installiertes_paket_ist_danach_importierbar(
     import sys
 
     monkeypatch.setattr(sys, "path", list(sys.path))
-    activate(ensure(["meinpaket==1.0"], tmp_path, _fake_install("frisch_geliefert")))
+    activate(ensure(["meinpaket==1.0"], tmp_path, _fake_install("freshly_installed")))
 
-    import frisch_geliefert  # noqa: PLC0415 — genau das ist der Test
+    import freshly_installed  # noqa: PLC0415 — genau das ist der Test
 
-    assert frisch_geliefert.VALUE == 1
+    assert freshly_installed.VALUE == 1
 
 
 def _build_wheel(directory: Path) -> Path:
@@ -199,25 +199,25 @@ def test_ein_ueber_den_zielordner_installiertes_paket_wird_entdeckt(
 
     from app.plugin_loader import ENTRY_POINT_GROUP
 
-    lager = tmp_path / "wheels"
-    lager.mkdir()
-    _build_wheel(lager)
+    wheel_dir = tmp_path / "wheels"
+    wheel_dir.mkdir()
+    _build_wheel(wheel_dir)
 
     monkeypatch.setenv("PIP_NO_INDEX", "1")
-    monkeypatch.setenv("PIP_FIND_LINKS", str(lager))
+    monkeypatch.setenv("PIP_FIND_LINKS", str(wheel_dir))
     monkeypatch.setattr(sys, "path", list(sys.path))
 
-    ziel = ensure(["demo-plugin==1.0.0"], tmp_path)
+    env_dir = ensure(["demo-plugin==1.0.0"], tmp_path)
 
-    assert ziel is not None, "die Installation ist fehlgeschlagen"
-    assert (ziel / "demo_plugin").is_dir(), "das Paket liegt im Zielordner"
+    assert env_dir is not None, "die Installation ist fehlgeschlagen"
+    assert (env_dir / "demo_plugin").is_dir(), "das Paket liegt im Zielordner"
 
-    activate(ziel)
+    activate(env_dir)
     metadata.MetadataPathFinder.invalidate_caches()
 
-    gefunden = {point.name for point in metadata.entry_points(group=ENTRY_POINT_GROUP)}
-    assert "demo-installiert" in gefunden, (
-        f"der Entry-Point aus {ziel} wurde nicht entdeckt: {sorted(gefunden)}"
+    found = {point.name for point in metadata.entry_points(group=ENTRY_POINT_GROUP)}
+    assert "demo-installiert" in found, (
+        f"der Entry-Point aus {env_dir} wurde nicht entdeckt: {sorted(found)}"
     )
 
 
@@ -250,7 +250,7 @@ def test_die_paketliste_steht_unter_plugins(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("eintrag", "warum"),
+    ("entry", "reason"),
     [
         ("demo", "ohne Version wäre derselbe Hash morgen ein anderes Paket"),
         ("demo>=1.0", "eine Spanne ist keine feste Version"),
@@ -259,7 +259,7 @@ def test_die_paketliste_steht_unter_plugins(tmp_path: Path) -> None:
     ],
 )
 def test_was_nicht_fest_gepinnt_ist_wird_abgewiesen(
-    tmp_path: Path, eintrag: str, warum: str
+    tmp_path: Path, entry: str, reason: str
 ) -> None:
     """Feste `==`-Versionen sind Pflicht — die Regel steht im Design.
 
@@ -268,9 +268,9 @@ def test_was_nicht_fest_gepinnt_ist_wird_abgewiesen(
     Eine URL oder eine Option wäre zusätzlich ein Weg, dem Installer etwas
     unterzuschieben.
     """
-    config = _config(tmp_path, f"plugins:\n  packages:\n    - {eintrag!r}\n")
+    config = _config(tmp_path, f"plugins:\n  packages:\n    - {entry!r}\n")
 
-    assert config.packages == (), warum
+    assert config.packages == (), reason
 
 
 def test_ein_gueltiger_eintrag_ueberlebt_neben_einem_abgewiesenen(
