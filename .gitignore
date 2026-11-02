@@ -21,3 +21,5 @@ _tickets/ACTIVITY.md
 build/
 dist/
 *.egg-info/
+/_tickets/
+/.worktrees/
