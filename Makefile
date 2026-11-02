@@ -24,7 +24,7 @@ export WORKSPACE WORKSPACE_SQ PROJECT_NAME
 # devtools am Tag aus DEVTOOLS_TAG und hält die Umgebung zwischen den Aufrufen; der Tag
 # geht über die Umgebung in die Befehle, nicht als Text.
 include .dev-tools.conf.sh
-export DEVTOOLS_SPEC := git+https://github.com/MikeMitterer/python-devtools.git@$(DEVTOOLS_TAG)
+export DEVTOOLS_SPEC := $(DEVTOOLS_SOURCE)@$(DEVTOOLS_TAG)
 DEV_TOOLS = pipx run --spec "$$DEVTOOLS_SPEC" devtools
 
 # BashLib für version, tag-*, docker/build.sh und scripts/. Ein von außen gesetztes
