@@ -44,7 +44,7 @@
 #------------------------------------------------------------------------------
 set -uo pipefail
 
-BASH_LIBS="${BASH_LIBS:-$(cd "$(dirname "$0")/../.libs/BashLib/src" 2>/dev/null && pwd || true)}"
+BASH_LIBS="${BASH_LIBS:-$(bashlib-path 2>/dev/null || true)}"
 
 # Das Script steht in der Unraid-Anleitung fuer Nutzer; die private BashLib
 # haben sie nicht. Ohne sie laeuft es mit einfachen Farben weiter.

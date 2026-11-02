@@ -1,9 +1,12 @@
-SHELL := /bin/bash
+SHELL := bash
 
 .DEFAULT_GOAL := help
 
-WORKSPACE    := $(realpath $(shell pwd))
-PROJECT_NAME := $(notdir $(WORKSPACE))
+WORKSPACE    := $(CURDIR)
+WORKSPACE_SQ := '$(subst ','\'',$(WORKSPACE))'
+PROJECT_NAME := $(shell basename -- $(WORKSPACE_SQ))
+# Werte von außen (Pfad, Umgebung) nur über die Umgebung in Rezepte geben, nie als $(VAR).
+export WORKSPACE WORKSPACE_SQ PROJECT_NAME
 
 # .env nur für Make selbst (PORT, HOST, …) — bewusst **ohne** `export`.
 # Ein pauschales `export` reicht die Werte 1:1 an jeden Kindprozess weiter,
@@ -12,53 +15,66 @@ PROJECT_NAME := $(notdir $(WORKSPACE))
 # ohnehin selbst (pydantic-settings), Docker via --env-file.
 -include .env
 
-# Entwicklungs-Targets (setup, dev-*, test, check, up/down) laufen auch ohne
-# die Bibliotheken unter .libs/. Maintainer-Targets (build, push, status,
-# tag-*, version) brauchen die private BashLib und brechen sonst mit Hinweis ab.
-DEV_MAKE ?= $(WORKSPACE)/.libs/MakeLib
--include ${DEV_MAKE}/colours.mk
--include ${DEV_MAKE}/tools.mk
+# Entwicklungs-Targets (setup, dev-*, up/down) laufen ohne die Entwicklungswerkzeuge.
+# Prüf-Targets (test, check, docs-check, status, changelog) brauchen ProjectTools,
+# Maintainer-Targets (build, push, tag-*, version) BashLib; beide kommen über pipx.
+#
+# Tag und Quelle (Git oder Arbeitskopie) beider Werkzeuge stehen nur in .dev-tools.conf.sh;
+# devtools (Paket mmit-devtools) liest sie, prüft, zeigt und installiert. pipx run holt
+# devtools am Tag aus DEVTOOLS_TAG und hält die Umgebung zwischen den Aufrufen; der Tag
+# geht über die Umgebung in die Befehle, nicht als Text.
+include .dev-tools.conf.sh
+export DEVTOOLS_SPEC := $(DEVTOOLS_SOURCE)@$(DEVTOOLS_TAG)
+DEV_TOOLS = pipx run --spec "$$DEVTOOLS_SPEC" devtools
 
-# Fallbacks, wenn MakeLib nicht verfügbar ist
-YELLOW ?= $(shell printf "\033[38;5;3m")
-GREEN  ?= $(shell printf "\033[38;5;2m")
-BLUE   ?= $(shell printf "\033[38;5;6m")
-RED    ?= $(shell printf "\033[38;5;1m")
-WHITE  ?= $(shell printf "\033[38;5;7m")
+# BashLib für version, tag-*, docker/build.sh und scripts/. Ein von außen gesetztes
+# BASH_LIBS geht vor, sonst bashlib-path aus der pipx-Installation; bei pipx install -e
+# <Arbeitskopie> zeigt es auf deren src/.
+BASHLIB_MIN := $(patsubst v%,%,$(firstword $(subst +, ,$(BASHLIB_TAG))))
+ifndef BASH_LIBS
+BASH_LIBS := $(shell bashlib-path 2>/dev/null)
+BASHLIB_FROM_PIPX := $(if $(BASH_LIBS),yes)
+endif
+export BASH_LIBS
+
+# Farben und Spalten der Hilfe, wie in agent-lessons ohne MakeLib. Von außen überschreibbar.
+YELLOW ?= $(shell printf "\033[38;5;11m")
+GREEN  ?= $(shell printf "\033[38;5;10m")
+BLUE   ?= $(shell printf "\033[38;5;33m")
+RED    ?= $(shell printf "\033[38;5;196m")
+WHITE  ?= $(shell printf "\033[38;5;15m")
 RESET  ?= $(shell printf "\033[0m")
 THEME_COLOR_GROUP   ?= $(YELLOW)
 THEME_COLOR_TARGET  ?= $(BLUE)
 THEME_COLOR_DESC    ?= $(GREEN)
+THEME_COLOR_DANGER  ?= $(RED)
 THEME_INDENT_GROUP  ?= $(shell printf '%2s' '')
 THEME_INDENT_TARGET ?= $(shell printf '%7s' '')
-THEME_COLOR_DANGER  ?= $(RED)
+THEME_WIDTH_TARGET  ?= 22
+THEME_COLUMN_GAP    ?= 1
 
-# Kennzeichnet in der Hilfe Targets, die die private BashLib brauchen. In der
+# Kennzeichnet in der Hilfe Targets, die BashLib brauchen. In der
 # Target-Beschreibung steht dafür am Ende „— Maintainer“.
 MAINTAINER_MARK = $(THEME_COLOR_DANGER)[Maintainer]$(THEME_COLOR_DESC)
 
-# ProjectTools (geteilte Dev-Scripte) — Fallback für nicht-interaktive Shells (Jenkins etc.)
-PROJECT_TOOLS ?= $(WORKSPACE)/.libs/ProjectTools/src
-BASH_LIBS ?= $(WORKSPACE)/.libs/BashLib/src
-export BASH_LIBS
-
-# Prüft vor Maintainer-Targets, ob die private BashLib vorhanden ist.
+# Prüft vor Maintainer-Targets, ob BashLib vorhanden ist.
 # Optionaler Parameter: ein Hinweis, wie es ohne BashLib geht.
 define require_bash_libs
-	@test -r "$(BASH_LIBS)/version.lib.sh" || { \
-		echo -e "  $(RED)✗$(RESET) Nur für Maintainer: benötigt die private BashLib ($(YELLOW)BASH_LIBS$(RESET))." >&2; \
+	@test -r "$${BASH_LIBS}/version.lib.sh" || { \
+		echo -e "  $(RED)✗$(RESET) Nur für Maintainer: benötigt BashLib ab $(BASHLIB_MIN): $(YELLOW)make install-tools$(RESET)" >&2; \
 		$(if $(1),echo -e "    $(1)" >&2;) \
 		exit 1; }
 endef
 
 IMAGE_HINT = Image ohne BashLib bauen: $(GREEN)docker build -f docker/Dockerfile -t $(IMAGE_NAME):latest .$(RESET)
-PYTHON ?= python3
 # Interpreter, mit dem `make setup` die .venv anlegt (mindestens 3.11).
 PYTHON_BOOTSTRAP ?= python3.11
-export PROJECT_TOOLS
 
 VENV    := .venv
 PYTEST  := $(VENV)/bin/pytest
+# Was setup herstellt und require-setup prüft: Python-Pakete in der .venv und die
+# Dashboard-Pakete. Eine geänderte Abhängigkeitsdatei macht den Stempel veraltet.
+SETUP_STAMPS := $(VENV)/.installed dashboard/node_modules/.installed
 
 PORT    ?= 8000
 
@@ -76,18 +92,21 @@ DATA_VOLUME ?= stockinfo-data
 
 # ─── Hilfe ────────────────────────────────────────────────────────────────────
 
+# Liste der Makefiles unausgewertet über die Umgebung (siehe Kopf).
+export HELP_FILES = $(value MAKEFILE_LIST)
+
 .PHONY: help
 help: ## Alle verfügbaren Befehle anzeigen
 	@echo
 	@echo "Please use \`make <$(THEME_COLOR_GROUP)target$(RESET)>' where <target> is one of"
 	@echo
-	@echo "Project: $(THEME_COLOR_GROUP)$(PROJECT_NAME)$(RESET)"
+	@echo "Project: $(THEME_COLOR_GROUP)$${PROJECT_NAME}$(RESET)"
 	@echo
-	@grep -hE '^(##@|[a-zA-Z0-9_-]+:.*?## )' $(MAKEFILE_LIST) | \
+	@grep -hE '^(##@|[a-zA-Z0-9_-]+:.*?## )' $${HELP_FILES} | \
 	  awk 'BEGIN {FS = ":.*?## "}; \
 	    /^##@/ { printf "\n$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)%s$(RESET)\n", substr($$0, 4); next }; \
 	    /^[^#]/ { desc = $$2; sub(/ — Maintainer$$/, " $(MAINTAINER_MARK)", desc); \
-	      printf "$(THEME_INDENT_TARGET)$(THEME_COLOR_TARGET)%-16s $(THEME_COLOR_DESC)%s$(RESET)\n", $$1, desc }'
+	      printf "$(THEME_INDENT_TARGET)$(THEME_COLOR_TARGET)%-$(THEME_WIDTH_TARGET)s%$(THEME_COLUMN_GAP)s$(THEME_COLOR_DESC)%s$(RESET)\n", $$1, "", desc }'
 	@echo
 
 .PHONY: hints
@@ -115,20 +134,47 @@ hints: ## Nützliche URLs und Hinweise anzeigen
 	@echo
 	@printf "    $(GREEN)%s$(RESET)\n" "wget -O /boot/config/plugins/dockerMan/templates-user/my-stockinfo.xml https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml"
 	@echo
+	@echo "  $(YELLOW)Werkzeuge$(RESET) $(WHITE)— Tag und Quelle in .dev-tools.conf.sh, einrichten mit make install-tools$(RESET)"
+	@echo
+	@cmd=$$($(DEV_TOOLS) command projecttools 2>/dev/null) || cmd="nicht abrufbar (pipx run devtools)"; \
+	 printf "    $(BLUE)%-22s$(RESET) $(WHITE)%s$(RESET)\n" "ProjectTools" "$$cmd"
+	@cmd=$$($(DEV_TOOLS) command bashlib 2>/dev/null) || cmd="nicht abrufbar (pipx run devtools)"; \
+	 printf "    $(BLUE)%-22s$(RESET) $(WHITE)%s$(RESET)\n" "BashLib (Maintainer)" "$$cmd"
+	@echo
+
+# Läuft vor den Maintainer-Zielen; ohne Hilfeeintrag. Verlangt BashLib in Mindestversion und
+# nennt sonst den Installationsbefehl. Ein von außen gesetztes BASH_LIBS prüft es nur auf Lesbarkeit.
+.PHONY: precheck
+precheck:
+	$(require_bash_libs)
+	@if [[ -n '$(BASHLIB_FROM_PIPX)' ]]; then $(DEV_TOOLS) check bashlib; fi
+
+# Ohne Hilfeeintrag: verlangt ProjectTools in Mindestversion und nennt sonst den Installationsbefehl.
+.PHONY: require-tools
+require-tools:
+	@$(DEV_TOOLS) check projecttools
 
 # ─── Setup ────────────────────────────────────────────────────────────────────
 
 ##@ Setup
 
-# Idempotent: vorhandene Links und .venv bleiben, pip und npm gleichen nur ab.
+# setup ist der einzige Weg, das Projekt einzurichten, auch als worktree_setup in Workspaces
+# und im Prüf-Worktree. Prüf-Targets richten nichts selbst ein, sie hängen an require-setup.
+# Wiederholbar: Die Stempel machen einen eingerichteten Stand zum Nulllauf.
 .PHONY: setup
-setup: ## .libs-Symlinks, Git-Hooks, Python-.venv und Dashboard-Pakete einrichten
-	@if [[ -r "$(BASH_LIBS)/tools.lib.sh" ]]; then \
-		./scripts/setup-libs.sh --install; \
-	else \
-		echo -e "  $(YELLOW)⚠$(RESET) BashLib nicht verfügbar — .libs-Verlinkung übersprungen (nur Maintainer-Targets brauchen sie)"; \
-	fi
+setup: ## Git-Hooks, Python-.venv und Dashboard-Pakete einrichten; zeigt den Werkzeugstand
 	@git config core.hooksPath .githooks
+	@$(MAKE) -s --no-print-directory $(SETUP_STAMPS)
+	@# Nur anzeigen: Ohne pipx oder Netz scheitert die Einrichtung daran nicht.
+	@$(DEV_TOOLS) status 2>/dev/null || echo -e "  $(YELLOW)⚠$(RESET) Werkzeugstand nicht abrufbar (pipx run devtools); Prüf-Targets brauchen ProjectTools: $(YELLOW)make install-tools$(RESET)"
+
+.PHONY: install-tools
+install-tools: ## ProjectTools und BashLib auf den Stand aus .dev-tools.conf.sh bringen (pipx)
+	@command -v pipx >/dev/null || { echo -e "  $(RED)✗$(RESET) pipx fehlt; etwa mit $(YELLOW)brew install pipx$(RESET) installieren." >&2; exit 1; }
+	@$(DEV_TOOLS) install
+
+# Stempelregeln: nur setup erreicht sie; neu, sobald eine Abhängigkeitsdatei neuer ist.
+$(VENV)/.installed: requirements.txt requirements-dev.txt
 	@$(PYTHON_BOOTSTRAP) -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "Python 3.11 oder neuer erforderlich")'
 	@test -x $(VENV)/bin/python || $(PYTHON_BOOTSTRAP) -m venv $(VENV)
 	@$(VENV)/bin/python -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "Bestehende .venv benötigt Python 3.11 oder neuer")'
@@ -140,8 +186,18 @@ setup: ## .libs-Symlinks, Git-Hooks, Python-.venv und Dashboard-Pakete einrichte
 		$(VENV)/bin/python -m pip freeze | grep -qxF "$$PIN" || \
 			$(VENV)/bin/python -m pip install -q --no-deps --force-reinstall "$$PIN"; \
 	done
-	@if [[ -d .libs/ProjectTools ]]; then $(VENV)/bin/python -m pip install -q -r requirements-maintainer.txt; fi
+	@touch "$@"
+
+dashboard/node_modules/.installed: dashboard/package-lock.json
 	@npm ci --prefix dashboard --no-audit --no-fund
+	@touch "$@"
+
+# Ohne Hilfeeintrag: meldet eine fehlende oder veraltete Einrichtung, statt sie nachzuholen.
+.PHONY: require-setup
+require-setup:
+	@$(MAKE) --no-print-directory -q $(SETUP_STAMPS) || { \
+		echo -e "  $(RED)✗$(RESET) Nicht eingerichtet oder veraltet: $(YELLOW)make setup$(RESET)" >&2; \
+		exit 1; }
 
 # ─── Entwicklung ──────────────────────────────────────────────────────────────
 
@@ -156,11 +212,12 @@ dev-up: ## Gesamten Stack starten — Backend + Dashboard (overmind, Daemon)
 dev-down: ## Gesamten Stack stoppen (overmind quit, dann Ports freigeben)
 	-@overmind quit 2>/dev/null || true
 	@# Raeumt nach einem Absturz overmind/tmux DIESES Projekts, eine verwaiste
-	@# .overmind.sock und die Ports aus .dev-ports.conf.sh auf.
-	@if [[ -r "$(PROJECT_TOOLS)/bash/dev-ports.sh" ]]; then \
-		"$(PROJECT_TOOLS)/bash/dev-ports.sh" --kill; \
+	@# .overmind.sock und die Ports aus .dev-ports.conf.sh auf. dev-ports hat im
+	@# pipx-Paket noch keinen Befehl (ProjectTools T-16); bis dahin aus PROJECT_TOOLS.
+	@if [[ -r "$${PROJECT_TOOLS:-}/bash/dev-ports.sh" ]]; then \
+		"$${PROJECT_TOOLS}/bash/dev-ports.sh" --kill; \
 	else \
-		echo -e "  $(YELLOW)⚠$(RESET) ProjectTools nicht verfügbar — Reste nach einem Absturz nicht geprüft"; \
+		echo -e "  $(YELLOW)⚠$(RESET) PROJECT_TOOLS nicht gesetzt — Reste nach einem Absturz nicht geprüft"; \
 	fi
 	@echo -e "  $(GREEN)✓$(RESET) Stack gestoppt"
 
@@ -185,15 +242,15 @@ check: docs-check test-plugin-api test-example test-dashboard ## Alle netzfreien
 	cd dashboard && npx vue-tsc -b
 
 .PHONY: test-backend
-test-backend: ## Backend-Tests (pytest)  [ARGS="-k name"]
+test-backend: require-setup ## Backend-Tests (pytest)  [ARGS="-k name"]
 	$(PYTEST) -q $(ARGS)
 
 # Eigener Lauf, nicht Teil von test-backend: `plugin_api/` ist ein
 # eigenständiges Paket mit eigenem Import-Pfad. Ohne dieses Target prüft die
 # reguläre Suite den öffentlichen Plugin-Vertrag überhaupt nicht.
 .PHONY: test-plugin-api
-test-plugin-api: ## Tests des Plugin-Vertrags (eigenes Paket)
-	cd plugin_api && $(WORKSPACE)/$(PYTEST) -q
+test-plugin-api: require-setup ## Tests des Plugin-Vertrags (eigenes Paket)
+	cd plugin_api && "$${WORKSPACE}"/$(PYTEST) -q
 
 # Das Entwicklerbeispiel läuft mit, obwohl es nichts ausliefert. Ein Beispiel,
 # das niemand ausführt, stimmt genau bis zur nächsten Vertragsänderung — und
@@ -203,27 +260,23 @@ test-plugin-api: ## Tests des Plugin-Vertrags (eigenes Paket)
 # Teil der Arbeitsumgebung, sonst prüfte der Lauf eine Version, die niemand
 # gebaut hat.
 .PHONY: test-example
-test-example: ## Tests des Beispiel-Plugins (us-example)
+test-example: require-setup ## Tests des Beispiel-Plugins (us-example)
 	cd plugin_api/examples/us-example && \
-		PYTHONPATH=src:$(WORKSPACE)/plugin_api/src $(WORKSPACE)/$(PYTEST) -q
+		PYTHONPATH="src:$${WORKSPACE}/plugin_api/src" "$${WORKSPACE}"/$(PYTEST) -q
 
 .PHONY: lint-dashboard
-lint-dashboard: ## Dashboard prüfen (ESLint und Foundation-Speicherregeln)
+lint-dashboard: require-setup ## Dashboard prüfen (ESLint und Foundation-Speicherregeln)
 	npm --prefix dashboard run lint
 
 .PHONY: test-dashboard
 test-dashboard: lint-dashboard ## Dashboard prüfen und testen (ESLint + Vitest)
 	npm --prefix dashboard test
 
-# Regeln in .docs-check.conf.sh. Ohne ProjectTools nur ein Hinweis, damit
-# die übrigen Tests trotzdem laufen.
+# Teil von test und check: Ohne ProjectTools scheitert es laut, statt die Doku still zu
+# überspringen. Regeln in .docs-check.conf.sh.
 .PHONY: docs-check
-docs-check: ## Nutzerdoku gegen das Projekt prüfen (Links, Befehle, Variablen, Abhängigkeiten)
-	@if [[ -r "$(PROJECT_TOOLS)/bash/docs-check.sh" ]]; then \
-		"$(PROJECT_TOOLS)/bash/docs-check.sh" --run; \
-	else \
-		echo -e "  $(YELLOW)⚠$(RESET) ProjectTools nicht verfügbar — Doku nicht geprüft (make setup)"; \
-	fi
+docs-check: require-tools ## Nutzerdoku gegen das Projekt prüfen (Links, Befehle, Variablen, Abhängigkeiten)
+	@docs-check --run
 
 # ─── Docker ───────────────────────────────────────────────────────────────────
 
@@ -266,22 +319,16 @@ push: ## Geprüftes Image pushen, danach docker/README.md bei Docker Hub (TARGET
 ##@ Status
 
 .PHONY: status
-status: ## Git-Status aller Workspace-Repos anzeigen — Maintainer
-	$(require_bash_libs)
-	@bash $(PROJECT_TOOLS)/bash/repo-status.sh --show
+status: require-tools ## Git-Status aller Workspace-Repos anzeigen
+	@repo-status --show
 
 # ─── Versionierung ────────────────────────────────────────────────────────────
 
 ##@ Versionierung
 
-# Ohne `##`: nicht in der Hilfe, laeuft aber als Abhaengigkeit von tag-*.
-.PHONY: precheck
-precheck:
-	$(require_bash_libs)
-
 .PHONY: changelog
-changelog: ## CHANGELOG.md aus Release-Tags erstellen (ohne Commit)
-	@LANGUAGE=en "$(PYTHON)" "$(PROJECT_TOOLS)/python/changelog.py" --generate
+changelog: require-tools ## CHANGELOG.md aus Release-Tags erstellen (ohne Commit)
+	@LANGUAGE=en changelog --generate
 
 .PHONY: tag-major tag-minor tag-patch
 tag-major: ## Version committen, taggen UND pushen — Major; danach Changelog [MSG="..."]
@@ -289,11 +336,10 @@ tag-minor: ## Version committen, taggen UND pushen — Minor; danach Changelog [
 tag-patch: ## Version committen, taggen UND pushen — Patch; danach Changelog [MSG="..."]
 
 # Alle Stufen verwenden dieselbe Reihenfolge: Release, dann Changelog-Commit.
-tag-major tag-minor tag-patch: precheck
-	@test -r "$(PROJECT_TOOLS)/python/changelog.py"
+tag-major tag-minor tag-patch: require-tools precheck
 	@test -z "$$(git status --porcelain)"
 	@source "$${BASH_LIBS}/version.lib.sh" && semVerBump "$(patsubst tag-%,%,$@)" auto "" "$${MSG:-}"
-	@LANGUAGE=en "$(PYTHON)" "$(PROJECT_TOOLS)/python/changelog.py" --publish
+	@LANGUAGE=en changelog --publish
 
 .PHONY: version
 version: ## Aktuelle Version anzeigen (Versionsdatei + git tag) — Maintainer
