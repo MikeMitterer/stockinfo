@@ -190,8 +190,7 @@ StockInfo is licensed under the **[EUPL 1.2](../LICENSE)**, version 1.2
 only. What it permits and requires, the consumer declaration and the contact
 are in the [License section of the README](../README.md#license).
 
-The independent plugin API and its example plugin remain under MIT. The
-separate [template repository](https://github.com/MikeMitterer/unraid-templates)
+The separate [template repository](https://github.com/MikeMitterer/unraid-templates)
 is MIT-licensed; its license covers the templates.
 
 [↑ Contents](#contents)

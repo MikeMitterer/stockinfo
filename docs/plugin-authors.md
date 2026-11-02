@@ -501,18 +501,24 @@ reports as such rather than starting with an empty key.
 
 The key never goes into the YAML file or into version control.
 
-**Local development** — a `.env` beside the app:
+**Local development** — a line in `.env` beside the app. `make dev-up`
+starts the app through overmind, which loads `.env` into the process
+environment:
 
 ```bash
 US_MARKET_API_KEY=sk-your-key-here
 ```
+
+The app itself reads only its own settings from `.env`, not other names. If
+you start it without `make dev-up`, set the variable in the shell instead,
+for example `export US_MARKET_API_KEY=…`.
 
 **Docker Compose**:
 
 ```yaml
 services:
   stockinfo:
-    image: mikemitterer/stockinfo:latest
+    image: mangolila/stockinfo:latest
     environment:
       - US_MARKET_API_KEY=${US_MARKET_API_KEY}   # from the host's .env
     volumes:

@@ -17,8 +17,9 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Server
-    host: str = "0.0.0.0"
+    # Server — gebunden wird in Procfile.dev bzw. im Container-CMD; hier nur für
+    # GET /env. Lokal ist 127.0.0.1 die Vorgabe, das Image setzt HOST=0.0.0.0.
+    host: str = "127.0.0.1"
     port: int = 8000
     log_level: str = "info"
 

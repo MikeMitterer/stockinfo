@@ -1,2 +1,2 @@
-backend: .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+backend: .venv/bin/uvicorn app.main:app --host "${HOST:-127.0.0.1}" --port "${PORT:-8000}" --reload
 dashboard: cd dashboard && npm run dev -- --port 5173

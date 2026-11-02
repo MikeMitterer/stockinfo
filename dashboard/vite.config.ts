@@ -7,8 +7,11 @@ import { defineConfig } from 'vite'
 // Testumgebung zu ziehen.
 import { apiPrefixes } from './api-prefixes'
 
-// Ziel-Backend für den Dev-Proxy (überschreibbar per Env).
-const apiTarget = process.env.VITE_DEV_API_TARGET ?? 'http://localhost:8000'
+// Ziel-Backend für den Dev-Proxy (überschreibbar per Env). Der Port folgt PORT,
+// den overmind bei `make dev-up` aus .env lädt, wie das Backend in Procfile.dev.
+// 127.0.0.1 statt localhost: Das Backend lauscht per Vorgabe nur auf IPv4, und
+// Node löst localhost womöglich zuerst als ::1 auf.
+const apiTarget = process.env.VITE_DEV_API_TARGET ?? `http://127.0.0.1:${process.env.PORT ?? '8000'}`
 
 export default defineConfig({
   plugins: [vue()],

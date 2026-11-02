@@ -71,10 +71,15 @@ anything up themselves: after such a change they stop and ask for
 `make dev-up` runs both in the background via
 [overmind](https://github.com/DarthSim/overmind) (needs overmind and tmux).
 
-`make dev-down` also cleans up after a crash: it ends leftover overmind, tmux
-and app processes of this project, removes a stale `.overmind.sock` and frees
-ports 5173 and 8000. It only ends your own processes inside this project and
-can be run as often as you like.
+overmind loads `.env` into the environment of both processes, so the values
+in `.env` apply to the backend.
+
+`make dev-down` stops the stack. With `PROJECT_TOOLS` pointing to the `src`
+folder of a ProjectTools checkout, it also cleans up after a crash: it ends
+leftover overmind, tmux and app processes of this project, removes a stale
+`.overmind.sock` and frees ports 5173 and 8000. It only ends your own
+processes inside this project and can be run as often as you like. Without
+`PROJECT_TOOLS` it only stops overmind and prints a warning.
 
 The server then runs at `http://localhost:8000`. Interactive API docs (Swagger UI,
 dark theme) live at `http://localhost:8000/docs` (use `http://` in the browser, not
@@ -103,7 +108,7 @@ from `.env.example`:
 
 | Variable | Meaning | Default |
 |---|---|---|
-| `HOST` / `PORT` | server address | `0.0.0.0` / `8000` |
+| `HOST` / `PORT` | address of the backend started by `make dev-up` | `127.0.0.1` / `8000` |
 | `DATABASE_PATH` | path of the SQLite file | `data/stockinfo.db` |
 | `CACHE_TTL_HOURS` | age at which a quote is re-fetched on request | `6` |
 | `REFRESH_INTERVAL_HOURS` | interval of the background refresh | `6` |
@@ -116,10 +121,12 @@ from `.env.example`:
 | `YAHOO_URL` | Yahoo link template (placeholder `{symbol}`) | de.finance.yahoo.com/… |
 | `CORS_ORIGINS` | web pages on another address that may call the API, as a JSON list | `["http://localhost:5173"]` |
 
-The default bind address `0.0.0.0` makes a natively started StockInfo
-reachable from your network. To use it only on your own computer, set
-`HOST=127.0.0.1`. The [security model](../docker/README.md#security) explains
-what anyone who can reach the port can do.
+By default `make dev-up` listens on `127.0.0.1`, so only your own computer
+reaches it. `HOST=0.0.0.0` makes it reachable from your network, for example
+to test from a phone. The [security model](../docker/README.md#security)
+explains what anyone who can reach the port can do. The container always
+listens on `0.0.0.0` inside; the port mapping of `docker run` decides who
+reaches it.
 
 The settings above are read by `app/config.py`. `make docs-check` does not
 see them, so a new setting has to be added here and to the
@@ -139,9 +146,11 @@ npm install
 npm run dev                # http://localhost:5173
 ```
 
-The Vite dev proxy forwards API requests to the backend (`http://localhost:8000`)
-automatically — `VITE_API_BASE_URL` is not needed in dev (optionally overridable,
-see `dashboard/vite.config.ts`). The backend must run in parallel.
+The Vite dev proxy forwards API requests to the backend at
+`http://127.0.0.1:8000`, or the port in `PORT`, automatically. Set
+`VITE_DEV_API_TARGET` for another backend (`dashboard/vite.config.ts`).
+`VITE_API_BASE_URL` (`dashboard/src/config.ts`) is not needed in dev. The
+backend must run in parallel.
 
 [↑ Contents](#contents)
 
@@ -167,6 +176,9 @@ see `dashboard/vite.config.ts`). The backend must run in parallel.
 | `GET /fields` | core and plugin field descriptions, detail schema and schema versions |
 | `GET /instrument-types` | declared asset types from the running plugin configuration, including completeness and source status |
 | `GET /sources` | configured source chains and local source diagnostics |
+| `GET /exchanges` | active exchange catalogue and the support the sources declare, without a live query |
+| `GET /analyze?isin=…` · `GET /analyze?symbol=…` | diagnosis: times each live fetch stage for one instrument; makes real external requests |
+| `GET /instruments/by-symbol/{symbol}/overrides` · `PUT …` | read / write the key figures added by hand |
 | `GET /env` | current configuration (secrets masked) |
 | `POST /refresh` · `POST /refresh/{isin}` | refresh all / a single instrument |
 | `PUT /instruments/by-symbol/{symbol}/isin` | add an ISIN after the fact |
@@ -407,7 +419,7 @@ If the changelog step fails after the tag has been pushed, fix the cause and
 retry without bumping the version again:
 
 ```bash
-changelog --publish
+LANGUAGE=en changelog --publish
 ```
 
 [↑ Contents](#contents)
@@ -424,7 +436,7 @@ app/                    # FastAPI backend
   plugins/              #   bundled sources implementing the plugin API
   services/             #   quote fetching + cache/TTL logic
   scheduler.py          #   periodic background refresh
-  routers/              #   HTTP endpoints (quotes, dashboard)
+  routers/              #   HTTP endpoints (quotes, instruments, fx, backups, …)
   docs.py               #   dark-themed Swagger UI (/docs)
 dashboard/              # Vue dashboard (standalone app)
 plugin_api/             # independent plugin contract, examples and role tests
@@ -432,7 +444,7 @@ contract/               # REST contract and OpenAPI snapshot
 examples/               # source profiles and manually maintained asset examples
 tests/                  # backend tests (pytest)
 docker/                 # Dockerfile, build.sh (single-image build)
-unraid/                 # Unraid guide and screenshots (README + CA template)
+unraid/                 # Unraid guide and screenshots (template: own repo)
 Makefile                # service start/stop (make help)
 CHANGELOG.md            # generated history of tagged releases
 ```

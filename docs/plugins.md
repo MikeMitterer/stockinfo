@@ -21,7 +21,7 @@ Es gibt zwei Wege, und beide landen in derselben Registry.
 Lege eine `*.py` in `data/plugins/` und exportiere `SOURCES`:
 
 ```python
-# data/plugins/meine_quelle.py
+# data/plugins/my_source.py
 from stockinfo_plugin import (
     ListedIdentity,
     NotFound,
@@ -31,8 +31,8 @@ from stockinfo_plugin import (
 )
 
 
-class MeinResolver(Resolver):
-    name = "meine-quelle"
+class MyResolver(Resolver):
+    name = "my-source"
     # Jede Quelle nennt die Vertragsversion **selbst**. Erben genügt nicht:
     # Der Loader weist eine Quelle ohne eigene Deklaration ab.
     api_version = 2
@@ -52,10 +52,10 @@ class MeinResolver(Resolver):
         )
 
 
-SOURCES = [MeinResolver]
+SOURCES = [MyResolver]
 ```
 
-Nach einem Neustart steht `meine-quelle` in `GET /sources` und lässt sich in
+Nach einem Neustart steht `my-source` in `GET /sources` und lässt sich in
 `sources.yaml` in eine Kette eintragen.
 
 Dateien mit führendem `_` werden übersprungen — so bleiben Hilfsmodule und
@@ -70,7 +70,7 @@ Ein Paket meldet seine Quellen als Entry-Point an:
 ```toml
 # pyproject.toml des Plugin-Pakets
 [project.entry-points."stockinfo.sources"]
-meine-quelle = "meinpaket.quellen:MeinResolver"
+my-source = "mypackage.sources:MyResolver"
 ```
 
 Eingetragen wird es in `data/sources.yaml`, mit **fester Version**:
@@ -78,7 +78,7 @@ Eingetragen wird es in `data/sources.yaml`, mit **fester Version**:
 ```yaml
 plugins:
   packages:
-    - stockinfo-plugin-meinemarkt==1.2.3
+    - stockinfo-plugin-mymarket==1.2.3
 ```
 
 Beim Start installiert die App die Liste nach `data/plugin-env/<hash>` und hängt
@@ -103,7 +103,7 @@ Drei Regeln gelten dabei:
 
 Dieselbe Liste ⇒ derselbe Ordner ⇒ **keine Installation** beim nächsten Start.
 Eine geänderte Liste ergibt einen neuen Ordner; der alte bleibt liegen, und ein
-Zurückrollen ist damit ein Zeileneditat.
+Zurückrollen ist damit eine Änderung in einer Zeile.
 
 > **Es gibt bewusst keine Automatik, die etwas nachlädt.** Ein Plugin läuft mit
 > den Rechten der App; was installiert wird, entscheidet der Betreiber
@@ -119,12 +119,12 @@ Geladen heißt **nicht** benutzt. Welche Quelle in welcher Rolle und in welcher
 Rangfolge gefragt wird, sagt allein `data/sources.yaml`:
 
 ```yaml
-resolvers: [meine-quelle, openfigi, yahoo-search]
+resolvers: [my-source, openfigi, yahoo-search]
 quotes:    [yfinance]
 
 providers:
-  meine-quelle:
-    path: data/meine-tabelle.yaml
+  my-source:
+    path: data/my-table.yaml
 ```
 
 Die Reihenfolge ist die Aussage und wird nicht umsortiert. `GET /sources` zeigt
