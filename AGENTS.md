@@ -75,7 +75,7 @@ festgehalten und ändert weder geprüfte Fassungen noch den Rundenverbrauch.
 Lokale Lessons liegen als Einzeldateien unter `_tickets/.agents/lessons/`.
 Die alten Sammeldateien sind Linkeinstiege. Verzeichnisinventar, gemeinsamer
 AgentLessons-Bestand und Herkunft folgen
-[Lessons lesen und pflegen](_tickets/.agents/LESSONS-ACCESS.md). Der Collector
+„Lessons lesen und pflegen“ (`_tickets/.agents/LESSONS-ACCESS.md`). Der Collector
 aktualisiert die gemeinsame Sammlung auf ausdrücklichen Aufruf; ein
 periodischer Lauf und die automatische Regelableitung sind noch nicht umgesetzt.
 
@@ -129,7 +129,7 @@ Prüfaufwand und Befundgewicht folgen dem belegten Schaden. Das gilt für die
 Breite zusätzlicher Arbeit, nicht für bereits geltende, als MUST oder eigene
 Abnahmebedingung formulierte Standardregeln (etwa i18n oder DRY in
 `code-conventions`): ein Verstoß dagegen bleibt blockierend, unabhängig vom
-beobachteten Schaden ([SI-P-13](_tickets/.agents/lessons/SI-P-13-eine-muss-regel-wird-per-schadensabwaegung-zur-kann-regel.md)).
+beobachteten Schaden (Lesson SI-P-13).
 Diese Einordnung gilt, bis Mike einen anderen Betriebsstand festlegt.
 
 [↑ Übersicht](#übersicht)

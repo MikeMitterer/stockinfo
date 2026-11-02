@@ -168,14 +168,8 @@ REQUIRED=(
     "./AGENTS.md|Projektregeln"
     "./CLAUDE.md|verweist Claude auf AGENTS.md"
 
-    # Ticket-Board
-    "_tickets/README.md|Ablage und Ablauf der Tickets"
-    "_tickets/STATUS.md|Rollen und Kommunikationsstatus"
-    "_tickets/.agents/AGENT-ACTIVATION.md|Startwege der Agenten, in AGENTS.md genannt"
-    "_tickets/.agents/AGENT-WORKFLOW.md|gemeinsamer Ablauf von Coder und Verifier, in AGENTS.md genannt"
-    "_tickets/.agents/CLAUDE-LESSONS.md|Einstieg in Claudes Lessons, in AGENTS.md genannt"
-    "_tickets/.agents/CODEX-LESSONS.md|Einstieg in Codex' Lessons, in AGENTS.md genannt"
-    "_tickets/.agents/LESSONS-ACCESS.md|Lese- und Pflegeregeln der Lessons, in AGENTS.md genannt"
+    # Das Ticket-Board liegt seit der Umstellung auf agent-lessons im Branch board,
+    # nicht im Code-Baum; seine Dateien sind deshalb keine Pflichtdateien mehr.
 )
 
 # ─── Abhängige Dateien und Screenshots ─────────────────────────────────────────
