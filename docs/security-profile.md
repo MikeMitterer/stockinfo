@@ -31,7 +31,7 @@ dort keine Zusage.
   im Container das Volume `/data`. Der Entrypoint übergibt `/data` an
   PUID/PGID (Vorgabe 99/100) und startet die App ohne Root-Rechte
   (`docker/entrypoint.sh`, `docker/Dockerfile`).
-- **Sicherungen:** Kopien der Datenbank neben ihr, höchstens zehn; die elfte
+- **Sicherungen:** in `backups/` neben der Datenbank, höchstens zehn; die elfte
   verdrängt die älteste (`app/services/backup.py`, `app/routers/backups.py`).
 - **Quellenkonfiguration:** `sources.yaml` im Daten-Volume, mit Ketten,
   Reihenfolgen und je Quelle einem Abschnitt unter `providers`. Ein Wert dort
