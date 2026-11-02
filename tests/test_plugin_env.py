@@ -132,11 +132,11 @@ def test_ein_installiertes_paket_ist_danach_importierbar(
     import sys
 
     monkeypatch.setattr(sys, "path", list(sys.path))
-    activate(ensure(["meinpaket==1.0"], tmp_path, _fake_install("frisch_geliefert")))
+    activate(ensure(["meinpaket==1.0"], tmp_path, _fake_install("freshly_installed")))
 
-    import frisch_geliefert  # noqa: PLC0415 — genau das ist der Test
+    import freshly_installed  # noqa: PLC0415 — genau das ist der Test
 
-    assert frisch_geliefert.VALUE == 1
+    assert freshly_installed.VALUE == 1
 
 
 def _build_wheel(directory: Path) -> Path:
