@@ -1,9 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('consola', () => ({
-  consola: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
-}))
-
 import { useHealth } from '../../src/composables/useHealth'
 
 beforeEach(() => vi.useFakeTimers())

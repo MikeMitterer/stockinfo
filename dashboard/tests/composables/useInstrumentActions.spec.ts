@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('consola', () => ({
-  consola: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
-}))
-
 import { i18n } from '../../src/i18n'
 
 import { useInstrumentActions } from '../../src/composables/useInstrumentActions'

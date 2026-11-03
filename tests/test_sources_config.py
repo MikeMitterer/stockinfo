@@ -104,10 +104,10 @@ def test_ein_tippfehler_nennt_den_namen_und_die_verfuegbaren(tmp_path: Path) -> 
     # selbst ist geblieben und steht jetzt dort, wo der Betreiber sie liest.
     assert build_chain("resolvers", config, Settings()) == []
 
-    grund = describe_chain("resolvers", config, Settings())[0].reason
+    reason = describe_chain("resolvers", config, Settings())[0].reason
 
-    assert "openfgi" in grund, "der eigene Tippfehler muss dastehen"
-    assert "openfigi" in grund, "und die richtige Schreibweise daneben"
+    assert "openfgi" in reason, "der eigene Tippfehler muss dastehen"
+    assert "openfigi" in reason, "und die richtige Schreibweise daneben"
 
 
 def test_die_datei_traegt_verweise_statt_schluessel(tmp_path: Path) -> None:

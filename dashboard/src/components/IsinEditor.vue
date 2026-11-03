@@ -25,7 +25,7 @@ const { t } = useI18n()
 const editing = ref<boolean>(false)
 const isinDraft = ref<string>('')
 const isinInvalid = ref<boolean>(false)
-const feld = ref<InstanceType<typeof NInput> | null>(null)
+const field = ref<InstanceType<typeof NInput> | null>(null)
 
 // Fehlerhinweis zurücksetzen, sobald der Entwurf geändert wird.
 watch(isinDraft, () => {
@@ -38,7 +38,7 @@ async function startIsin(): Promise<void> {
   isinInvalid.value = false
   // Erst nach dem Einblenden fokussieren — vorher gibt es das Feld nicht.
   await nextTick()
-  feld.value?.focus()
+  field.value?.focus()
 }
 
 function cancelIsin(): void {
@@ -69,7 +69,7 @@ function confirmIsin(): void {
     @click.stop
   >
     <NInput
-      ref="feld"
+      ref="field"
       v-model:value="isinDraft"
       class="isin__input"
       size="tiny"

@@ -1,3 +1,11 @@
+import { vi } from 'vitest'
+
+// consola schreibt in Tests nicht in die Ausgabe: ein Mock für alle Specs statt
+// einer Kopie je Datei. `tests/setup.spec.ts` prüft, dass er wirkt.
+vi.mock('consola', () => ({
+  consola: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+}))
+
 // Node ≥22 definiert ein eigenes localStorage-Global (Web Storage API), das ohne
 // --localstorage-file undefined bleibt — dadurch übernimmt Vitest die
 // jsdom-Implementierung nicht. Für Tests wird hier ein In-Memory-Ersatz gesetzt.

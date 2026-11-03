@@ -66,7 +66,6 @@ define require_bash_libs
 		exit 1; }
 endef
 
-IMAGE_HINT = Image ohne BashLib bauen: $(GREEN)docker build -f docker/Dockerfile -t $(IMAGE_NAME):latest .$(RESET)
 # Interpreter, mit dem `make setup` die .venv anlegt (mindestens 3.11).
 PYTHON_BOOTSTRAP ?= python3.11
 
@@ -76,6 +75,13 @@ PYTEST  := $(VENV)/bin/pytest
 # Dashboard-Pakete. Eine geänderte Abhängigkeitsdatei macht den Stempel veraltet.
 SETUP_STAMPS := $(VENV)/.installed dashboard/node_modules/.installed
 
+# Ports des Dev-Stacks aus .dev-ports.conf.sh, dieselbe Quelle wie dev-ports.sh. Nur
+# Ziffern werden übernommen; die Werte stehen danach als Zahlen in den Rezepten.
+DEV_PORTS      := $(shell bash -c 'source ./.dev-ports.conf.sh && printf "%s %s" "$$DASHBOARD_PORT" "$$BACKEND_PORT"' 2>/dev/null | grep -xE '[0-9]+ [0-9]+')
+DASHBOARD_PORT := $(word 1,$(DEV_PORTS))
+BACKEND_PORT   := $(word 2,$(DEV_PORTS))
+
+# Host-Port des Containers bei `make up`, aus .env oder der Umgebung.
 PORT    ?= 8000
 
 # Docker (Image via docker/build.sh, Start via 'make up')
@@ -90,10 +96,37 @@ CONTAINER   ?= stockinfo
 # sources-profile.sh --target docker verwendet denselben Standardnamen.
 DATA_VOLUME ?= stockinfo-data
 
+# Diese Werte kommen von außen (.env, Umgebung, Kommandozeile). Rezepte lesen sie als
+# "$${NAME}" aus der Umgebung, nie als $(NAME) im Shell-Text. strip entfernt den
+# Trailing-Whitespace, den -include .env mitbringt.
+PORT        := $(strip $(PORT))
+PLATFORM    := $(strip $(PLATFORM))
+IMAGE_NAME  := $(strip $(IMAGE_NAME))
+CONTAINER   := $(strip $(CONTAINER))
+DATA_VOLUME := $(strip $(DATA_VOLUME))
+export PORT PLATFORM IMAGE_NAME CONTAINER DATA_VOLUME
+
+IMAGE_HINT = Image ohne BashLib bauen: $(GREEN)docker build -f docker/Dockerfile -t $${IMAGE_NAME}:latest .$(RESET)
+
+# Repo-Adresse aus git remote origin (SSH oder HTTPS) als https-URL; leer ohne Remote.
+# Werte von außen landen im Rezept; Ref-Namen dürfen $, ( und ) enthalten. Nur
+# erlaubte Zeichen übernehmen, sonst leer – ein Tag wie v1$(touch x) liefe sonst.
+REPO_URL    := $(shell git remote get-url origin 2>/dev/null | sed -E 's|^git@([^:]+):|https://\1/|; s|\.git$$||' | grep -xE '[A-Za-z0-9._:/@+~-]+')
+RELEASE_TAG := $(or $(shell git describe --tags --abbrev=0 2>/dev/null | grep -xE '[A-Za-z0-9._+-]+'),noch kein Release)
+NO_REMOTE   := kein Remote origin (git remote add origin …)
+
 # ─── Hilfe ────────────────────────────────────────────────────────────────────
 
 # Liste der Makefiles unausgewertet über die Umgebung (siehe Kopf).
 export HELP_FILES = $(value MAKEFILE_LIST)
+
+# Platzhalter {major}, {minor} und {patch} der Hilfe: „<jetzt> → <danach>“ aus der
+# Version, die help mit readProjectVersion liest; gerechnet wie semVerBump.
+HELP_VALUES += if (ver ~ /^[0-9]+\.[0-9]+\.[0-9]+$$/ && split(ver, v, ".") == 3) { \
+	  value["major"] = ver " → " (v[1] + 1) ".0.0"; \
+	  value["minor"] = ver " → " v[1] "." (v[2] + 1) ".0"; \
+	  value["patch"] = ver " → " v[1] "." v[2] "." (v[3] + 1) } \
+	else { value["major"] = value["minor"] = value["patch"] = "(Version unbekannt: make version)" };
 
 .PHONY: help
 help: ## Alle verfügbaren Befehle anzeigen
@@ -102,44 +135,67 @@ help: ## Alle verfügbaren Befehle anzeigen
 	@echo
 	@echo "Project: $(THEME_COLOR_GROUP)$${PROJECT_NAME}$(RESET)"
 	@echo
-	@grep -hE '^(##@|[a-zA-Z0-9_-]+:.*?## )' $${HELP_FILES} | \
-	  awk 'BEGIN {FS = ":.*?## "}; \
+	@set -o pipefail; \
+	 VER=$$(source "$${BASH_LIBS}/version.lib.sh" 2>/dev/null && readProjectVersion 2>/dev/null); \
+	 grep -hE '^(##@|[a-zA-Z0-9_-]+:.*?## )' $${HELP_FILES} | \
+	  awk -v ver="$$VER" 'BEGIN {FS = ":.*?## "; $(HELP_VALUES)}; \
 	    /^##@/ { printf "\n$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)%s$(RESET)\n", substr($$0, 4); next }; \
 	    /^[^#]/ { desc = $$2; sub(/ — Maintainer$$/, " $(MAINTAINER_MARK)", desc); \
+	      for (k in value) gsub("\\{" k "\\}", value[k], desc); \
 	      printf "$(THEME_INDENT_TARGET)$(THEME_COLOR_TARGET)%-$(THEME_WIDTH_TARGET)s%$(THEME_COLUMN_GAP)s$(THEME_COLOR_DESC)%s$(RESET)\n", $$1, "", desc }'
 	@echo
 
+.PHONY: info
+info: ## Projektpfade, Ports und Werkzeugstand anzeigen
+	@echo
+	@printf '    $(YELLOW)%-16s$(RESET) = $(BLUE)%s$(RESET)\n' \
+		'WORKSPACE' "$${WORKSPACE}" \
+		'VENV' '$(VENV)' \
+		'BASH_LIBS' "$${BASH_LIBS:-nicht gesetzt}" \
+		'PROJECT_TOOLS' "$${PROJECT_TOOLS:-nicht gesetzt}" \
+		'Dev-Ports' '$(DASHBOARD_PORT) (Dashboard) · $(BACKEND_PORT) (Backend)' \
+		'PORT (make up)' "$${PORT}"
+	@echo
+	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Werkzeuge (.dev-tools.conf.sh)$(RESET)"
+	@# devtools rückt um zwei Zeichen ein; zwei mehr stellen die Zeilen unter die Variablen.
+	@set -o pipefail; $(DEV_TOOLS) status | sed 's/^/  /'
+	@echo
+
+# Eine Zeile für hints: Beschriftung auf THEME_WIDTH_TARGET Zeichen aufgefüllt, dann der Wert.
+# printf füllt nach Bytes auf; gezählt werden deshalb Zeichen (UTF-8-Folgebytes nicht).
+# Aufruf: $(call hint_row,Beschriftung,Wert), ohne Komma in den Werten.
+hint_row = LABEL="$(1)"; \
+	CHARS=$$(printf '%s' "$$LABEL" | LC_ALL=C tr -d '\200-\277' | wc -c); \
+	printf "$(THEME_INDENT_TARGET)$(THEME_COLOR_TARGET)%s$(RESET)%*s$(THEME_COLOR_DESC)%s$(RESET)\n" \
+		"$$LABEL" $$(( $(THEME_WIDTH_TARGET) - CHARS + $(THEME_COLUMN_GAP) )) "" "$(2)"
+
+# Links, URLs und Tipps für den Alltag; das Einrichten beschreibt docs/development.md.
 .PHONY: hints
-hints: ## Nützliche URLs und Hinweise anzeigen
+hints: ## Links, URLs und Tipps für die tägliche Arbeit
 	@echo
-	@echo "  $(YELLOW)Erster Start$(RESET) $(WHITE)— make setup → cp .env.example .env → make dev-up$(RESET)"
+	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Links$(RESET)"
+	@$(call hint_row,Repository,$(or $(REPO_URL),$(NO_REMOTE)))
+	@$(call hint_row,Entwicklerdoku,$(if $(REPO_URL),$(REPO_URL)/blob/master/docs/development.md,docs/development.md))
+	@$(call hint_row,Letzter Release,$(RELEASE_TAG))
+	@$(call hint_row,Docker Hub,https://hub.docker.com/r/$${IMAGE_NAME})
 	@echo
-	@echo "  $(YELLOW)Backend (make dev-up)$(RESET) $(WHITE)— im Browser http:// verwenden, nicht https$(RESET)"
+	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)URLs nach make dev-up (http://, nicht https)$(RESET)"
+	@$(call hint_row,Dashboard,http://localhost:$(DASHBOARD_PORT)/)
+	@$(call hint_row,API,http://localhost:$(BACKEND_PORT)/)
+	@$(call hint_row,Swagger,http://localhost:$(BACKEND_PORT)/docs)
+	@$(call hint_row,Health,http://localhost:$(BACKEND_PORT)/health)
+	@$(call hint_row,Container (make up),http://localhost:$${PORT}/)
 	@echo
-	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "API"     "http://localhost:$(PORT)/"
-	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Swagger" "http://localhost:$(PORT)/docs"
-	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Health"  "http://localhost:$(PORT)/health"
+	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Im Alltag$(RESET)"
+	@$(call hint_row,Vor dem Commit,make check)
+	@$(call hint_row,Einzelne Tests,make test-backend ARGS='-k name')
+	@$(call hint_row,Stack hängt,make dev-down; dann make dev-up)
+	@$(call hint_row,Erster Kurs,curl http://localhost:$(BACKEND_PORT)/quote/IE00B4L5Y983)
+	@$(call hint_row,Unraid-Test,wget -O /boot/config/plugins/dockerMan/templates-user/stockinfo-test.xml https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml)
 	@echo
-	@echo "  $(YELLOW)Dashboard$(RESET) $(WHITE)— make dev-up startet es mit (Port 5173, Proxy → Backend)$(RESET)"
-	@echo
-	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Dashboard" "http://localhost:5173/"
-	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Container" "http://localhost:$(PORT)/  (make up — Dashboard + API)"
-	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Docker Hub" "https://hub.docker.com/r/mangolila/stockinfo"
-	@echo
-	@echo "  $(YELLOW)Beispiel$(RESET)"
-	@echo
-	@printf "    $(GREEN)%s$(RESET)\n" "curl http://localhost:$(PORT)/quote/IE00B4L5Y983"
-	@echo
-	@echo "  $(YELLOW)Unraid$(RESET) $(WHITE)— Template als User-Template installieren (auf dem Unraid ausführen)$(RESET)"
-	@echo
-	@printf "    $(GREEN)%s$(RESET)\n" "wget -O /boot/config/plugins/dockerMan/templates-user/my-stockinfo.xml https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml"
-	@echo
-	@echo "  $(YELLOW)Werkzeuge$(RESET) $(WHITE)— Tag und Quelle in .dev-tools.conf.sh, einrichten mit make install-tools$(RESET)"
-	@echo
-	@cmd=$$($(DEV_TOOLS) command projecttools 2>/dev/null) || cmd="nicht abrufbar (pipx run devtools)"; \
-	 printf "    $(BLUE)%-22s$(RESET) $(WHITE)%s$(RESET)\n" "ProjectTools" "$$cmd"
-	@cmd=$$($(DEV_TOOLS) command bashlib 2>/dev/null) || cmd="nicht abrufbar (pipx run devtools)"; \
-	 printf "    $(BLUE)%-22s$(RESET) $(WHITE)%s$(RESET)\n" "BashLib (Maintainer)" "$$cmd"
+	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Werkzeuge (Tag und Quelle in .dev-tools.conf.sh)$(RESET)"
+	@CMD=$$($(DEV_TOOLS) command projecttools 2>/dev/null) || CMD="nicht abrufbar: make info"; $(call hint_row,ProjectTools,$$CMD)
+	@CMD=$$($(DEV_TOOLS) command bashlib 2>/dev/null) || CMD="nicht abrufbar: make info"; $(call hint_row,BashLib (Maintainer),$$CMD)
 	@echo
 
 # Läuft vor den Maintainer-Zielen; ohne Hilfeeintrag. Verlangt BashLib in Mindestversion und
@@ -199,17 +255,25 @@ require-setup:
 		echo -e "  $(RED)✗$(RESET) Nicht eingerichtet oder veraltet: $(YELLOW)make setup$(RESET)" >&2; \
 		exit 1; }
 
+# ─── Status ───────────────────────────────────────────────────────────────────
+
+##@ Status
+
+.PHONY: status
+status: require-tools ## Git-Status aller Workspace-Repos anzeigen
+	@repo-status --show
+
 # ─── Entwicklung ──────────────────────────────────────────────────────────────
 
 ##@ Entwicklung
 
 .PHONY: dev-up
-dev-up: ## Gesamten Stack starten — Backend + Dashboard (overmind, Daemon)
+dev-up: ## Backend und Dashboard laufen im Hintergrund, mit Auto-Reload
 	overmind start -D -N -f Procfile.dev
-	@echo -e "  $(GREEN)✓$(RESET) Stack läuft — Backend $(BLUE)http://localhost:$(PORT)$(RESET) · Dashboard $(BLUE)http://localhost:5173$(RESET)  ($(WHITE)make dev-logs$(RESET))"
+	@echo -e "  $(GREEN)✓$(RESET) Stack läuft — Backend $(BLUE)http://localhost:$(BACKEND_PORT)$(RESET) · Dashboard $(BLUE)http://localhost:$(DASHBOARD_PORT)$(RESET)  ($(WHITE)make dev-logs$(RESET))"
 
 .PHONY: dev-down
-dev-down: ## Gesamten Stack stoppen (overmind quit, dann Ports freigeben)
+dev-down: ## Dev-Stack gestoppt, Reste nach einem Absturz beseitigt, Ports frei
 	-@overmind quit 2>/dev/null || true
 	@# Raeumt nach einem Absturz overmind/tmux DIESES Projekts, eine verwaiste
 	@# .overmind.sock und die Ports aus .dev-ports.conf.sh auf. dev-ports hat im
@@ -222,7 +286,7 @@ dev-down: ## Gesamten Stack stoppen (overmind quit, dann Ports freigeben)
 	@echo -e "  $(GREEN)✓$(RESET) Stack gestoppt"
 
 .PHONY: dev-logs
-dev-logs: ## Logs des Stacks folgen (overmind echo)
+dev-logs: ## Logs des Dev-Stacks live verfolgen
 	overmind echo
 
 # ─── Tests ────────────────────────────────────────────────────────────────────
@@ -231,6 +295,12 @@ dev-logs: ## Logs des Stacks folgen (overmind echo)
 
 .PHONY: test
 test: docs-check test-backend test-plugin-api test-example test-dashboard ## Alle Tests — Doku, Backend, Plugin-API, Beispielpaket, Dashboard
+
+# Teil von test und check: Ohne ProjectTools scheitert es laut, statt die Doku still zu
+# überspringen. Regeln in .docs-check.conf.sh.
+.PHONY: docs-check
+docs-check: require-tools ## Nutzerdoku gegen das Projekt prüfen (Links, Befehle, Variablen, Abhängigkeiten)
+	@docs-check --run
 
 # Wie `test`, aber ohne Netz: Die mit `integration` markierten Tests fragen
 # echte Online-Anbieter und bleiben bei `test`. Dazu Ruff und die Typprüfung
@@ -272,74 +342,45 @@ lint-dashboard: require-setup ## Dashboard prüfen (ESLint und Foundation-Speich
 test-dashboard: lint-dashboard ## Dashboard prüfen und testen (ESLint + Vitest)
 	npm --prefix dashboard test
 
-# Teil von test und check: Ohne ProjectTools scheitert es laut, statt die Doku still zu
-# überspringen. Regeln in .docs-check.conf.sh.
-.PHONY: docs-check
-docs-check: require-tools ## Nutzerdoku gegen das Projekt prüfen (Links, Befehle, Variablen, Abhängigkeiten)
-	@docs-check --run
-
 # ─── Docker ───────────────────────────────────────────────────────────────────
 
 ##@ Docker
 
 .PHONY: up
-up: ## Container starten (Image aus 'make build'; Dashboard + API auf Port $(PORT))
-	-@docker rm -f $(CONTAINER) 2>/dev/null || true
-	docker run -d --name $(CONTAINER) \
-		-p $(PORT):8000 \
+up: ## Container läuft mit Dashboard und API auf dem Port aus PORT (Image aus make build)
+	-@docker rm -f "$${CONTAINER}" 2>/dev/null || true
+	docker run -d --name "$${CONTAINER}" \
+		-p "$${PORT}":8000 \
 		--env-file .env \
 		-e HOST=0.0.0.0 -e PORT=8000 -e DATABASE_PATH=/data/stockinfo.db \
-		-v $(DATA_VOLUME):/data \
+		-v "$${DATA_VOLUME}":/data \
 		--restart unless-stopped \
-		$(IMAGE_NAME):latest
-	@echo -e "  $(GREEN)✓$(RESET) Läuft — App $(BLUE)http://localhost:$(PORT)/$(RESET)  ($(WHITE)zuvor: make build$(RESET))"
+		"$${IMAGE_NAME}":latest
+	@echo -e "  $(GREEN)✓$(RESET) Läuft — App $(BLUE)http://localhost:$${PORT}/$(RESET)  ($(WHITE)zuvor: make build$(RESET))"
 
 .PHONY: down
-down: ## Container stoppen und entfernen
-	-@docker rm -f $(CONTAINER) 2>/dev/null \
+down: ## Container gestoppt und entfernt
+	-@docker rm -f "$${CONTAINER}" 2>/dev/null \
 		&& echo -e "  $(GREEN)✓$(RESET) Gestoppt" \
-		|| echo -e "  $(YELLOW)⚠$(RESET) Kein Container '$(CONTAINER)'"
+		|| echo -e "  $(YELLOW)⚠$(RESET) Kein Container '$${CONTAINER}'"
 
 .PHONY: docker-logs
-docker-logs: ## Container-Logs folgen
-	docker logs -f $(CONTAINER)
+docker-logs: ## Container-Logs live verfolgen
+	docker logs -f "$${CONTAINER}"
 
 .PHONY: build
-build: ## Docker-Image bauen und prüfen (PLATFORM=x86|arm, Default x86) — Maintainer
+build: ## Geprüftes Image für PLATFORM=x86|arm (Vorgabe x86) — Maintainer
 	$(call require_bash_libs,$(IMAGE_HINT))
-	docker/build.sh --build $(PLATFORM)
+	docker/build.sh --build "$${PLATFORM}"
 
 .PHONY: push
-push: ## Geprüftes Image pushen, danach docker/README.md bei Docker Hub (TARGET=ghcr|dockerhub|ecr) — Maintainer
+push: ## Geprüftes Image und docker/README.md veröffentlicht (TARGET=ghcr|dockerhub|ecr) — Maintainer
 	$(call require_bash_libs,$(IMAGE_HINT))
 	docker/build.sh --push
-
-# ─── Status ───────────────────────────────────────────────────────────────────
-
-##@ Status
-
-.PHONY: status
-status: require-tools ## Git-Status aller Workspace-Repos anzeigen
-	@repo-status --show
 
 # ─── Versionierung ────────────────────────────────────────────────────────────
 
 ##@ Versionierung
-
-.PHONY: changelog
-changelog: require-tools ## CHANGELOG.md aus Release-Tags erstellen (ohne Commit)
-	@LANGUAGE=en changelog --generate
-
-.PHONY: tag-major tag-minor tag-patch
-tag-major: ## Version committen, taggen UND pushen — Major; danach Changelog [MSG="..."]
-tag-minor: ## Version committen, taggen UND pushen — Minor; danach Changelog [MSG="..."]
-tag-patch: ## Version committen, taggen UND pushen — Patch; danach Changelog [MSG="..."]
-
-# Alle Stufen verwenden dieselbe Reihenfolge: Release, dann Changelog-Commit.
-tag-major tag-minor tag-patch: require-tools precheck
-	@test -z "$$(git status --porcelain)"
-	@source "$${BASH_LIBS}/version.lib.sh" && semVerBump "$(patsubst tag-%,%,$@)" auto "" "$${MSG:-}"
-	@LANGUAGE=en changelog --publish
 
 .PHONY: version
 version: ## Aktuelle Version anzeigen (Versionsdatei + git tag) — Maintainer
@@ -351,3 +392,37 @@ version: ## Aktuelle Version anzeigen (Versionsdatei + git tag) — Maintainer
 	 echo "    $(YELLOW)version$(RESET)      = $(BLUE)$$VER$(RESET)"; \
 	 echo "    $(YELLOW)git tag$(RESET)      = $(BLUE)$$TAG$(RESET)"
 	@echo
+
+.PHONY: tags
+tags: ## Letzte 10 Tags mit Message anzeigen
+	@echo
+	@git tag --sort=-version:refname -n1 | head -10 | \
+	  awk '{printf "    $(BLUE)%-28s$(RESET) $(GREEN)%s$(RESET)\n", $$1, substr($$0, index($$0,$$2))}'
+	@echo
+
+.PHONY: changelog
+changelog: require-tools ## CHANGELOG.md aus Release-Tags erstellen (ohne Commit)
+	@LANGUAGE=en changelog --generate
+
+# $(call release,major|minor|patch): bumpen, taggen, pushen, dann CHANGELOG.md.
+# Der Changelog ist englisch wie die übrige Doku; LANGUAGE=en gilt auch auf deutschem Locale.
+define release
+	@test -z "$$(git status --porcelain)" || { \
+		echo -e "  $(RED)✗$(RESET) Release abgebrochen: Arbeitsbaum nicht sauber (git status)" >&2; exit 1; }
+	@source "$${BASH_LIBS}/version.lib.sh" && semVerBump $(1) auto "" "$${MSG:-}"
+	@LANGUAGE=en changelog --publish
+endef
+
+# require-tools vor precheck: ohne ProjectTools bricht ein Release vor dem Bump ab,
+# nicht erst nach dem gepushten Tag.
+.PHONY: tag-major
+tag-major: require-tools precheck ## Major-Release {major}, inkompatible Änderung  [MSG="..."] — Maintainer
+	$(call release,major)
+
+.PHONY: tag-minor
+tag-minor: require-tools precheck ## Minor-Release {minor}, neue Funktion  [MSG="..."] — Maintainer
+	$(call release,minor)
+
+.PHONY: tag-patch
+tag-patch: require-tools precheck ## Patch-Release {patch}, Fehlerbehebung  [MSG="..."] — Maintainer
+	$(call release,patch)

@@ -435,7 +435,7 @@ def test_ein_erfundener_typ_bleibt_ein_anderer_fehler() -> None:
     die Rolle verwechselt", und nur eine der beiden Lesarten stimmt je.
     """
 
-    class Erfunden:
+    class Fabricated:
         pass
 
     findings = validate_scenarios(
@@ -443,7 +443,7 @@ def test_ein_erfundener_typ_bleibt_ein_anderer_fehler() -> None:
             Scenario(
                 case_id="gibt-es-nicht",
                 request=ResolveRequest(isin="CA78012H5675"),
-                expect=Erfunden,
+                expect=Fabricated,
             )
         ]
     )

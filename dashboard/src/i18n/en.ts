@@ -501,6 +501,8 @@ export const en = {
 
     downTitle: 'StockInfo is unavailable',
     downBody: 'Check that the server and database are running, then reload the page.',
+    confirmFailed: 'The migration could not be run.',
+    retryFailed: 'The service could not be started.',
 
     reason: {
       symbol_without_exchange_suffix:

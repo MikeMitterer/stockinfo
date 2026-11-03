@@ -60,3 +60,30 @@ def create_legacy_tables(connection: sqlite3.Connection) -> None:
         connection: Offene Verbindung zu einer **leeren** Datenbank.
     """
     connection.executescript(LEGACY_SCHEMA)
+
+
+def add_prices(path: str, symbol: str, quotes: int, daily: int) -> None:
+    """Hängt einem Papier Kurspunkte an, damit verlorene Kurse zählbar werden.
+
+    Args:
+        path: Pfad der Testdatenbank.
+        symbol: Symbol des Papiers, das schon in `instruments` steht.
+        quotes: Anzahl Intraday-Kurspunkte.
+        daily: Anzahl Tagesschlusskurse.
+    """
+    with sqlite3.connect(path) as connection:
+        instrument_id = connection.execute(
+            "SELECT id FROM instruments WHERE symbol = ?", (symbol,)
+        ).fetchone()[0]
+        connection.executemany(
+            "INSERT INTO quotes (instrument_id, price, quote_time, fetched_at) "
+            "VALUES (?, ?, ?, ?)",
+            [
+                (instrument_id, 1.0, f"2026-01-{day + 1:02d}T10:00:00+00:00", "x")
+                for day in range(quotes)
+            ],
+        )
+        connection.executemany(
+            "INSERT INTO daily_closes (instrument_id, date, close) VALUES (?, ?, ?)",
+            [(instrument_id, f"2026-02-{day + 1:02d}", 1.0) for day in range(daily)],
+        )

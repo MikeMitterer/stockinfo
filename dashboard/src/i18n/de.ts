@@ -621,6 +621,8 @@ export const de = {
 
     downTitle: 'StockInfo ist nicht verfügbar',
     downBody: 'Prüfe, ob Server und Datenbank laufen, und lade die Seite neu.',
+    confirmFailed: 'Der Umzug ließ sich nicht ausführen.',
+    retryFailed: 'Der Betrieb ließ sich nicht starten.',
 
     reason: {
       symbol_without_exchange_suffix:
