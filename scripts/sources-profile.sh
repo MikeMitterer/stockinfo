@@ -100,10 +100,6 @@ readonly DOCKER_IMAGE="${STOCKINFO_IMAGE:-mangolila/stockinfo:latest}"
 readonly CONTAINER_DATA_DIR="/data"
 readonly CONTAINER_NAME="${STOCKINFO_CONTAINER:-stockinfo}"
 
-# Der Port, auf dem der Server lauscht — nur für die Lebendabfrage. `make dev-up`
-# und das `docker run`-Beispiel verwenden beide 8000.
-readonly PORT="${PORT:-8000}"
-readonly BASE_URL="http://127.0.0.1:${PORT}"
 
 # Wie die Fachdaten im Datenverzeichnis heißen. **Sie gehören neben die
 # Datenbank**, nicht ins Repo: Sie sind Betriebsdaten, überleben ein Update und
@@ -197,7 +193,7 @@ showInfo() {
         echo -e "    ${YELLOW}Mount ${NC} = ${BLUE}${DOCKER_DATA_DIR}${NC} → ${BLUE}${CONTAINER_DATA_DIR}${NC}"
     fi
     [[ "${TARGET}" != "docker" ]] || echo -e "    ${YELLOW}Cont. ${NC} = ${BLUE}${CONTAINER_NAME}${NC}"
-    echo -e "    ${YELLOW}Port  ${NC} = ${BLUE}${PORT}${NC}"
+    echo -e "    ${YELLOW}Port  ${NC} = ${BLUE}${SERVER_PORT}${NC}"
     echo
 }
 
@@ -620,6 +616,18 @@ if [[ -n "${DATA_DIR}" ]]; then
 fi
 LOCAL_DATA_DIR="$(absolutePath "${LOCAL_DATA_DIR}")"
 DOCKER_DATA_DIR="$(absolutePath "${DOCKER_DATA_DIR}")"
+
+# Der Port des laufenden Servers, nur für die Lebendabfrage; auch er hängt an
+# `--target`. Lokal ist es der Dev-Server von `make dev-up` auf BACKEND_PORT
+# aus `.dev-ports.conf.sh`, im Container der Host-Port PORT von `make up`.
+if [[ "${TARGET}" == "docker" ]]; then
+    SERVER_PORT="${PORT:-8000}"
+else
+    # shellcheck source=/dev/null
+    SERVER_PORT="$(. "${PROJECT_ROOT}/.dev-ports.conf.sh" && printf '%s' "${BACKEND_PORT}")" || exit 1
+fi
+readonly SERVER_PORT
+readonly BASE_URL="http://127.0.0.1:${SERVER_PORT}"
 case "${ACTION}" in
     online) ASSETS_NAME="assets-fallback.yaml"; SAMPLE_SOURCES="${PROJECT_ROOT}/examples/sources-fallback.yaml" ;;
     yaml) ASSETS_NAME="assets-standalone.yaml"; SAMPLE_SOURCES="${PROJECT_ROOT}/examples/sources-standalone.yaml" ;;

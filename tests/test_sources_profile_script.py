@@ -2,6 +2,7 @@
 
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -38,6 +39,65 @@ def test_docker_vorgaben_passen_zu_make_up(tmp_path):
     assert result.returncode == 0, result.stderr
     assert f"{volume_name.group(1)}:/data/sources.yaml" in result.stdout
     assert f"{image_name.group(1)}:latest" in result.stdout
+
+
+@pytest.mark.parametrize(
+    ("target", "expected_port"),
+    [("local", "18766"), ("docker", "8123")],
+    ids=["lokal-der-dev-server-auf-backend-port", "docker-der-container-auf-port"],
+)
+def test_show_fragt_den_server_auf_dem_port_seines_ziels(
+    tmp_path: Path, target: str, expected_port: str
+) -> None:
+    """Lokal gilt BACKEND_PORT aus `.dev-ports.conf.sh`, im Container PORT.
+
+    Beide Werte weichen absichtlich von 8000 und voneinander ab: Mit der
+    Vorgabe stimmten zwei Quellen zufällig überein, und der Test bewiese nichts.
+    """
+    project = tmp_path / "project"
+    (project / "scripts").mkdir(parents=True)
+    shutil.copy(SCRIPT, project / "scripts" / SCRIPT.name)
+    (project / ".dev-ports.conf.sh").write_text(
+        'DASHBOARD_PORT=15174\nBACKEND_PORT=18766\nPORTS=("$DASHBOARD_PORT" "$BACKEND_PORT")\n'
+    )
+    executable_dir = tmp_path / "bin"
+    executable_dir.mkdir()
+    curl_log = tmp_path / "curl.log"
+    fake_curl = executable_dir / "curl"
+    fake_curl.write_text(f'#!/bin/sh\nprintf "%s\\n" "$@" >> "{curl_log}"\nexit 0\n')
+    fake_curl.chmod(0o755)
+    fake_docker = executable_dir / "docker"
+    fake_docker.write_text(
+        "#!/bin/sh\n"
+        'if [ "$1" = volume ]; then exit 0; fi\n'
+        'if [ "$1" = run ]; then printf "quotes: [yaml-file]\\n"; exit 0; fi\n'
+        "exit 1\n"
+    )
+    fake_docker.chmod(0o755)
+
+    environment = {
+        **os.environ,
+        "PATH": f"{executable_dir}{os.pathsep}{os.environ['PATH']}",
+        "PORT": "8123",
+        "DATABASE_PATH": str(tmp_path / "data" / "stockinfo.db"),
+    }
+    script = project / "scripts" / SCRIPT.name
+
+    shown = subprocess.run(
+        ["bash", str(script), "--show", "--target", target],
+        cwd=tmp_path, env=environment, capture_output=True, text=True,
+    )
+    info = subprocess.run(
+        ["bash", str(script), "--info", "--target", target],
+        cwd=tmp_path, env=environment, capture_output=True, text=True,
+    )
+
+    assert shown.returncode == 0, shown.stderr
+    assert f"http://127.0.0.1:{expected_port}/sources" in curl_log.read_text()
+    assert f"127.0.0.1:{expected_port}" in shown.stdout
+    assert info.returncode == 0, info.stderr
+    plain_info = re.sub(r"\x1b\[[0-9;]*m", "", info.stdout)
+    assert re.search(rf"Port\s+=\s+{expected_port}$", plain_info, re.MULTILINE), plain_info
 
 
 def run_profile(directory: Path, *arguments: str) -> subprocess.CompletedProcess:
