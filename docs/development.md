@@ -74,10 +74,16 @@ anything up themselves: after such a change they stop and ask for
 overmind loads `.env` into the environment of both processes, so the values
 in `.env` apply to the backend.
 
+The ports of the dev stack stand in `.dev-ports.conf.sh`: `DASHBOARD_PORT`
+(default 5173) and `BACKEND_PORT` (default 8000). `Procfile.dev`, the Vite
+proxy, `make hints` and `make dev-down` all read them from there; to change a
+port, change it only in that file. If the dashboard port is taken, Vite stops
+instead of moving to another one.
+
 `make dev-down` stops the stack. With `PROJECT_TOOLS` pointing to the `src`
 folder of a ProjectTools checkout, it also cleans up after a crash: it ends
 leftover overmind, tmux and app processes of this project, removes a stale
-`.overmind.sock` and frees ports 5173 and 8000. It only ends your own
+`.overmind.sock` and frees the ports from `.dev-ports.conf.sh`. It only ends your own
 processes inside this project and can be run as often as you like. Without
 `PROJECT_TOOLS` it only stops overmind and prints a warning.
 
@@ -110,7 +116,8 @@ from `.env.example`:
 
 | Variable | Meaning | Default |
 |---|---|---|
-| `HOST` / `PORT` | address of the backend started by `make dev-up` | `127.0.0.1` / `8000` |
+| `HOST` | bind address of the backend started by `make dev-up` | `127.0.0.1` |
+| `PORT` | host port of the container started by `make up` | `8000` |
 | `DATABASE_PATH` | path of the SQLite file | `data/stockinfo.db` |
 | `CACHE_TTL_HOURS` | age at which a quote is re-fetched on request | `6` |
 | `REFRESH_INTERVAL_HOURS` | interval of the background refresh | `6` |
@@ -148,8 +155,9 @@ npm install
 npm run dev                # http://localhost:5173
 ```
 
-The Vite dev proxy forwards API requests to the backend at
-`http://127.0.0.1:8000`, or the port in `PORT`, automatically. Set
+The Vite dev proxy forwards API requests to the backend automatically. With
+`make dev-up` it targets `BACKEND_PORT` from `.dev-ports.conf.sh`; started
+on its own as above, it targets `http://127.0.0.1:8000`. Set
 `VITE_DEV_API_TARGET` for another backend (`dashboard/vite.config.ts`).
 `VITE_API_BASE_URL` (`dashboard/src/config.ts`) is not needed in dev. The
 backend must run in parallel.

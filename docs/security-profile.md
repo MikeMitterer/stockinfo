@@ -109,8 +109,9 @@ dort keine Zusage.
   löschen, Aktualisieren, Sicherung anlegen, Sicherung einspielen und
   Migration bestätigen (`app/routers/`).
 - **Bindung:** `make dev-up` lauscht per Vorgabe auf `127.0.0.1:8000`, also
-  nur auf dem eigenen Rechner; `HOST` und `PORT` aus `.env` ändern das
-  (`Procfile.dev`, `.env.example`). Der Container lauscht innen auf
+  nur auf dem eigenen Rechner. Die Adresse kommt aus `HOST` in `.env`, der
+  Port aus `BACKEND_PORT` in `.dev-ports.conf.sh` (`Procfile.dev`,
+  `.env.example`). Der Container lauscht innen auf
   `0.0.0.0:8000` (`ENV` und `CMD` in `docker/Dockerfile`); wer ihn erreicht,
   entscheidet die Port-Freigabe von `docker run`. `host` in `app/config.py`
   bindet nichts, es erscheint nur in `GET /env`.
