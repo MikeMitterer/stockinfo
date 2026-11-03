@@ -336,6 +336,8 @@ commit or registry target.
 
 The versioned image tag contains the source commit hash. Publish that commit
 before publishing the image so recipients can obtain the corresponding source.
+`make push` checks that the release tag of the build commit is in `origin`
+and stops otherwise; publish it first with `git push --follow-tags`.
 
 **Docker Hub description.** After a successful Docker Hub image push,
 `make push` uploads [`docker/README.md`](../docker/README.md), the
@@ -424,15 +426,18 @@ is replaced on the next run; its content comes from commit and release tag
 messages.
 
 `make tag-major`, `make tag-minor` and `make tag-patch` bump the version,
-commit, tag and push it, then generate, commit and push the changelog. Pass
-`MSG="Release summary"` for the release tag message. A release needs a clean
-working tree, BashLib and ProjectTools (`make install-tools`).
+commit and tag it, then generate and commit the changelog. Everything stays
+local; publish the branch and the release tag yourself with
+`git push --follow-tags`. Pass `MSG="Release summary"` for the release tag
+message. A release needs a clean working tree, BashLib and ProjectTools
+(`make install-tools`).
 
-If the changelog step fails after the tag has been pushed, fix the cause and
-retry without bumping the version again:
+If the changelog step fails after the tag, fix the cause and retry without
+bumping the version again:
 
 ```bash
-LANGUAGE=en changelog --publish
+make changelog
+git commit -m "docs(changelog): update release history" -- CHANGELOG.md
 ```
 
 [↑ Contents](#contents)

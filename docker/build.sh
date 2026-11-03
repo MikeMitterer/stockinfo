@@ -389,6 +389,37 @@ loadLastBuildTag() {
     echo "${_saved_tag}"
 }
 
+# verifyRemoteReleaseTag — Release-Tag des Quellcommits liegt unverändert in origin
+#
+#   make tag-* taggt nur lokal. Ein Image mit einer Version, deren Tag niemand
+#   im Repo findet, geht deshalb nicht hinaus. Verglichen wird das Tag-Objekt,
+#   damit auch ein gleichnamiger, aber anderer Tag im Remote auffällt.
+#   Release-Tag ist, was gitDockerTag (version.lib.sh) für den Image-Tag nimmt:
+#   der nächste Tag mit --match 'v[0-9]*'. Eine eigene Funktion dafür hat die
+#   BashLib noch nicht (BashLib T-17); bis dahin muss der Filter hier derselbe bleiben.
+#
+#   Params:
+#     $1 - Quellcommit des Builds
+#
+verifyRemoteReleaseTag() {
+    local _commit="${1:?verifyRemoteReleaseTag: commit fehlt}"
+    local _release_tag _local_object _remote_line
+    _release_tag=$(git -C .. describe --tags --abbrev=0 --match 'v[0-9]*' "${_commit}") || {
+        echo -e "${RED}Push abgebrochen:${NC} Kein Release-Tag für ${_commit}." >&2
+        return 1
+    }
+    _local_object=$(git -C .. rev-parse "refs/tags/${_release_tag}") || return 1
+    _remote_line=$(git -C .. ls-remote --tags origin "refs/tags/${_release_tag}") || {
+        echo -e "${RED}Push abgebrochen:${NC} origin nicht erreichbar; Tag ${_release_tag} nicht geprüft." >&2
+        return 1
+    }
+    if [[ "${_remote_line%%[[:space:]]*}" != "${_local_object}" ]]; then
+        echo -e "${RED}Push abgebrochen:${NC} Git-Tag ${_release_tag} liegt nicht in origin." >&2
+        echo -e "${YELLOW}Zuerst veröffentlichen:${NC} git push --follow-tags" >&2
+        return 1
+    fi
+}
+
 # push — Zuletzt gebautes Image ins gewählte Registry-Ziel (TARGET) laden
 #
 #   Liest den Tag des letzten Builds aus TAGFILE und delegiert an pushImage(),
@@ -411,6 +442,7 @@ push() {
         echo -e "${RED}Push abgebrochen:${NC} Build-Ziel ${_saved_target:-unbekannt} passt nicht zu ${TARGET}. Mit TARGET=${TARGET} make build neu bauen." >&2
         return 1
     fi
+    verifyRemoteReleaseTag "${_saved_commit}" || return 1
     for _ref in "${NAMESPACE}/${NAME}:${_tag}" "${NAMESPACE}/${NAME}:latest" "${IMAGE}:${_tag}" "${IMAGE}:latest"; do
         _current_image_id=$(docker image inspect "${_ref}" --format '{{.Id}}') || return 1
         if [[ "${_current_image_id}" != "${_saved_image_id}" ]]; then

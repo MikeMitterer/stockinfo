@@ -9,6 +9,8 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+RELEASE_TAG = "v1.0.0+260101.1200.abcde"
+OTHER_TAG = "deploy-2026-11"
 PROJECT_TOOLS = os.environ.get("PROJECT_TOOLS", "")
 SCRIPT = Path(PROJECT_TOOLS) / "bash/dockerhub-readme.sh" if PROJECT_TOOLS else None
 
@@ -84,8 +86,23 @@ def _push_sandbox(tmp_path: Path, target: str) -> dict[str, str]:
         "pushImage2GHCR() { pushImage2DockerHub; }\n"
         "pushImage2Amazon() { pushImage2DockerHub; }\n"
     )
+    # Der Release-Tag des Quellcommits ist lokal das Tag-Objekt local-tag; im
+    # Remote steht, was REMOTE_TAG_OBJECT sagt (leer: Tag fehlt im Remote).
+    # Näher am Commit liegt ein Nicht-Release-Tag, der in origin steht: Nur
+    # describe mit --match 'v[0-9]*' wie in gitDockerTag findet den Release-Tag.
+    git_stub = (
+        'case "$*" in\n'
+        f"  *describe*--match*) echo {RELEASE_TAG};;\n"
+        f"  *describe*) echo {OTHER_TAG};;\n"
+        "  *'rev-parse refs/tags/'*) echo local-tag;;\n"
+        "  *rev-parse*) echo source-commit;;\n"
+        f'  *ls-remote*{OTHER_TAG}*) printf "local-tag\\trefs/tags/{OTHER_TAG}\\n";;\n'
+        '  *ls-remote*) [ -z "$REMOTE_TAG_OBJECT" ] || '
+        f'printf "%s\\trefs/tags/{RELEASE_TAG}\\n" "$REMOTE_TAG_OBJECT";;\n'
+        "esac\n"
+    )
     for name, content in {
-        "bin/git": 'case "$*" in *rev-parse*) echo source-commit;; esac\n',
+        "bin/git": git_stub,
         "bin/docker": "echo image-id\n",
     }.items():
         path = tmp_path / name
@@ -103,6 +120,7 @@ def _push_sandbox(tmp_path: Path, target: str) -> dict[str, str]:
             "CALL_LOG": str(tmp_path / "calls"),
             "IMAGE_STATUS": "0",
             "DOCKER_PW_FILE": str(tmp_path / "token file"),
+            "REMOTE_TAG_OBJECT": "local-tag",
         }
     )
     return environment
@@ -170,6 +188,27 @@ def test_push_startet_readme_nur_nach_erfolgreichem_hub_push(
             "--token-file",
             str(tmp_path / "token file"),
         ]
+
+
+@pytest.mark.parametrize(
+    "remote_tag_object",
+    ["", "other-tag"],
+    ids=["tag-fehlt-im-remote", "remote-tag-ist-ein-anderer"],
+)
+def test_push_verlangt_den_release_tag_im_remote(
+    tmp_path: Path, remote_tag_object: str
+) -> None:
+    """tag-* taggt nur lokal; ohne denselben Tag in origin geht kein Image hinaus.
+
+    Der Nicht-Release-Tag in origin darf die Prüfung nicht ersetzen.
+    """
+    environment = _push_sandbox(tmp_path, "dockerhub")
+    environment["REMOTE_TAG_OBJECT"] = remote_tag_object
+    result = _push(tmp_path, environment)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert not (tmp_path / "calls").exists()
+    assert RELEASE_TAG in result.stderr
+    assert "git push --follow-tags" in result.stderr
 
 
 def test_push_ohne_project_tools_nennt_die_variable(tmp_path: Path) -> None:
