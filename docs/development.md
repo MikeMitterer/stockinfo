@@ -79,8 +79,9 @@ The ports of the dev stack stand in `.dev-ports.conf.sh`: `DASHBOARD_PORT`
 proxy, `make hints`, `make dev-down` and `scripts/sources-profile.sh --show`
 all read them from there; to change a port, change it only in that file.
 `PORT` in `.env` is the host port of `make up`; for the dev backend
-`Procfile.dev` sets it to `BACKEND_PORT`, so `GET /env` shows the port in use. If the dashboard port is taken, Vite stops
-instead of moving to another one.
+`Procfile.dev` sets it to `BACKEND_PORT`, so `GET /env` shows the port in
+use. If the dashboard port is taken, Vite stops instead of moving to another
+one.
 
 `make dev-down` stops the stack. With `PROJECT_TOOLS` pointing to the `src`
 folder of a ProjectTools checkout, it also cleans up after a crash: it ends
