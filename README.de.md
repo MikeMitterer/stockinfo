@@ -8,7 +8,7 @@
 
 [English](README.md) · Deutsch
 
-[Funktionen](#funktionen) · [Schnellstart](#schnellstart) · [Konfiguration](#konfiguration) · [Docker-Anleitung](docker/README.md) · [Entwicklerdoku](docs/development.md)
+[Funktionen](#funktionen) · [Schnellstart](#schnellstart) · [Konfiguration](#konfiguration) · [Docker-Anleitung](docker/README.md) (englisch) · [Entwicklerdoku](docs/development.md) (englisch)
 
 </div>
 
@@ -99,7 +99,7 @@ Die Quellen stehen in `sources.yaml` neben der Datenbank. Eine mitgelieferte
 Dateiquelle kann selbst gepflegte Daten liefern, als Rückfall oder allein.
 
 Siehe [Quellenkonfiguration](docs/plugins.md) und die
-[Anleitung für Plugin-Autoren](docs/plugin-authors.md).
+[Anleitung für Plugin-Autoren](docs/plugin-authors.md) (englisch).
 
 **Keine offiziellen APIs.** justETF und Yahoo Finance bieten für diese Daten
 keine öffentliche API an. StockInfo liest ihre öffentlichen Webseiten über
@@ -192,7 +192,7 @@ Für Unraid siehe die [Unraid-Anleitung](unraid/README.md) (englisch).
 | `REFRESH_INTERVAL_HOURS` | `6` | Abstand der Hintergrundaktualisierung |
 | `OPENFIGI_API_KEY` | leer | optionaler Schlüssel für ein höheres OpenFIGI-Limit |
 
-Alle Einstellungen beschreibt die [Docker-Anleitung](docker/README.md#configuration).
+Alle Einstellungen beschreibt die [Docker-Anleitung](docker/README.md#configuration) (englisch).
 
 [↑ Übersicht](#übersicht)
 
@@ -212,7 +212,7 @@ Release-Ablauf stehen in der [Entwicklerdoku](docs/development.md)
 - [Anleitung für Plugin-Autoren](docs/plugin-authors.md) – eine eigene Quelle schreiben (englisch)
 - [REST-Vertrag](docs/rest-core-contract.md) – was die API zusagt
 - [Entwicklerdoku](docs/development.md) – Einrichtung, REST-API, Tests und Releases (englisch)
-- [Changelog](CHANGELOG.md) und [Release Notes](docs/release-notes.md) – Änderungen je Release
+- [Changelog](CHANGELOG.md) und [Release Notes](docs/release-notes.md) – Änderungen je Release (englisch)
 
 [↑ Übersicht](#übersicht)
 

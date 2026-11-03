@@ -7,8 +7,12 @@ import { defineConfig } from 'vite'
 // Testumgebung zu ziehen.
 import { apiPrefixes } from './api-prefixes'
 
-// Ziel-Backend für den Dev-Proxy (überschreibbar per Env).
-const apiTarget = process.env.VITE_DEV_API_TARGET ?? 'http://localhost:8000'
+// Ziel-Backend für den Dev-Proxy. `make dev-up` setzt VITE_DEV_API_TARGET in
+// Procfile.dev aus `.dev-ports.conf.sh`, der einzigen Quelle der Dev-Ports. Der
+// Rückfall gilt nur für `npm run dev` ohne `make dev-up`. 127.0.0.1 statt
+// localhost: Das Backend lauscht per Vorgabe nur auf IPv4, und Node löst
+// localhost womöglich zuerst als ::1 auf.
+const apiTarget = process.env.VITE_DEV_API_TARGET ?? 'http://127.0.0.1:8000'
 
 export default defineConfig({
   plugins: [vue()],
@@ -46,6 +50,8 @@ export default defineConfig({
   },
 
   server: {
+    // Rückfall für `npm run dev`; `make dev-up` übergibt DASHBOARD_PORT aus
+    // `.dev-ports.conf.sh` mit `--port` (Procfile.dev).
     port: 5173,
     // Das Fundament liegt als Symlink daneben — ohne das 403 auf jede Datei.
     fs: { allow: ['..', '../..'] },

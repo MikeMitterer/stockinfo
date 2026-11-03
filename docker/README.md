@@ -118,7 +118,8 @@ project-scoped data volume.
 
   ![Detail area](../unraid/screenshots/detail-area.png)
 
-- A dashboard for managing instruments, viewing charts and configuring sources.
+- A dashboard for managing instruments, viewing charts and checking the
+  configured sources.
   A short note below the asset list states the limits of the displayed data.
 - An **About** tab under Settings, also linked from the status bar, explains
   the limits of the displayed data and links to the license documents.
@@ -152,7 +153,8 @@ For a host directory instead of a named volume, use a mount such as
 `-v /srv/stockinfo:/data`. Mount a directory dedicated to StockInfo.
 
 The container starts as root only to prepare `/data`, then runs the
-application as **UID 99 / GID 100** (Unraid's `nobody:users`). The
+application as **UID 99 / GID 100** (Unraid's `nobody:users`); `PUID` and
+`PGID` select other IDs (see [Configuration](#configuration)). The
 entrypoint changes ownership only when files belong to someone else. Before the app starts, it checks that `/data` and an existing database
 are writable for the target user:
 
@@ -179,6 +181,7 @@ Pass settings with `docker run -e NAME=value`, an `--env-file`, or Compose's
 | Variable | Default | Purpose |
 |---|---|---|
 | `TZ` | Container default | Timezone, for example `Europe/Vienna` |
+| `PUID` / `PGID` | `99` / `100` | User and group the application runs as; `/data` is handed over to them |
 | `CACHE_TTL_HOURS` | `6` | Quote age that triggers a refresh on request |
 | `REFRESH_INTERVAL_HOURS` | `6` | Background refresh interval |
 | `METADATA_TTL_DAYS` | `7` | ETF metadata refresh interval |
@@ -186,6 +189,8 @@ Pass settings with `docker run -e NAME=value`, an `--env-file`, or Compose's
 | `STRICT_EXCHANGE` | `false` | Require that exchange during ISIN resolution |
 | `FX_TTL_HOURS` | `1` | Exchange-rate cache lifetime |
 | `OPENFIGI_API_KEY` | Empty | Optional key for a higher OpenFIGI rate limit |
+| `EXTRAETF_ETF_URL` / `EXTRAETF_STOCK_URL` | extraetf.com/… | Profile link templates in the dashboard (placeholder `{isin}`) |
+| `YAHOO_URL` | de.finance.yahoo.com/… | Yahoo link template in the dashboard (placeholder `{symbol}`) |
 | `CORS_ORIGINS` | `["http://localhost:5173"]` | Web pages on another address that may call the API, as a JSON list; see [Security](#security) |
 
 The container listens on **port 8000**. Dashboard and API share an origin;

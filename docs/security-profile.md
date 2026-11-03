@@ -104,11 +104,17 @@ dort keine Zusage.
 
 ## Anmeldung
 
-- **Keine.** Es gibt keine Benutzer, Sitzungen oder Tokens. Die API lauscht
-  per Vorgabe auf `0.0.0.0:8000` (`app/config.py`); auch die schreibenden
-  Endpunkte sind offen, darunter Instrumente anlegen, ändern und löschen,
-  Aktualisieren, Sicherung anlegen, Sicherung einspielen und
+- **Keine.** Es gibt keine Benutzer, Sitzungen oder Tokens. Auch die
+  schreibenden Endpunkte sind offen, darunter Instrumente anlegen, ändern und
+  löschen, Aktualisieren, Sicherung anlegen, Sicherung einspielen und
   Migration bestätigen (`app/routers/`).
+- **Bindung:** `make dev-up` lauscht per Vorgabe auf `127.0.0.1:8000`, also
+  nur auf dem eigenen Rechner. Die Adresse kommt aus `HOST` in `.env`, der
+  Port aus `BACKEND_PORT` in `.dev-ports.conf.sh` (`Procfile.dev`,
+  `.env.example`). Der Container lauscht innen auf
+  `0.0.0.0:8000` (`ENV` und `CMD` in `docker/Dockerfile`); wer ihn erreicht,
+  entscheidet die Port-Freigabe von `docker run`. `host` in `app/config.py`
+  bindet nichts, es erscheint nur in `GET /env`.
 - CORS erlaubt per Vorgabe nur `http://localhost:5173` (`cors_origins`).
 - **Offen:** Die App setzt heute ein vertrauenswürdiges Heimnetz mit einem
   Betreiber voraus. Ob das die Grundsatzentscheidung ist oder eine Anmeldung

@@ -1,2 +1,2 @@
-backend: .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-dashboard: cd dashboard && npm run dev -- --port 5173
+backend: bash -c '. ./.dev-ports.conf.sh && PORT="$BACKEND_PORT" exec .venv/bin/uvicorn app.main:app --host "${HOST:-127.0.0.1}" --port "$BACKEND_PORT" --reload'
+dashboard: bash -c '. ./.dev-ports.conf.sh && cd dashboard && VITE_DEV_API_TARGET="http://127.0.0.1:$BACKEND_PORT" exec npm run dev -- --port "$DASHBOARD_PORT" --strictPort'

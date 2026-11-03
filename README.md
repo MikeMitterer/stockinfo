@@ -49,7 +49,7 @@ price history of the selected row is docked at the bottom._
 - **Automatic updates** – a background job refreshes all known instruments
   at a set interval; repeated requests are answered from the local database.
 - **Price history** – an intraday curve and end-of-day closes from one week
-  to "max".
+  to "Max".
 - **Fund and stock metrics** – volume and 1-year volatility; for ETFs also
   TER, provider, replication, fund size, domicile, fund currency and
   distribution policy.
