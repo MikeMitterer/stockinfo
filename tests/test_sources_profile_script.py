@@ -85,11 +85,17 @@ def test_show_fragt_den_server_auf_dem_port_seines_ziels(
 
     shown = subprocess.run(
         ["bash", str(script), "--show", "--target", target],
-        cwd=tmp_path, env=environment, capture_output=True, text=True,
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
     )
     info = subprocess.run(
         ["bash", str(script), "--info", "--target", target],
-        cwd=tmp_path, env=environment, capture_output=True, text=True,
+        cwd=tmp_path,
+        env=environment,
+        capture_output=True,
+        text=True,
     )
 
     assert shown.returncode == 0, shown.stderr
@@ -97,7 +103,9 @@ def test_show_fragt_den_server_auf_dem_port_seines_ziels(
     assert f"127.0.0.1:{expected_port}" in shown.stdout
     assert info.returncode == 0, info.stderr
     plain_info = re.sub(r"\x1b\[[0-9;]*m", "", info.stdout)
-    assert re.search(rf"Port\s+=\s+{expected_port}$", plain_info, re.MULTILINE), plain_info
+    assert re.search(rf"Port\s+=\s+{expected_port}$", plain_info, re.MULTILINE), (
+        plain_info
+    )
 
 
 def run_profile(directory: Path, *arguments: str) -> subprocess.CompletedProcess:
