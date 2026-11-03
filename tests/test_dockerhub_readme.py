@@ -10,6 +10,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 RELEASE_TAG = "v1.0.0+260101.1200.abcde"
+OTHER_TAG = "deploy-2026-11"
 PROJECT_TOOLS = os.environ.get("PROJECT_TOOLS", "")
 SCRIPT = Path(PROJECT_TOOLS) / "bash/dockerhub-readme.sh" if PROJECT_TOOLS else None
 
@@ -87,11 +88,15 @@ def _push_sandbox(tmp_path: Path, target: str) -> dict[str, str]:
     )
     # Der Release-Tag des Quellcommits ist lokal das Tag-Objekt local-tag; im
     # Remote steht, was REMOTE_TAG_OBJECT sagt (leer: Tag fehlt im Remote).
+    # Näher am Commit liegt ein Nicht-Release-Tag, der in origin steht: Nur
+    # describe mit --match 'v[0-9]*' wie in gitDockerTag findet den Release-Tag.
     git_stub = (
         'case "$*" in\n'
-        f"  *describe*) echo {RELEASE_TAG};;\n"
+        f"  *describe*--match*) echo {RELEASE_TAG};;\n"
+        f"  *describe*) echo {OTHER_TAG};;\n"
         "  *'rev-parse refs/tags/'*) echo local-tag;;\n"
         "  *rev-parse*) echo source-commit;;\n"
+        f'  *ls-remote*{OTHER_TAG}*) printf "local-tag\\trefs/tags/{OTHER_TAG}\\n";;\n'
         '  *ls-remote*) [ -z "$REMOTE_TAG_OBJECT" ] || '
         f'printf "%s\\trefs/tags/{RELEASE_TAG}\\n" "$REMOTE_TAG_OBJECT";;\n'
         "esac\n"
@@ -193,7 +198,10 @@ def test_push_startet_readme_nur_nach_erfolgreichem_hub_push(
 def test_push_verlangt_den_release_tag_im_remote(
     tmp_path: Path, remote_tag_object: str
 ) -> None:
-    """tag-* taggt nur lokal; ohne denselben Tag in origin geht kein Image hinaus."""
+    """tag-* taggt nur lokal; ohne denselben Tag in origin geht kein Image hinaus.
+
+    Der Nicht-Release-Tag in origin darf die Prüfung nicht ersetzen.
+    """
     environment = _push_sandbox(tmp_path, "dockerhub")
     environment["REMOTE_TAG_OBJECT"] = remote_tag_object
     result = _push(tmp_path, environment)

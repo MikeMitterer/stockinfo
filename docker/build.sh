@@ -394,6 +394,9 @@ loadLastBuildTag() {
 #   make tag-* taggt nur lokal. Ein Image mit einer Version, deren Tag niemand
 #   im Repo findet, geht deshalb nicht hinaus. Verglichen wird das Tag-Objekt,
 #   damit auch ein gleichnamiger, aber anderer Tag im Remote auffällt.
+#   Release-Tag ist, was gitDockerTag (version.lib.sh) für den Image-Tag nimmt:
+#   der nächste Tag mit --match 'v[0-9]*'. Eine eigene Funktion dafür hat die
+#   BashLib noch nicht (BashLib T-17); bis dahin muss der Filter hier derselbe bleiben.
 #
 #   Params:
 #     $1 - Quellcommit des Builds
@@ -401,7 +404,7 @@ loadLastBuildTag() {
 verifyRemoteReleaseTag() {
     local _commit="${1:?verifyRemoteReleaseTag: commit fehlt}"
     local _release_tag _local_object _remote_line
-    _release_tag=$(git -C .. describe --tags --abbrev=0 "${_commit}") || {
+    _release_tag=$(git -C .. describe --tags --abbrev=0 --match 'v[0-9]*' "${_commit}") || {
         echo -e "${RED}Push abgebrochen:${NC} Kein Release-Tag für ${_commit}." >&2
         return 1
     }
