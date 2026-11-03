@@ -400,21 +400,27 @@ tags: ## Letzte 10 Tags mit Message anzeigen
 	  awk '{printf "    $(BLUE)%-28s$(RESET) $(GREEN)%s$(RESET)\n", $$1, substr($$0, index($$0,$$2))}'
 	@echo
 
+# Der Changelog ist englisch wie die übrige Doku; LANGUAGE=en gilt auch auf deutschem Locale.
+CHANGELOG_GENERATE := LANGUAGE=en changelog --generate
+
 .PHONY: changelog
 changelog: require-tools ## CHANGELOG.md aus Release-Tags erstellen (ohne Commit)
-	@LANGUAGE=en changelog --generate
+	@$(CHANGELOG_GENERATE)
 
-# $(call release,major|minor|patch): bumpen, taggen, pushen, dann CHANGELOG.md.
-# Der Changelog ist englisch wie die übrige Doku; LANGUAGE=en gilt auch auf deutschem Locale.
+# $(call release,major|minor|patch): bumpen, taggen und CHANGELOG.md committen, alles
+# nur lokal; veröffentlicht wird mit git push --follow-tags. changelog --publish pusht
+# selbst, darum --generate und ein eigener Commit (bis ProjectTools T-20).
 define release
 	@test -z "$$(git status --porcelain)" || { \
 		echo -e "  $(RED)✗$(RESET) Release abgebrochen: Arbeitsbaum nicht sauber (git status)" >&2; exit 1; }
 	@source "$${BASH_LIBS}/version.lib.sh" && semVerBump $(1) auto "" "$${MSG:-}"
-	@LANGUAGE=en changelog --publish
+	@$(CHANGELOG_GENERATE)
+	@git add -- CHANGELOG.md
+	@git diff --cached --quiet -- CHANGELOG.md || git commit -q -m "docs(changelog): update release history" -- CHANGELOG.md
 endef
 
 # require-tools vor precheck: ohne ProjectTools bricht ein Release vor dem Bump ab,
-# nicht erst nach dem gepushten Tag.
+# nicht erst nach dem Tag.
 .PHONY: tag-major
 tag-major: require-tools precheck ## Major-Release {major}, inkompatible Änderung  [MSG="..."] — Maintainer
 	$(call release,major)

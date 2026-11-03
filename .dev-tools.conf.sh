@@ -23,8 +23,9 @@ PROJECTTOOLS_SOURCE=/Volumes/DevLocal/DevBash/Production/ProjectTools
 PROJECTTOOLS_EDITABLE=yes
 
 # BashLib (version, tag-*, docker/build.sh, scripts/), aus der lokalen Arbeitskopie.
+# Ab 0.3.0 taggen die Bump-Funktionen nur lokal (BashLib T-14).
 BASHLIB_PACKAGE=mmit-bashlib
 BASHLIB_LABEL=BashLib
-BASHLIB_TAG=v0.2.0+261031.2038.b22f0
+BASHLIB_TAG=v0.3.0+261103.1253.f86e0
 BASHLIB_SOURCE=/Volumes/DevLocal/DevBash/Production/BashLib
 BASHLIB_EDITABLE=yes
