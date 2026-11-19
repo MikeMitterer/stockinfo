@@ -70,7 +70,7 @@ function focusCancel(): void {
   >
     <div v-if="shown" class="confirm-delete">
       <p class="confirm-delete__item">
-        <span class="confirm-delete__name">{{ shown.name ?? shown.symbol }}</span>
+        <span class="confirm-delete__name">{{ shown.name }}</span>
         <span class="confirm-delete__symbol mono">{{ shown.symbol }}</span>
       </p>
       <p class="confirm-delete__history">{{ t('confirmDelete.history', shown.history_count) }}</p>

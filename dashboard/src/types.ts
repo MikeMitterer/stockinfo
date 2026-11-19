@@ -141,8 +141,9 @@ export interface InstrumentSummary {
   identity: Identity
   symbol: string
   exchange: string | null
-  name: string | null
-  type: string | null
+  // Pflicht im Backend (`InstrumentSummary`, app/models.py).
+  name: string
+  type: string
   currency: string | null
   provider: string | null
   ter: number | null
@@ -279,14 +280,14 @@ export interface QuotePoint {
   price: number
   quote_time: string
   volume: number | null
-  currency: string | null
+  currency: string
   fetched_at: string
 }
 
 export interface DailyPoint {
   date: string
   close: number
-  currency: string | null
+  currency: string
 }
 
 export interface RefreshResult {

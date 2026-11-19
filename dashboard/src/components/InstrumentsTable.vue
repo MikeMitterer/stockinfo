@@ -373,7 +373,7 @@ function price(value: number | null): string {
                   class="row-toggle"
                   @click.stop="emit('select', item)"
                 >
-                  {{ item.name ?? t('common.noValue') }}
+                  {{ item.name }}
                 </button>
               </td>
               <td>

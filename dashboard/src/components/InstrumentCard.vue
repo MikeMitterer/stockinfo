@@ -81,7 +81,7 @@ function price(value: number | null): string {
         {{ price(item.latest_price) }}
         <span class="icard__ccy">{{ item.latest_currency ?? '' }}</span>
       </span>
-      <span class="icard__name">{{ item.name ?? t('common.noValue') }}</span>
+      <span class="icard__name">{{ item.name }}</span>
     </div>
 
     <div class="icard__foot">
