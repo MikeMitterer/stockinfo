@@ -702,6 +702,9 @@ try {
     page = await ctx.page('/#/settings?tab=environment')
     check((await page.locator('main').innerText()).includes(join(state.dataDir, 'stockinfo.db')),
       'Umgebung nennt den Datenbankpfad der Instanz nicht')
+    // Vorgabe 6 Stunden, seit T-136 als wirksames Intervall in Minuten.
+    check((await page.locator('main').innerText()).includes('at startup and then every 360 minutes'),
+      'Umgebung nennt Startlauf und Refresh-Intervall in Minuten nicht')
     await ctx.shot(page, 'environment')
     page = await ctx.page('/#/settings?tab=links')
     check(await page.getByRole('link', { name: 'Swagger UI (/docs)' }).count() === 1, 'Link zur Swagger UI fehlt')

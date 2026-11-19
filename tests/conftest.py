@@ -43,6 +43,9 @@ def isolated_database(tmp_path, monkeypatch):
         clear_cached_factories()
 
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "stockinfo.db"))
+    # Tests mit dem echten Lifespan starten den Scheduler; ein Refresh beim Start holte
+    # dort Kurse aus dem Netz, parallel zum Test. Den Startlauf prüft test_refresh.py.
+    monkeypatch.setenv("REFRESH_ON_START", "false")
     clear_caches()
     try:
         yield

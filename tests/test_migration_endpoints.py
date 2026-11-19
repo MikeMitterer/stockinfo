@@ -450,6 +450,8 @@ def test_ein_gescheiterter_scheduler_start_meldet_keinen_normalbetrieb(
     monkeypatch.setattr(RefreshScheduler, "start", start_fails)
 
     with TestClient(app) as client:
+        # Gesperrt startet kein Scheduler, also auch kein Refresh beim Start (T-136).
+        assert attempts == []
         response = client.post("/migration/confirm")
 
         assert response.status_code == 503

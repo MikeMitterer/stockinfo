@@ -75,6 +75,7 @@ NO_RELOAD = {
     "FX_TTL_HOURS": "1000000",
     "METADATA_TTL_DAYS": "100000",
     "REFRESH_INTERVAL_HOURS": "1000000",
+    "REFRESH_ON_START": "false",
 }
 
 EMPTY_ASSETS = "version: 1\ninstruments: []\nfx_rates: []\n"

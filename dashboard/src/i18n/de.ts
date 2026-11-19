@@ -161,13 +161,14 @@ export const de = {
     title: 'Environment',
     refreshNote:
       'Automatischer Kurs-Update: Ein Hintergrund-Scheduler aktualisiert die Kurse aller ' +
-      'gecachten Instrumente alle {hours} Stunden (Refresh-Intervall, per Setting änderbar). ' +
+      'gecachten Instrumente beim Start und danach alle {minutes} Minuten (Refresh-Intervall, ' +
+      'per Setting änderbar). ' +
       'Unabhängig davon gilt bei jeder Abfrage die Cache-TTL — ist ein Kurs älter, wird er ' +
       'direkt frisch von der Quelle geholt.',
     version: 'Version',
     dbPath: 'DB-Pfad',
     cacheTtl: 'Cache-TTL (h)',
-    refreshInterval: 'Refresh-Intervall (h)',
+    refreshInterval: 'Refresh-Intervall (min)',
     metadataTtl: 'Metadaten-TTL (d)',
     defaultExchange: 'Default-Börse',
     strictExchange: 'Strikte Börse',

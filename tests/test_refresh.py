@@ -1,9 +1,12 @@
 """Tests für den Hintergrund-Refresh und den Scheduler."""
 
+import threading
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
+from app.config import Settings
 from app.models import ListedIdentityOut, QuoteResponse
 from app.persistence.db import init_db
 from app.persistence.repository import QuoteRepository
@@ -120,17 +123,89 @@ def test_refresh_all_isoliert_fehler(repo: QuoteRepository) -> None:
     assert len(repo.get_history(etf["id"])) == 1  # kein neuer Punkt für die Fehler-ISIN
 
 
-class NoopService:
-    """Minimaler Service für den Scheduler-Test."""
+class CountingService:
+    """Zählt die Refresh-Läufe des Schedulers und meldet den ersten."""
+
+    def __init__(self) -> None:
+        self.runs = 0
+        self.first_run = threading.Event()
 
     def refresh_all(self) -> int:
+        self.runs += 1
+        self.first_run.set()
         return 0
 
 
 def test_scheduler_registriert_job_und_stoppt() -> None:
-    scheduler = RefreshScheduler(NoopService(), interval_hours=1)
+    scheduler = RefreshScheduler(CountingService(), interval_minutes=60, run_on_start=False)
     scheduler.start()
     try:
         assert scheduler._scheduler.get_job("refresh_all") is not None
     finally:
         scheduler.shutdown()
+
+
+@pytest.mark.parametrize(
+    ("run_on_start", "expected_runs"),
+    [
+        pytest.param(True, 1, id="erster-lauf-direkt-nach-dem-start"),
+        pytest.param(False, 0, id="ohne-startlauf-erst-nach-dem-intervall"),
+    ],
+)
+def test_erster_refresh_laeuft_beim_start(run_on_start: bool, expected_runs: int) -> None:
+    """Nach einem Neustart sind die Kurse nicht bis zu ein Intervall alt."""
+    service = CountingService()
+    scheduler = RefreshScheduler(service, interval_minutes=60, run_on_start=run_on_start)
+    scheduler.start()
+    try:
+        service.first_run.wait(timeout=1)
+    finally:
+        scheduler.shutdown()
+
+    assert service.runs == expected_runs
+
+
+def _settings(monkeypatch, **environment: str) -> Settings:
+    """Settings nur aus den übergebenen Umgebungswerten, ohne .env."""
+    for name in ("REFRESH_INTERVAL_HOURS", "REFRESH_INTERVAL_MINUTES", "REFRESH_ON_START"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in environment.items():
+        monkeypatch.setenv(name, value)
+    return Settings(_env_file=None)
+
+
+@pytest.mark.parametrize(
+    ("environment", "expected_minutes"),
+    [
+        pytest.param({}, 360, id="vorgabe-6-stunden"),
+        pytest.param({"REFRESH_INTERVAL_HOURS": "2"}, 120, id="stunden-wie-bisher"),
+        pytest.param({"REFRESH_INTERVAL_MINUTES": "15"}, 15, id="minuten"),
+        pytest.param(
+            {"REFRESH_INTERVAL_HOURS": "2", "REFRESH_INTERVAL_MINUTES": "15"},
+            15,
+            id="minuten-gehen-vor-stunden",
+        ),
+        pytest.param({"REFRESH_INTERVAL_MINUTES": ""}, 360, id="leere-minuten-gelten-als-nicht-gesetzt"),
+    ],
+)
+def test_refresh_intervall_in_minuten(
+    monkeypatch, environment: dict[str, str], expected_minutes: int
+) -> None:
+    assert _settings(monkeypatch, **environment).refresh_minutes == expected_minutes
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        pytest.param("REFRESH_INTERVAL_MINUTES", "0", id="minuten-null"),
+        pytest.param("REFRESH_INTERVAL_MINUTES", "-5", id="minuten-negativ"),
+        pytest.param("REFRESH_INTERVAL_MINUTES", "viertel", id="minuten-keine-zahl"),
+        pytest.param("REFRESH_INTERVAL_HOURS", "0", id="stunden-null"),
+    ],
+)
+def test_ungueltiges_intervall_bricht_den_start_ab(monkeypatch, name: str, value: str) -> None:
+    """Kein stiller Standard: Die Meldung nennt die Einstellung."""
+    with pytest.raises(ValidationError) as raised:
+        _settings(monkeypatch, **{name: value})
+
+    assert name.lower() in str(raised.value)

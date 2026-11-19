@@ -35,7 +35,7 @@ def test_env_info_und_refresh_result() -> None:
         version="0.1.0",
         database_path="data/stockinfo.db",
         cache_ttl_hours=6,
-        refresh_interval_hours=6,
+        refresh_interval_minutes=360,
         metadata_ttl_days=7,
         default_exchange="XETR",
         strict_exchange=False,

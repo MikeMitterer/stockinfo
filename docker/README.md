@@ -184,6 +184,8 @@ Pass settings with `docker run -e NAME=value`, an `--env-file`, or Compose's
 | `PUID` / `PGID` | `99` / `100` | User and group the application runs as; `/data` is handed over to them |
 | `CACHE_TTL_HOURS` | `6` | Quote age that triggers a refresh on request |
 | `REFRESH_INTERVAL_HOURS` | `6` | Background refresh interval |
+| `REFRESH_INTERVAL_MINUTES` | empty | Background refresh interval in minutes; takes precedence over `REFRESH_INTERVAL_HOURS` |
+| `REFRESH_ON_START` | `true` | Run the first background refresh right after startup instead of after one interval |
 | `METADATA_TTL_DAYS` | `7` | ETF metadata refresh interval |
 | `DEFAULT_EXCHANGE` | `XETR` | Preferred exchange for ISIN queries (MIC code) |
 | `STRICT_EXCHANGE` | `false` | Require that exchange during ISIN resolution |
