@@ -531,7 +531,7 @@ def build_chain(role: str, config: SourcesConfig, settings: Settings) -> list[ob
         # nebeneinander, und `close()` erreichte nur eine davon.
         return cached[1]
 
-    if role == "etf_meta":
+    if role == DETAIL_SCHEMA_ROLE:
         _DETAIL_SCHEMAS.clear()
     evaluated = _evaluate(role, config, settings)
 
@@ -578,6 +578,10 @@ aus.
 """
 
 
+DETAIL_SCHEMA_ROLE = "etf_meta"
+"""Die Rolle, deren Quellen Felder für den Detailkatalog deklarieren."""
+
+
 def _register_detail_schema(name: str, declaration: object) -> bool:
     """Validiert Feldzusagen unabhängig von der Betriebsfähigkeit der Quelle."""
     try:
@@ -613,7 +617,10 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings: Settings) ->
         Die einsatzbereite Quelle, oder ``None`` — dann steht der Grund im
         Protokoll und die Kette geht ohne sie weiter.
     """
-    if role == "etf_meta" and spec.declaration is not None:
+    # Ein geladenes Plugin meldet seine Felder **vor** dem Bau an: Die Zusagen
+    # gelten auch dann, wenn der Konstruktor gleich scheitert. Eine eingebaute
+    # Quelle (ohne Deklaration) meldet sie nach dem Bau über das Objekt an.
+    if role == DETAIL_SCHEMA_ROLE and spec.declaration is not None:
         if not _register_detail_schema(spec.name, spec.declaration):
             return None
     try:
@@ -628,7 +635,7 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings: Settings) ->
         )
         return None
 
-    if role == "etf_meta" and spec.declaration is None:
+    if role == DETAIL_SCHEMA_ROLE and spec.declaration is None:
         if not _register_detail_schema(spec.name, source):
             return None
     problem = configuration_problem_of(source)
