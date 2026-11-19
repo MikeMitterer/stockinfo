@@ -36,7 +36,6 @@ from types import MappingProxyType
 from typing import Any
 
 from stockinfo_plugin import (
-    ListedIdentity,
     MicCoverage,
     NotFound,
     PairIdentity,
@@ -48,6 +47,7 @@ from stockinfo_plugin import (
 )
 
 from app.plugins.exchange_support import ONLINE_MICS
+from app.plugins.resolution import listed_resolution
 from app.providers.base import ResolvedInstrument
 from app.resolver import DEFAULT_EXCHANGE, YFinanceResolver
 
@@ -186,15 +186,7 @@ class YahooSearchResolverPlugin(Resolver):
             #   nur ist es hier nicht identifizierbar.
             return NotFound()
 
-        return Resolved(
-            identity=ListedIdentity(
-                ticker=answer.ticker,
-                mic=answer.mic,
-                isin=answer.isin or request.isin,
-            ),
-            name=answer.name,
-            instrument_type=answer.type,
-        )
+        return listed_resolution(answer, request.isin)
 
     def configuration_problem(self) -> str:
         """Yahoo braucht keinen Schlüssel — und sagt das."""

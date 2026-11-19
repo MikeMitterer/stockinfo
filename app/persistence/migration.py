@@ -37,6 +37,7 @@ from app.exchanges import (
     is_real_mic,
     mic_for_alias,
 )
+from app.models import IDENTITY_COLUMNS
 
 logger = structlog.get_logger()
 
@@ -401,17 +402,17 @@ def schema_outdated(connection: sqlite3.Connection) -> bool:
     columns = {
         row["name"]: row for row in connection.execute("PRAGMA table_info(instruments)")
     }
-    if not IDENTITY_COLUMNS <= set(columns):
+    if not T31_COLUMNS <= set(columns):
         return True
     if "identity_status" in columns:
         return True
     return not _has_identity_check(connection)
 
 
-# Die Spalten, die die Identität in ihren drei Formen ausmacht (T-31).
-IDENTITY_COLUMNS = frozenset(
-    {"kind", "ticker", "mic", "base", "quote_currency", "listing_id"}
-)
+# Die Spalten, die T-31 für die drei Identitätsformen angelegt hat: die
+# Identitätsspalten ohne `isin` (die gab es vorher schon) und `listing_id`.
+# Fehlt eine davon, steht der Umzug noch aus.
+T31_COLUMNS = (frozenset(IDENTITY_COLUMNS) - {"isin"}) | {"listing_id"}
 
 
 def _has_identity_check(connection: sqlite3.Connection) -> bool:

@@ -323,6 +323,8 @@ guarantee that every request succeeds. FX has no MIC declaration.
 
 `EXCHANGES` adds venues missing from the core catalog. Core MICs such as
 `XNAS` belong in `MIC_SUPPORT`; do not redefine their names or aliases.
+The region of an `ExchangeSpec` is one of `germany`, `usa`, `europe` or
+`global` (`stockinfo_plugin.exchanges.REGIONS`).
 
 For a file-backed source, override the additive class method
 `get_mic_support(config)` (available with the exchange contract in 0.3).

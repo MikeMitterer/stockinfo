@@ -6,6 +6,7 @@ from typing import Annotated, Any, Literal, Union
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.detail_models import DetailDefinition, DetailValue
+from app.details import CANONICAL
 
 
 def always_present(*fields: str) -> Callable[[dict[str, Any]], None]:
@@ -243,6 +244,18 @@ dieses Raten ist der Zustand, den T-31 beendet.
 # dieselbe Menge meinen; zwei Listen liefen beim ersten Zusatzfeld auseinander.
 IDENTITY_COLUMNS = ("kind", "ticker", "mic", "base", "quote_currency", "isin")
 
+IDENTITY_KEYS: dict[str, tuple[str, ...]] = {
+    "listed": ("ticker", "mic"),
+    "pair": ("base", "quote_currency"),
+    "isin_only": ("isin",),
+}
+"""Je Identitätsform die Felder, die ein Papier eindeutig machen.
+
+Suche, Konflikt-Meldung und der Aufbau eines `ResolvedInstrument` lesen sie
+hier, statt je Form zu verzweigen. Ein Listing trägt seine ISIN zusätzlich,
+eindeutig ist es über Ticker und MIC.
+"""
+
 
 def identity_columns(identity: IdentityOut) -> dict[str, str | None]:
     """Die Identität als **vollständige** Spaltenbelegung.
@@ -259,17 +272,11 @@ def identity_columns(identity: IdentityOut) -> dict[str, str | None]:
     Returns:
         Spaltenname → Wert, für alle sechs Identitätsspalten.
     """
-    columns: dict[str, str | None] = dict.fromkeys(IDENTITY_COLUMNS)
-    columns["kind"] = identity.kind
-    if isinstance(identity, ListedIdentityOut):
-        columns["ticker"] = identity.ticker
-        columns["mic"] = identity.mic
-        columns["isin"] = identity.isin
-    elif isinstance(identity, PairIdentityOut):
-        columns["base"] = identity.base
-        columns["quote_currency"] = identity.quote_currency
-    else:
-        columns["isin"] = identity.isin
+    # Jede Form trägt genau ihre Felder als Attribute; die übrigen fehlen und
+    # werden `None` — das verlangt der `CHECK`.
+    columns: dict[str, str | None] = {
+        column: getattr(identity, column, None) for column in IDENTITY_COLUMNS
+    }
     return columns
 
 
@@ -450,21 +457,14 @@ class QuoteResponse(BaseModel):
     """
 
 
-OVERRIDE_FIELDS = (
-    "ter",
-    "volatility",
-    "accumulating",
-    "provider",
-    "replication",
-    "fund_size",
-    "fund_domicile",
-    "fund_currency",
-)
+OVERRIDE_FIELDS = tuple(CANONICAL)
 """Kennzahlen, die von Hand nachgetragen werden können.
 
 Eine Quelle für Modell, Repository, Endpoint und Tests — sonst kennt jede
 Stelle eine andere Teilmenge. Die Menge ist genau das, was justETFs
 `get_etf_overview` beisteuert: Wo die Quelle nichts hat, springt der Mensch ein.
+Sie steht als Schlüssel von `details.CANONICAL`, zusammen mit Art, Einheit und
+Grenzen jedes Felds.
 """
 
 

@@ -11,6 +11,7 @@ import sqlite3
 from collections.abc import Sequence
 from typing import Any
 
+from app.error_text import error_text
 from app.persistence.data_versions import (
     DATA_VERSIONS_KEY,
     declared_versions,
@@ -77,5 +78,5 @@ def migrate_plugins(database: str, config: SourcesConfig, backup: BackupService)
                 connection.close()
         except Exception as error:
             raise RuntimeError(
-                f"{name}: data_version {previous} -> {target}: {type(error).__name__}: {error}"
+                f"{name}: data_version {previous} -> {target}: {error_text(error)}"
             ) from error

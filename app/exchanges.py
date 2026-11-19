@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 import structlog
 from stockinfo_plugin.invariants import ISIN_PATTERN as _PLUGIN_ISIN_PATTERN
+from stockinfo_plugin.exchanges import Region
 from stockinfo_plugin.invariants import isin_check_digit_is_valid, mic_is_wellformed
 
 logger = structlog.get_logger()
@@ -107,7 +108,7 @@ class ExchangeDef:
 
     alias: str | None
     name: str
-    region: str  # "germany" | "usa" | "europe" | "global"
+    region: Region
     currency: str
 
 
@@ -158,6 +159,13 @@ EXCHANGES: dict[str, ExchangeDef] = {
     "XJSE": ExchangeDef("JO", "Johannesburg", "global", "ZAR"),
     "XTAE": ExchangeDef("TA", "Tel Aviv", "global", "ILS"),
 }
+
+CORE_MICS: tuple[str, ...] = tuple(EXCHANGES)
+"""Die Handelsplätze des Core, festgehalten beim Laden dieses Moduls.
+
+`exchange_catalog` ergänzt `EXCHANGES` beim Start um Plugin-Börsen; diese
+Liste bleibt dabei die des Core.
+"""
 
 DEFAULT_EXCHANGE = "XETR"
 
@@ -555,6 +563,22 @@ def preferred_mics(code: str) -> tuple[str, ...]:
         return (code,)
     logger.warning("unknown_default_exchange", configured=code)
     return (DEFAULT_EXCHANGE,)
+
+
+def exchange_name(mic: str | None) -> str | None:
+    """Der Anzeigename eines Handelsplatzes (etwa ``Xetra``) — ``None``, wenn der MIC unbekannt ist."""
+    definition = EXCHANGES.get(mic) if mic else None
+    return definition.name if definition else None
+
+
+def pair_symbol(base: str, quote_currency: str) -> str:
+    """Das Symbol eines Währungspaars, etwa ``BTC-EUR``.
+
+    Die Schreibweise führt yfinance, und sie ist die einzige, die es für ein
+    Paar gibt. Der Bindestrich trennt die Teile; aus ihm auf ein Paar zu
+    schließen, verbietet T-31 (die Form steht vorher fest).
+    """
+    return f"{base}-{quote_currency}"
 
 
 def provider_alias(ticker: str, mic: str) -> str:

@@ -22,6 +22,7 @@ from pathlib import Path
 
 import structlog
 
+from app.error_text import error_text
 from app.models import BackupReason, SourceDifference
 from app.persistence.backup_store import (
     UnreadableDatabaseError,
@@ -402,7 +403,7 @@ def apply_pending(database_path: str, config: SourcesConfig) -> str | None:
         logger.error("restore_failed", name=name, error=str(exc))
         _write_atomic(
             pending,
-            json.dumps({**intent, "failed": f"{type(exc).__name__}: {exc}"}, indent=2),
+            json.dumps({**intent, "failed": error_text(exc)}, indent=2),
         )
         return None
 

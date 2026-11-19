@@ -22,6 +22,7 @@ from pathlib import Path
 
 import structlog
 import yaml
+from stockinfo_plugin.sources import ROLE_FOR_PROTOCOL
 
 logger = structlog.get_logger()
 
@@ -32,8 +33,10 @@ _ENV_REFERENCE = re.compile(r"^\$\{([A-Z_][A-Z0-9_]*)\}$")
 
 # Die Rollen, die eine Kette besetzen kann. Eine Rolle ist eine Frage an die
 # Außenwelt — nicht eine Klasse: `quotes` beantwortet „was kostet das Papier
-# gerade", unabhängig davon, wer sie beantwortet.
-ROLES = ("resolvers", "etf_meta", "quotes", "daily", "fx")
+# gerade", unabhängig davon, wer sie beantwortet. Namen und Reihenfolge kommen
+# aus dem Plugin-Vertrag; `scripts/sources-profile.sh` hält eine Kopie, die ein
+# Test mit dieser Liste vergleicht.
+ROLES = tuple(role for _, role in ROLE_FOR_PROTOCOL)
 
 # Was gilt, wenn keine Datei da ist. **Nicht abbrechen**: Eine frische
 # Installation ohne `sources.yaml` ist der Normalfall, nicht der Fehlerfall,

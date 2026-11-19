@@ -12,6 +12,7 @@ import structlog
 from fastapi import Depends
 
 from app.config import get_settings
+from app.error_text import error_text
 from app.exchange_catalog import covered_quote_mics
 from app.persistence.quote_store import QuoteStore
 from app.persistence.repository import QuoteRepository
@@ -22,7 +23,7 @@ from app.providers.composite_market import (
     CompositeQuoteProvider,
 )
 from app.resolver import CompositeResolver
-from app.services.analyzer import ROLES as ANALYZED_ROLES
+from app.services.analyzer import INSTRUMENT_ROLES
 from app.services.analyzer import QuoteAnalyzer
 from app.services.backup import BackupService
 from app.services.daily_history import DailyHistoryService
@@ -100,7 +101,7 @@ def warm_all_chains() -> None:
             logger.warning(
                 "chain_warmup_failed",
                 role=role,
-                error=f"{type(error).__name__}: {error}",
+                error=error_text(error),
             )
 
 
@@ -239,7 +240,7 @@ def get_quote_analyzer() -> QuoteAnalyzer:
     im Analyzer selbst: Eine Instanz ohne Online-Quelle maß damit Yahoo und
     justETF — Zahlen zu einer Kette, die sie gar nicht führt.
     """
-    return QuoteAnalyzer({role: _chain(role) for role in ANALYZED_ROLES})
+    return QuoteAnalyzer({role: _chain(role) for role in INSTRUMENT_ROLES})
 
 
 @lru_cache

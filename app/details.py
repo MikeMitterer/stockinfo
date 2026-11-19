@@ -12,18 +12,34 @@ from app.detail_models import DetailDefinition, DetailInput, DetailScope, Detail
 
 # Der geschlossene Kompatibilitätskatalog legt Zieleinheiten und Grenzen fest.
 # Welche Felder bei einem Instrument gelten, deklarieren ausschließlich Quellen.
+#
+# Die Schlüssel sind zugleich die Kennzahlen, die von Hand nachgetragen werden
+# können (`models.OVERRIDE_FIELDS` leitet sich daraus ab, in dieser Reihenfolge).
 CANONICAL = {
     'ter': ('number', 'percent', 0, 5),
     'volatility': ('number', 'percent', 0, 500),
-    # In Millionen; die Währung trägt jeder Wert selbst (justETF: EUR).
-    # 2.000.000 entspricht 2 Billionen.
-    'fund_size': ('number', 'millions', 0, 2_000_000),
     'accumulating': ('boolean', None, None, None),
     'provider': ('text', None, None, None),
     'replication': ('text', None, None, None),
+    # In Millionen; die Währung trägt jeder Wert selbst (justETF: EUR).
+    # 2.000.000 entspricht 2 Billionen.
+    'fund_size': ('number', 'millions', 0, 2_000_000),
     'fund_domicile': ('text', None, None, None),
     'fund_currency': ('text', None, None, None),
 }
+
+
+def is_boolean_field(field: str) -> bool:
+    """Ist das Kennzahlenfeld laut Katalog ein Wahrheitswert (heute `accumulating`)?"""
+    return CANONICAL.get(field, (None,))[0] == 'boolean'
+
+
+def needs_currency(field: str) -> bool:
+    """Ist das Kennzahlenfeld laut Katalog ein Geldbetrag mit Währung (heute `fund_size`)?
+
+    Die Währung steht in der Altspalte `fund_currency`.
+    """
+    return CANONICAL.get(field, (None, None))[1] in MONEY_UNITS
 
 # Betragseinheiten als Katalogwerte; die Regel selbst steht im Plugin-Vertrag.
 MONEY_UNITS = frozenset(unit.value for unit in CONTRACT_MONEY_UNITS)

@@ -48,13 +48,7 @@ from stockinfo_plugin.invariants import (
     isin_check_digit_is_valid,
     resolution_problem,
 )
-from stockinfo_plugin.sources import (
-    DailyCloseSource,
-    FxSource,
-    MetadataSource,
-    QuoteSource,
-    Resolver,
-)
+from stockinfo_plugin.sources import roles_of
 from stockinfo_plugin.types import (
     API_VERSION,
     MONEY_UNITS,
@@ -100,13 +94,7 @@ class SourceContract:
         """Prüft Klassenmetadaten; Konflikte mit dem Katalog prüft der Host."""
         source = self.make_source()
         source_class = type(source)
-        roles = frozenset(
-            role for base, role in (
-                (Resolver, "resolvers"), (QuoteSource, "quotes"),
-                (DailyCloseSource, "daily"), (MetadataSource, "etf_meta"),
-                (FxSource, "fx"),
-            ) if issubclass(source_class, base)
-        )
+        roles = roles_of(source_class)
         validate_exchanges(source_class, roles)
         validate_exchanges(SimpleNamespace(
             MIC_SUPPORT=source_class.get_mic_support(getattr(source, "_config", {})),
