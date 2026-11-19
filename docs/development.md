@@ -27,9 +27,12 @@ Installing and running the finished container is described in the
 - **Node.js 24+ with npm** (`make setup` installs the dashboard packages;
   the backend and prebuilt Docker image do not use Node.js on the host)
 - **pipx** and **Deno 2** for the checks: `make install-tools` installs
-  ProjectTools and BashLib at the versions in `.dev-tools.conf.sh`
+  ProjectTools, BashLib and CLITheme at the versions in `.dev-tools.conf.sh`
 
-`make setup`, the `dev-*` targets and `make up`/`down` work on a plain clone.
+`make setup`, `make help`, `make info`, the `dev-*` targets and
+`make up`/`down` work on a plain clone. With BashLib and CLITheme,
+`make help`, `make info` and `make hints` print in your CLITheme theme
+(`clitheme use NAME`); without them, they print plain lists.
 `make test`, `make check`, `make docs-check`, `make status`, `make hints`
 and `make changelog` need ProjectTools; without it they stop and print the
 install command. Targets marked **[Maintainer]** in `make help` (`build`, `push`,

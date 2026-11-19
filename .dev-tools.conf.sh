@@ -22,10 +22,18 @@ PROJECTTOOLS_TAG=v0.11.0+261118.1922.975db
 PROJECTTOOLS_SOURCE=/Volumes/DevLocal/DevBash/Production/ProjectTools
 PROJECTTOOLS_EDITABLE=yes
 
-# BashLib (version, tag-*, docker/build.sh, scripts/), aus der lokalen Arbeitskopie.
-# Ab 0.3.0 taggen die Bump-Funktionen nur lokal (BashLib T-14).
+# BashLib (version, tag-*, docker/build.sh, scripts/; make.lib.sh für help, info und hints),
+# aus der lokalen Arbeitskopie.
 BASHLIB_PACKAGE=mmit-bashlib
 BASHLIB_LABEL=BashLib
-BASHLIB_TAG=v0.3.0+261103.1253.f86e0
+BASHLIB_TAG=v0.14.0+261119.1230.2ace6
 BASHLIB_SOURCE=/Volumes/DevLocal/DevBash/Production/BashLib
 BASHLIB_EDITABLE=yes
+
+# CLITheme (clitheme export: Farben und Abstände für help, info und hints über make.lib.sh),
+# aus der lokalen Arbeitskopie. Ohne clitheme bleibt die Ausgabe ohne Farben.
+CLITHEME_PACKAGE=mmit-clitheme
+CLITHEME_LABEL=CLITheme
+CLITHEME_TAG=v0.12.0+261119.1304.0816b
+CLITHEME_SOURCE=/Volumes/DevLocal/DevPython/Production/CLITheme
+CLITHEME_EDITABLE=yes
