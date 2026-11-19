@@ -12,6 +12,7 @@ import IsinEditor from './IsinEditor.vue'
 import MetricValue from './MetricValue.vue'
 import { acceptsIsin, isinOf, symbolOf } from '../types'
 import type { OverridePatch, InstrumentSummary, OverrideField } from '../types'
+import { formatTwoDecimals } from '../utils/numberFormat'
 
 const props = defineProps<{
   instruments: InstrumentSummary[]
@@ -199,7 +200,7 @@ function yahooLink(item: InstrumentSummary): string {
 function price(value: number | null): string {
   return value === null
     ? t('common.noValue')
-    : value.toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    : formatTwoDecimals(value, locale.value)
 }
 
 

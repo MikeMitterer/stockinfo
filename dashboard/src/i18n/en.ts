@@ -34,13 +34,9 @@ export const en = {
   nav: {
     assets: 'Assets',
     exchanges: 'Exchanges',
-    environment: 'Environment',
-    links: 'API & Links',
-    themes: 'Themes',
     analysis: 'Analysis',
     fx: 'FX',
     home: 'Go to start page',
-    menu: 'Menu',
     settings: 'Settings',
   },
   toolbar: {
@@ -67,7 +63,6 @@ export const en = {
     colTer: 'TER',
     colVola: 'Vola 1y',
     colAccumulating: 'Acc.',
-    colPoints: 'Pts.',
     yes: 'Yes',
     no: 'No',
     addIsin: 'Add ISIN',
@@ -87,7 +82,6 @@ export const en = {
     sortNone: 'No sorting',
     sortAsc: 'Ascending',
     sortDesc: 'Descending',
-    sortIdle: 'Sort',
   },
   chart: {
     title: 'Price history',
@@ -207,7 +201,6 @@ export const en = {
   links: {
     title: 'API & Links',
     base: 'Base:',
-    apiRoot: 'API root',
     swagger: 'Swagger UI (/docs)',
     openapi: 'OpenAPI (JSON)',
     health: 'Health',
@@ -246,7 +239,6 @@ export const en = {
     de: 'German',
     en: 'English',
   },
-  roles,
   backups: {
     title: 'Database backups',
     hint:
@@ -263,9 +255,7 @@ export const en = {
       backup_schema_too_new: 'Schema {version} is newer than this app ({app})',
       backup_fingerprint_mismatch: 'Manifest and database name different fingerprints',
       backup_data_version_differ: 'Incompatible plugin data version',
-      backup_sources_differ: 'Different source setup',
       line: '{field}: there {theirs}, here {ours}',
-      packages: 'Packages',
       none: '—',
     },
     /* Der Neustart steht vor der Entscheidung — siehe die deutsche Fassung. */
@@ -328,7 +318,6 @@ export const en = {
     copyJson: 'Copy JSON',
     copied: 'copied ✓',
     loading: 'Loading…',
-    close: 'Close',
   },
   errors: {
     title: 'Error',
@@ -340,7 +329,6 @@ export const en = {
     daily: 'Could not load daily history',
     refresh: 'Refresh failed',
     rawQuote: 'Request failed',
-    add: 'Adding failed',
     addIdentifier: 'Adding “{identifier}” failed',
     refreshOne: 'Refresh failed',
     remove: 'Delete failed',
@@ -400,9 +388,6 @@ export const en = {
   hints: {
     more: 'More about this →',
     openSetting: 'To the setting →',
-    points:
-      'Stored price points for this instrument — the depth of the history, not ' +
-      'how current it is. How often new ones arrive is set by the refresh interval.',
   },
   overrides: {
     edit: 'Edit',

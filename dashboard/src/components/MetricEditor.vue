@@ -8,6 +8,7 @@ import MetricValue from './MetricValue.vue'
 import { manualValue, sourceProvides } from '../composables/useOverrides'
 import { FIELD_LABEL_KEY } from '../utils/fieldLabels'
 import { fundSizeCurrency, fundSizeText } from '../utils/fundSize'
+import { TWO_DECIMALS } from '../utils/numberFormat'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
 /**
@@ -116,7 +117,6 @@ function onRemove(): void {
 
 // ─── Zahlenfelder (ter, volatility, fund_size) ─────────────────────────────
 
-const twoDecimals = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
 
 /** Obergrenze je Zahlenfeld — dieselben Werte prüft das Backend noch einmal. */
 const numberMaxByField: Partial<Record<OverrideField, number>> = {
@@ -132,7 +132,7 @@ const numberMax = computed(() => numberMaxByField[props.field] ?? Number.MAX_SAF
 /** Fondsvolumen steht in Millionen mit seiner Eingabewährung — TER und Volatilität in Prozent. */
 const numberDisplay = computed(() => {
   if (numericValue.value === null) return t('common.noValue')
-  const formatted = n(numericValue.value, twoDecimals)
+  const formatted = n(numericValue.value, TWO_DECIMALS)
   return props.field === 'fund_size'
     ? fundSizeText(t, formatted, fundSizeCurrency(props.item, 'manual'))
     : `${formatted} %`

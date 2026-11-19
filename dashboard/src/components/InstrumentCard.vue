@@ -9,6 +9,7 @@ import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
 import { acceptsIsin, isinOf, symbolOf } from '../types'
 import type { OverridePatch, InstrumentSummary, OverrideField } from '../types'
+import { formatTwoDecimals } from '../utils/numberFormat'
 
 const props = defineProps<{
   item: InstrumentSummary
@@ -41,11 +42,9 @@ function toggle(): void {
   expanded.value = !expanded.value
 }
 
-/** Formatiert einen Kurs mit zwei Nachkommastellen (oder Platzhalter), sprachabhängig. Mirror von InstrumentsTable. */
+/** Formatiert einen Kurs mit zwei Nachkommastellen (oder Platzhalter), sprachabhängig. */
 function price(value: number | null): string {
-  return value === null
-    ? t('common.noValue')
-    : value.toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return value === null ? t('common.noValue') : formatTwoDecimals(value, locale.value)
 }
 
 /*

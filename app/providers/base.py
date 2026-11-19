@@ -125,17 +125,9 @@ def identity_from_row(row: object) -> Identity | None:
     """
     # Lokal: `app.exchanges` bezieht seine Regeln aus dem Vertrag, und ein
     # Modulimport von hier dorthin und zurück schlösse den Kreis.
-    from app.exchanges import identity_form
+    from app.exchanges import field_reader, identity_form
 
-    read = (
-        row.get
-        if hasattr(row, "get")
-        else (
-            (lambda key: row[key])
-            if hasattr(row, "keys")
-            else (lambda key: getattr(row, key, None))
-        )
-    )
+    read = field_reader(row)
     form = identity_form(row)
     if form == "pair":
         return PairIdentity(base=read("base"), quote_currency=read("quote_currency"))

@@ -88,7 +88,7 @@ class LoadResult:
 
     `problems` ist ausdrücklich Teil des Ergebnisses und nicht nur eine
     Protokollzeile: Wer wissen will, warum seine Quelle fehlt, soll es an einer
-    Stelle nachlesen können — und `GET /sources` kann sie später anzeigen.
+    Stelle nachlesen können.
     """
 
     specs: tuple[SourceSpec, ...] = ()

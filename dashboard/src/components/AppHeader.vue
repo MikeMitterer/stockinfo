@@ -9,6 +9,7 @@ import {
   type NavIconName,
 } from '@mmit/ux-foundation'
 
+import { tabHref } from '../composables/useHashTab'
 import { useNaiveOverrides } from '../composables/useNaiveOverrides'
 import type { TabKey } from '../types'
 
@@ -67,7 +68,7 @@ const tabs = computed<{ key: TabKey; label: string; icon: NavIconName }[]>(() =>
   <UxTopbar
     :brand-lead="t('app.brandLead')"
     :brand-accent="t('app.brandAccent')"
-    href="#/assets"
+    :href="tabHref('assets')"
     :aria-label="t('nav.home')"
   >
     <template #badge>
@@ -101,7 +102,7 @@ const tabs = computed<{ key: TabKey; label: string; icon: NavIconName }[]>(() =>
         :icon="tab.icon"
         :label="tab.label"
         :active="tab.key === active"
-        :href="`#/${tab.key}`"
+        :href="tabHref(tab.key)"
         @select="emit('navigate', tab.key)"
       />
     </template>

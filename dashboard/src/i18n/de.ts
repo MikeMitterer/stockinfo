@@ -2,8 +2,8 @@
 /**
  * Die fünf Rollen der Quellenkette — **einmal** benannt.
  *
- * Die Analyse zeigt vier davon, der Passungsgrund alle fünf; beide lesen
- * dieses Objekt, damit es die Wörter nur einmal gibt.
+ * Die Analyse liest sie über `analysis.role`; als eigenes Objekt, damit ein
+ * weiterer Leser dieselben Wörter nimmt, statt sie neu zu schreiben.
  */
 const roles = {
   resolvers: 'Auflösung',
@@ -44,13 +44,9 @@ export const de = {
   nav: {
     assets: 'Assets',
     exchanges: 'Börsen',
-    environment: 'Environment',
-    links: 'API & Links',
-    themes: 'Themes',
     analysis: 'Analyse',
     fx: 'Devisen',
     home: 'Zur Startseite',
-    menu: 'Menü',
     settings: 'Einstellungen',
   },
   toolbar: {
@@ -82,7 +78,6 @@ export const de = {
     colTer: 'TER',
     colVola: 'Vola 1J',
     colAccumulating: 'Thes.',
-    colPoints: 'Pkt.',
     yes: 'Ja',
     no: 'Nein',
     addIsin: 'ISIN nachtragen',
@@ -102,7 +97,6 @@ export const de = {
     sortNone: 'Ohne Sortierung',
     sortAsc: 'Aufsteigend',
     sortDesc: 'Absteigend',
-    sortIdle: 'Sortieren',
   },
   chart: {
     title: 'Kurshistorie',
@@ -233,7 +227,6 @@ export const de = {
   links: {
     title: 'API & Links',
     base: 'Basis:',
-    apiRoot: 'API-Wurzel',
     swagger: 'Swagger-UI (/docs)',
     openapi: 'OpenAPI (JSON)',
     health: 'Health',
@@ -272,7 +265,6 @@ export const de = {
     de: 'Deutsch',
     en: 'Englisch',
   },
-  roles,
   backups: {
     title: 'Backups der Datenbank',
     hint:
@@ -290,9 +282,7 @@ export const de = {
       backup_schema_too_new: 'Schema {version} ist neuer als diese App ({app})',
       backup_fingerprint_mismatch: 'Manifest und Datenbank nennen verschiedene Kennungen',
       backup_data_version_differ: 'Inkompatible Plugin-Datenversion',
-      backup_sources_differ: 'Andere Quellenlage',
       line: '{field}: dort {theirs}, hier {ours}',
-      packages: 'Pakete',
       none: '—',
     },
     /*
@@ -362,7 +352,6 @@ export const de = {
     copyJson: 'JSON kopieren',
     copied: 'kopiert ✓',
     loading: 'Lade…',
-    close: 'Schließen',
   },
   errors: {
     // Überschrift des Fehler-Toasts; der Text darunter ist die Meldung selbst.
@@ -381,7 +370,6 @@ export const de = {
     daily: 'Tageshistorie konnte nicht geladen werden',
     refresh: 'Refresh fehlgeschlagen',
     rawQuote: 'Abfrage fehlgeschlagen',
-    add: 'Hinzufügen fehlgeschlagen',
     addIdentifier: 'Hinzufügen von „{identifier}“ fehlgeschlagen',
     refreshOne: 'Aktualisieren fehlgeschlagen',
     remove: 'Löschen fehlgeschlagen',
@@ -483,9 +471,6 @@ export const de = {
   hints: {
     more: 'Mehr dazu →',
     openSetting: 'Zur Einstellung →',
-    points:
-      'Gespeicherte Kurspunkte dieses Papiers — die Tiefe der Historie, nicht ' +
-      'die Aktualität. Wie oft neue dazukommen, bestimmt das Refresh-Intervall.',
   },
   overrides: {
     edit: 'Bearbeiten',

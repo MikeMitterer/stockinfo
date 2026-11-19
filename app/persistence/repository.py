@@ -45,7 +45,11 @@ from app.models import (
 )
 from app.persistence import detail_store
 from app.persistence.meta_store import get_meta
-from app.persistence.quote_store import PROTECTED_META_FIELDS, SavedQuote
+from app.persistence.quote_store import (
+    PROTECTED_META_FIELD_ORDER,
+    PROTECTED_META_FIELDS,
+    SavedQuote,
+)
 from app.persistence.session import fetch_all, fetch_one, open_session
 from app.persistence.tables import (
     DailyCloseRecord,
@@ -219,24 +223,9 @@ class _InstrumentFacts:
     metadata_complete: bool = False
 
 
-# Instrument-Metadatenfelder (ohne id/isin/symbol/first_seen).
-_META_FIELDS = (
-    "exchange",
-    "name",
-    "type",
-    "currency",
-    "provider",
-    "ter",
-    "replication",
-    "fund_size",
-    "fund_domicile",
-    "fund_currency",
-    "volatility",
-    "accumulating",
-    # Wandert mit den Metadaten mit, nicht mit dem Kurspunkt: Er sagt, woher
-    # der jüngste Metadaten-Stand kommt.
-    "source",
-)
+# Instrument-Metadatenfelder (ohne id/isin/symbol/first_seen): die vier, die
+# jede Antwort beschreibt, und die geschützten aus `quote_store`.
+_META_FIELDS = ("exchange", "name", "type", "currency", *PROTECTED_META_FIELD_ORDER)
 
 KEEP_IF_UNKNOWN = frozenset({"name", "type"})
 """Felder, die eine **leere** Antwort nicht überschreiben darf.
@@ -462,17 +451,6 @@ class QuoteRepository:
                     for row in rows
                 ],
             )
-
-    def daily_closes_range(self, instrument_id: int) -> tuple[str, str] | None:
-        """Gibt (min, max) der gecachten Datumsgrenzen zurück (oder ``None``)."""
-        with self._session() as session:
-            row = session.execute(
-                select(func.min(col(DailyCloseRecord.date)), func.max(col(DailyCloseRecord.date)))
-                .where(col(DailyCloseRecord.instrument_id) == instrument_id)
-            ).one()
-            if row[0] is None:
-                return None
-            return (row[0], row[1])
 
     def get_daily_meta(self, instrument_id: int) -> dict | None:
         """Gibt die Fetch-Wasserzeichen (fetched_from/to) zurück (oder ``None``).

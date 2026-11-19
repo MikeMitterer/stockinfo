@@ -66,19 +66,6 @@ from app.providers.base import (
 
 logger = structlog.get_logger()
 
-CORE_UNITS: dict[str, Unit] = {
-    "ter": Unit.PERCENT,
-    "volatility": Unit.PERCENT,
-    "fund_size": Unit.MILLIONS,
-}
-"""Die Einheit, in der der Core ein Feld **erwartet**.
-
-`EtfDetails.ter` ist Prozent, `volatility` ebenso, `fund_size` ein Betrag in
-Millionen (wie justETF ihn liefert). Ein Plugin darf liefern, was es will — die Umrechnung passiert hier,
-einmal, und ein Feld ohne Eintrag geht unverändert durch.
-"""
-
-
 class _Adapter:
     """Was alle Adapter teilen: die gekapselte Quelle und ihr Lebenszyklus.
 
@@ -589,7 +576,6 @@ class MetadataAdapter(_Adapter):
                 value = convert(value, given, Unit(definition.unit))
                 if value is None:
                     continue
-            # Fondsgröße kommt vom bisherigen Adapter bereits in Millionen.
             try:
                 entry = validate_input(definition, DetailInput(value=value, currency=reading.currency))
             except ValueError:

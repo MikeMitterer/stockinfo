@@ -168,9 +168,8 @@ def _yfinance(role: str, config: dict, settings: Settings) -> object:
     `YFinanceProvider` bekommen — ein Objekt, das `is_responsible` gar nicht
     kennt, und der Fehler wäre erst beim ersten ETF-Abruf sichtbar geworden.
     """
-    # Seit T-23 spricht die Kursrolle den Vertrag; `etf_meta` folgt in einem
-    # eigenen Schritt, weil dort die Antwort eine andere Form hat (`Reading`
-    # statt eines Datensatzes) und der Core-Enricher noch anders fragt.
+    # Beide Rollen sprechen den Vertrag; `etf_meta` mit eigener Klasse, weil
+    # die Antwort dort eine andere Form hat (`Reading` statt eines Datensatzes).
     if role == "etf_meta":
         return YFinanceMetadataPlugin(config)
     return YFinancePlugin(config)
@@ -238,6 +237,13 @@ vier Konstruktionen, zwei laufende Stände, null geschlossene Quellen.
 Verglichen wird die Konfiguration über **Identität**, nicht über Gleichheit:
 Im Betrieb ist sie zwischengespeichert und damit dasselbe Objekt; im Test
 bedeutet eine neue Konfiguration eine neue Kette, und genau das ist gemeint.
+
+`/sources` liest hier, was zuletzt **wirklich gebaut** wurde, und baut nicht
+neu. Der Unterschied ist nicht theoretisch: Eine Quelle, deren erste
+Konstruktion gelingt und deren zweite wirft, blieb in der laufenden Kette,
+während der Leseweg sie als unbrauchbar meldete — zwei Wahrheiten, und die
+Diagnose war die falsche. Dazu erzeugte jedes `GET /sources` neue Instanzen
+samt ihrer Seiteneffekte.
 """
 
 
@@ -336,14 +342,6 @@ class ChainEntry:
         return self.known and self.role_ok and self.configured
 
 
-# Was zuletzt **wirklich gebaut** wurde, je Rolle. `/sources` liest hier und
-# baut nicht neu.
-#
-# **Der Unterschied ist nicht theoretisch.** Eine Quelle, deren erste
-# Konstruktion gelingt und deren zweite wirft, blieb in der laufenden Kette,
-# während der Leseweg sie als unbrauchbar meldete — zwei Wahrheiten, und die
-# Diagnose war die falsche. Dazu erzeugte jedes `GET /sources` neue Instanzen
-# samt ihrer Seiteneffekte.
 def close_all() -> None:
     """Schließt alle gebauten Quellen — beim Herunterfahren.
 
@@ -561,8 +559,8 @@ def build_chain(role: str, config: SourcesConfig, settings: Settings) -> list[ob
     return built
 
 
-# Welche Rolle über welchen Adapter in die Sprache des Core kommt. Rollen ohne
-# Eintrag sprechen sie noch direkt — der Übergang ist absichtlich sichtbar.
+# Welche Rolle über welchen Adapter in die Sprache des Core kommt. Jede Rolle
+# hat einen Eintrag; `_build_one` setzt das voraus.
 ROLE_ADAPTERS = {
     "resolvers": ResolverAdapter,
     "quotes": QuoteAdapter,

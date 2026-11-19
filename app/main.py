@@ -163,9 +163,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                     error=f"{type(error).__name__}: {error}",
                 )
                 return
+            # `scheduler.start()` meldet `scheduler_started` selbst, mit Intervall.
             scheduler.start()
             running.append(scheduler)
-        logger.info("scheduler_started")
 
     def start_business() -> None:
         """Migriert Plugin-Daten vor Katalogschreibzugriffen und Scheduler."""
@@ -492,7 +492,7 @@ async def operational(response: Response) -> OperationalResponse:
     Args:
         response: Wird auf 503 gesetzt, wenn etwas kaputt ist — die Datenbank
             nicht erreichbar oder der Betriebsstart gescheitert. Ein
-            ausstehender Umzug und ein anrunningr Betrieb sind **kein**
+            ausstehender Umzug und ein anlaufender Betrieb sind **kein**
             Fehler und bleiben bei `200`.
 
     Returns:

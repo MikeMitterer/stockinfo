@@ -9,9 +9,10 @@ fest, abgebildet wird sie zentral in `app/main.py`. Das gilt gerade für
 bei zwei gleichnamigen Listings beide samt Historie, und genau er ist das
 Beispiel, mit dem T-24 die Regel begründet hat.
 
-`responses` stehen an diesen Endpunkten bewusst **nicht**: Sie liegen laut
-`docs/rest-core-contract.md` außerhalb des geschlossenen Core, führen heute
-keinerlei Fehlerzusagen — und `PUT .../isin` trägt zusätzlich einen dritten,
+`responses` beschreiben an diesen Endpunkten nur die ISIN-Prüfung von
+`PUT .../isin` (`invalid_isin_response`); weitere Fehlerzusagen fehlen bewusst.
+Die Wege liegen laut `docs/rest-core-contract.md` außerhalb des geschlossenen
+Core — und `PUT .../isin` trägt zusätzlich einen dritten,
 älteren `409` (`IsinConflictError`) in einer anderen Rumpfform. Diese drei
 Formen zu vereinheitlichen ist eine eigene Aufräumarbeit und keine
 Nebenwirkung dieses Tickets.

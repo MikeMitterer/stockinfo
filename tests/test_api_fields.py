@@ -12,7 +12,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from app.contract import CONTRACT_FILE, core_contract
+from app.contract import CONTRACT_FILE, ContractUnavailableError, core_contract
 from tests import test_yaml_profile as yaml_profile
 
 client = yaml_profile.client
@@ -103,3 +103,17 @@ def test_fields_traegt_die_endpunkte_je_modell(client: TestClient) -> None:
 
     paths = [entry["path"] for entry in data["endpoints"]["quote"]]
     assert "/quote/{isin}" in paths
+
+
+@pytest.mark.parametrize("path", ["/fields", "/instrument-types"])
+def test_ohne_vertragsartefakt_antworten_beide_wege_mit_503(
+    client: TestClient, monkeypatch, path: str
+) -> None:
+    """Fehlt das Artefakt, sagt der Dienst es, statt mit 500 abzustürzen."""
+
+    def unreadable() -> dict:
+        raise ContractUnavailableError("Artefakt fehlt")
+
+    monkeypatch.setattr("app.routers.fields.core_contract", unreadable)
+
+    assert client.get(path).status_code == 503

@@ -289,7 +289,7 @@ docs-check: require-tools ## Nutzerdoku gegen das Projekt prüfen (Links, Befehl
 .PHONY: check
 check: docs-check test-plugin-api test-example test-dashboard ## Alle netzfreien Prüfungen — Doku, Backend ohne Online-Tests, Plugin-API, Beispiel, Dashboard, Ruff, Typen
 	$(PYTEST) -q -m "not integration"
-	$(VENV)/bin/ruff check app tests scripts
+	$(VENV)/bin/ruff check app tests scripts plugin_api
 	cd dashboard && npx vue-tsc -b
 
 .PHONY: test-backend
@@ -369,7 +369,7 @@ version: ## Aktuelle Version anzeigen (Versionsdatei + git tag) — Maintainer
 	@echo
 	@VER=$$(source "$${BASH_LIBS}/version.lib.sh" 2>/dev/null && readProjectVersion 2>/dev/null); \
 	 [[ -z "$$VER" ]] && VER='nicht gesetzt'; \
-	 TAG=$$(git describe --tags --abbrev=0 2>/dev/null || echo 'kein Tag'); \
+	 TAG="$${RELEASE_TAG:-nicht abrufbar: make install-tools}"; \
 	 echo "    $(YELLOW)version$(RESET)      = $(BLUE)$$VER$(RESET)"; \
 	 echo "    $(YELLOW)git tag$(RESET)      = $(BLUE)$$TAG$(RESET)"
 	@echo

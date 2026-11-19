@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n'
 
 import InfoHint from './InfoHint.vue'
+import { REPOSITORY_URL } from '../config'
 import type { EnvInfo } from '../types'
 
 defineProps<{ env: EnvInfo | null }>()
@@ -9,7 +10,7 @@ defineProps<{ env: EnvInfo | null }>()
 const { t } = useI18n()
 
 // .env.example im Projekt-Repo (Verweis auf die Schlüssel-Vorlage).
-const ENV_EXAMPLE_URL = 'https://github.com/MikeMitterer/stockinfo/blob/master/.env.example'
+const ENV_EXAMPLE_URL = `${REPOSITORY_URL}/blob/master/.env.example`
 </script>
 
 <template>
