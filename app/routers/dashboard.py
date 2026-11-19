@@ -1,6 +1,7 @@
-"""Dashboard-Endpoints — DB-Übersicht, Environment, Refresh, Löschen.
+"""Dashboard-Endpoints — DB-Übersicht, Environment, Diagnose, Refresh, Löschen.
 
-Nur HTTP-Belange; Fachlogik liegt im CachedQuoteService.
+Nur HTTP-Belange; Fachlogik liegt im `CachedQuoteService`, die Selbstauskunft
+über Börsenkatalog und Quellenlage in `services/diagnostics.py`.
 
 **Die `by-symbol`-Wege antworten bei einem mehrdeutigen Symbol mit `409`**,
 ohne dass hier etwas davon steht: Die Mehrdeutigkeit stellt das Repository
@@ -30,23 +31,18 @@ from app.container import (
     get_sources_config,
 )
 from app.detail_models import DetailInput, DetailValue
-from app.exchange_catalog import catalog_annotations, prepare_catalog
-from app.exchanges import EXCHANGES, preference_kind
 from app.models import (
     AnalyzeResult,
     EnvInfo,
-    ExchangeEntry,
     ExchangesResponse,
     InstrumentOverrides,
     InstrumentSummary,
     IsinUpdate,
     QuoteResponse,
     RefreshResult,
-    SourceEntry,
     SourcesResponse,
     invalid_isin_response,
 )
-from app.persistence.data_versions import declared_versions
 from app.routers.validation import (
     IsinPath,
     SymbolPath,
@@ -54,15 +50,13 @@ from app.routers.validation import (
     normalize_symbol,
 )
 from app.services.analyzer import QuoteAnalyzer
-from app.services.backup import fingerprint_of, stamped_fingerprint
+from app.services.diagnostics import exchange_overview, source_overview
 from app.services.quote_cache import (
     CachedQuoteService,
     IsinConflictError,
     RefreshInProgressError,
 )
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
-from app.sources_config import ROLES, SourcesConfig
-from app.sources_registry import describe_chain, specs_by_name
 
 router = APIRouter(tags=["dashboard"])
 
@@ -100,90 +94,23 @@ def environment(settings: SettingsDep) -> EnvInfo:
 @router.get("/exchanges", response_model=ExchangesResponse)
 def exchanges(settings: SettingsDep) -> ExchangesResponse:
     """Aktiver Börsenkatalog und deklarierte Unterstützung, ohne Live-Abfrage."""
-    config = get_sources_config()
-    prepare_catalog(specs_by_name(), config)
-    annotations, unspecified = catalog_annotations([
-        entry for role in ROLES for entry in describe_chain(role, config)
-    ])
-    return ExchangesResponse(
-        unspecified_support=unspecified,
-        default_exchange=settings.default_exchange,
-        default_exchange_kind=preference_kind(settings.default_exchange) or "unknown",
-        catalog=[
-            ExchangeEntry(
-                mic=mic,
-                alias=definition.alias,
-                name=definition.name,
-                region=definition.region,
-                currency=definition.currency,
-                **annotations[mic],
-            )
-            for mic, definition in EXCHANGES.items()
-        ],
-    )
+    return exchange_overview(get_sources_config(), settings)
 
 
 @router.get("/sources", response_model=SourcesResponse)
-def sources() -> SourcesResponse:
+def sources(settings: SettingsDep) -> SourcesResponse:
     """Welche Quellen in welcher Reihenfolge greifen — und welche ausfallen.
 
     **Der Beleg, dass die Konfiguration wirkt.** Bis T-22 stand die Kette als
     `if`-Kaskade im Code; wer wissen wollte, welche Quelle zuerst gefragt wird,
     musste ihn lesen. Jetzt beantwortet der Dienst die Frage selbst.
-
-    Gelistet wird **auch**, was nicht einsatzbereit ist. Eine Quelle
-    stillschweigend wegzulassen hieße, dem Betreiber die Erklärung für ihr
-    Fehlen vorzuenthalten — und die ist der eigentliche Zweck dieses Wegs.
     """
     # **Derselbe Stand wie die laufenden Dienste**, nicht die Datei von jetzt.
     # Die Services halten `get_sources_config()` gecacht; läse der Endpunkt die
     # Datei bei jedem Request neu, meldete er nach einer Änderung ohne Neustart
     # eine Kette, die gar nicht läuft — und die Diagnose wäre genau dann
     # falsch, wenn man sie braucht.
-    config = get_sources_config()
-    versions = declared_versions(config)
-    entries = [
-        SourceEntry(
-            name=entry.name,
-            data_version=versions.get(entry.name, 1),
-            role=entry.role,
-            position=entry.position,
-            configured=entry.usable,
-            reason=entry.reason,
-            cost=entry.cost,
-        )
-        for role in ROLES
-        for entry in describe_chain(role, config, get_settings())
-    ]
-    return SourcesResponse(
-        config_path=str(config.path) if config.path else None,
-        profile=config.profile,
-        provenance_warning=_provenance_warning(config),
-        sources=entries,
-    )
-
-
-def _provenance_warning(config: SourcesConfig) -> str:
-    """Stammt der Bestand aus einer anderen Quellenlage als der laufenden?
-
-    **Gemeldet, nicht geheilt.** Die Datenbank trägt die Kennung, unter der sie
-    entstanden ist; nach einem erzwungenen Wiederherstellen weicht sie von der
-    laufenden Konfiguration ab. Die Papiere darin können dann in einer Form
-    vorliegen, die die laufende Kette nicht bedient — und das fiele sonst erst
-    beim nächsten Kursabruf auf, papierweise.
-
-    Die Auskunft kommt aus dem vorhandenen Stempel und der laufenden
-    Konfiguration; ein eigener Vermerk daneben wäre eine zweite Wissensquelle,
-    die beim ersten Nachtrag von der ersten abwiche.
-    """
-    stamped = stamped_fingerprint(get_settings().database_path)
-    running = fingerprint_of(config)
-    if not stamped or stamped == running:
-        return ""
-    return (
-        f"Der Bestand stammt aus der Quellenlage {stamped}, die Instanz läuft "
-        f"unter {running}."
-    )
+    return source_overview(get_sources_config(), settings)
 
 
 @router.get(

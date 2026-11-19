@@ -16,7 +16,9 @@ Fachregel; ein Sonderweg für die Diagnose wäre eine zweite Ausnahmequelle.
 import os
 import threading
 from collections.abc import Callable
+from dataclasses import dataclass
 from enum import Enum
+from typing import Literal
 
 import structlog
 
@@ -155,6 +157,75 @@ class GateState(Enum):
     """Der Umzug ist festgeschrieben, der Start ist gescheitert."""
 
 
+@dataclass(frozen=True)
+class OperatingCondition:
+    """Wie eine Lage nach außen erscheint — auf `/ready`, `/operational` und im Guard.
+
+    **Eine** Tabelle für alle drei Antworten. Bis T-142 fragten `/ready`,
+    `/operational` und `blocking_reason` den Riegel je in einer eigenen
+    `if`-Kette ab; eine neue Lage hätte an drei Stellen nachgetragen werden
+    müssen.
+
+    `ready_ok` und `operational_ok` sagen, ob der Weg mit `200` antwortet;
+    sonst mit `503`.
+    """
+
+    ready_status: Literal["ok", "degraded", "migration_pending", "starting"]
+    ready_ok: bool
+    operational_mode: Literal["serving", "migration_pending", "degraded", "starting"]
+    operational_ok: bool
+    blocking_reason: str | None
+    database: Literal["ok", "error"] = "ok"
+
+
+# Ausstehender und laufender Umzug sehen von außen gleich aus: Der Bestand ist
+# noch der alte. `/operational` bleibt bei `200` — der Prozess tut genau, was er
+# soll, nämlich auf die Bestätigung warten.
+_MIGRATION_PENDING = OperatingCondition(
+    ready_status="migration_pending", ready_ok=False,
+    operational_mode="migration_pending", operational_ok=True,
+    blocking_reason=REASON_MIGRATION_PENDING,
+)
+
+CONDITIONS: dict[GateState, OperatingCondition] = {
+    GateState.SERVING: OperatingCondition(
+        ready_status="ok", ready_ok=True,
+        operational_mode="serving", operational_ok=True,
+        blocking_reason=None,
+    ),
+    GateState.PENDING: _MIGRATION_PENDING,
+    GateState.MIGRATING: _MIGRATION_PENDING,
+    # Der Umzug ist festgeschrieben, der Betrieb läuft an. `/ready` schon mit
+    # `ok` zu beantworten war der Befund aus Runde 32: Zwischen Commit und
+    # zurückgekehrtem `RefreshScheduler.start()` stand der Riegel offen — bei
+    # einem hängenden Start unbegrenzt lange. `/operational` bleibt bei `200`:
+    # Ein `503` machte den Docker-`HEALTHCHECK` auf dem **erfolgreichen** Weg
+    # kurz `unhealthy`. `serving` wäre trotzdem falsch, ein hängender Start
+    # bliebe darunter unsichtbar.
+    GateState.STARTING: OperatingCondition(
+        ready_status="starting", ready_ok=False,
+        operational_mode="starting", operational_ok=True,
+        blocking_reason=REASON_STARTUP_RUNNING,
+    ),
+    # Umgezogen, aber der Hintergrund-Refresh läuft nicht. `ok` wäre die Lüge
+    # aus Runde 31: Der Dienst lieferte aus, und seine Kurse veralteten
+    # unbemerkt. Hier ist auch `/operational` `degraded`: Der Prozess hält
+    # keine Rückfrage offen, ihm fehlt der Refresh.
+    GateState.STARTUP_FAILED: OperatingCondition(
+        ready_status="degraded", ready_ok=False,
+        operational_mode="degraded", operational_ok=False,
+        blocking_reason=REASON_STARTUP_FAILED,
+    ),
+}
+
+# Die Datenbank antwortet nicht — unabhängig von der Lage des Riegels.
+DATABASE_UNREACHABLE = OperatingCondition(
+    ready_status="degraded", ready_ok=False,
+    operational_mode="degraded", operational_ok=False,
+    blocking_reason=None, database="error",
+)
+
+
 class MigrationGate:
     """Der Zustand „Umzug steht aus" — **fünf** Lagen, eine Zustandsgröße.
 
@@ -251,15 +322,15 @@ class MigrationGate:
         return self._state is GateState.MIGRATING
 
     @property
+    def condition(self) -> OperatingCondition:
+        """Liest die Lage atomar und bildet sie über `CONDITIONS` ab."""
+        with self._lock:
+            return CONDITIONS[self._state]
+
+    @property
     def blocking_reason(self) -> str | None:
         """Liest Sperre und Kennung atomar, auch wenn der Start gerade endet."""
-        with self._lock:
-            return {
-                GateState.PENDING: REASON_MIGRATION_PENDING,
-                GateState.MIGRATING: REASON_MIGRATION_PENDING,
-                GateState.STARTING: REASON_STARTUP_RUNNING,
-                GateState.STARTUP_FAILED: REASON_STARTUP_FAILED,
-            }.get(self._state)
+        return self.condition.blocking_reason
 
     def block(self) -> None:
         """Versetzt den Dienst in den Pending-Zustand."""
@@ -415,6 +486,21 @@ class MigrationGate:
             if self._state is GateState.MIGRATING:
                 self._state = GateState.PENDING
         logger.warning("migration_abandoned")
+
+
+# Der Riegel als Modulzustand.
+#
+# **Eine** Quelle: Guard-Middleware, `/ready`, `/operational` und die
+# Bestätigung fragen dieselbe Instanz. Sie über die Dependency-Injection zu
+# reichen wäre die formal sauberere Form — sie ist aber Zustand der laufenden
+# Instanz, nicht Konfiguration, und ein zweiter Wert wäre genau das Loch, das
+# der Riegel schließen soll.
+_gate = MigrationGate()
+
+
+def get_gate() -> MigrationGate:
+    """Der eine Riegel dieser Instanz."""
+    return _gate
 
 
 def is_allowed(

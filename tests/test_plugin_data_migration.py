@@ -9,11 +9,10 @@ from fastapi.testclient import TestClient
 
 from app import container
 from app.config import get_settings
+from app import migration_guard
 from app.main import app
-from app.migration_guard import MigrationGate
 from app.persistence.data_versions import stored_versions
 from app.persistence.db import init_db
-from app.routers import migration
 from app.scheduler import RefreshScheduler
 from app.services.backup import BackupService
 from app.sources_registry import close_all
@@ -40,7 +39,7 @@ def reset():
     for value in vars(container).values():
         if hasattr(value, "cache_clear"):
             value.cache_clear()
-    migration._gate = MigrationGate()
+    migration_guard._gate = migration_guard.MigrationGate()
 
 
 @contextmanager
@@ -280,7 +279,7 @@ def test_anlauf_ist_keine_fehlgeschlagene_migration(installation):
         entered.set()
         assert finish.wait(5)
     with boot() as client:
-        gate = migration.get_gate()
+        gate = migration_guard.get_gate()
         gate.on_release(starting)
         worker = threading.Thread(target=gate.start)
         worker.start()

@@ -10,46 +10,44 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from app.container import get_quote_store, get_sources_config
-from app.contract import ContractUnavailableError, core_contract, plugin_contract
+from app.container import get_field_catalog, get_sources_config
+from app.contract import ContractUnavailableError
 from app.models import FieldsResponse, InstrumentTypesResponse
-from app.persistence.quote_store import QuoteStore
+from app.services.field_catalog import FieldCatalogService
 from app.services.instrument_types import instrument_type_catalog
 
 router = APIRouter(tags=["contract"])
 
-StoreDep = Annotated[QuoteStore, Depends(get_quote_store)]
+CatalogDep = Annotated[FieldCatalogService, Depends(get_field_catalog)]
+
+
+def _contract_unavailable(exc: ContractUnavailableError) -> HTTPException:
+    return HTTPException(status_code=503, detail="Vertragsartefakt nicht lesbar")
 
 
 @router.get("/instrument-types", response_model=InstrumentTypesResponse)
-def instrument_types(response: Response, store: StoreDep) -> InstrumentTypesResponse:
+def instrument_types(response: Response, catalog: CatalogDep) -> InstrumentTypesResponse:
     """Liefert den aktuellen Typkatalog der konfigurierten Plugin-Rollen.
 
     Raises:
         HTTPException: 503, wenn das Vertragsartefakt fehlt, wie bei `/fields`.
     """
     try:
-        contract = core_contract()
+        header, generation = catalog.generation_header()
     except ContractUnavailableError as exc:
-        raise HTTPException(
-            status_code=503, detail="Vertragsartefakt nicht lesbar"
-        ) from exc
+        raise _contract_unavailable(exc) from exc
     response.headers["Cache-Control"] = "no-store"
-    response.headers[contract["generation"]["header"]] = store.detail_generation()
+    response.headers[header] = generation
     return instrument_type_catalog(get_sources_config())
 
 
 @router.get("/fields", response_model=FieldsResponse)
-def fields(store: StoreDep) -> FieldsResponse:
+def fields(catalog: CatalogDep) -> FieldsResponse:
     """Liefert Pflichtfelder, Bedeutung und Vertragsversion.
 
     Gegliedert nach Antworttyp, nicht flach: `price` und `currency` sind im
     Kurs Pflicht, in der Instrumentenzeile nicht. Eine flache Liste wäre
     ungenauer als das vorhandene OpenAPI-Dokument.
-
-    Zwischenspeichern sollte ein Konsument unter
-    ``(generation_id, core_version, details_version)`` — die beiden Nummern
-    sagen ihm, dass er neu holen muss, ohne dass er den Inhalt vergleicht.
 
     Raises:
         HTTPException: 503, wenn das Vertragsartefakt fehlt. Eine leere
@@ -57,19 +55,6 @@ def fields(store: StoreDep) -> FieldsResponse:
             eine Zusage aus.
     """
     try:
-        contract = core_contract()
+        return catalog.fields()
     except ContractUnavailableError as exc:
-        raise HTTPException(
-            status_code=503, detail="Vertragsartefakt nicht lesbar"
-        ) from exc
-
-    definitions, version = store.detail_catalog()
-    return FieldsResponse(
-        core_version=contract["core_version"],
-        core=contract["core"],
-        endpoints=contract["endpoints"],
-        generation_id=store.detail_generation(),
-        details_version=version,
-        details=definitions,
-        plugin_contract=plugin_contract(),
-    )
+        raise _contract_unavailable(exc) from exc

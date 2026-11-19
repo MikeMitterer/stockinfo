@@ -28,6 +28,7 @@ from app.services.analyzer import QuoteAnalyzer
 from app.services.backup import BackupService
 from app.services.daily_history import DailyHistoryService
 from app.services.daily_sync import DailyCloseSync
+from app.services.field_catalog import FieldCatalogService
 from app.services.fx_service import CachedFxService
 from app.services.intake_service import IntakeService
 from app.services.quote_cache import CachedQuoteService
@@ -41,10 +42,15 @@ logger = structlog.get_logger()
 def get_quote_store() -> QuoteStore:
     """Der Kursspeicher für die aktuelle Datenbank — die eine Stelle, die ihn baut.
 
-    Dienste und Router bekommen ihn hierüber (FastAPI `Depends` oder beim
-    Zusammenbau der Dienste) und kennen nur das Interface `QuoteStore`.
+    Dienste bekommen ihn hierüber beim Zusammenbau und kennen nur das
+    Interface `QuoteStore`; Router sprechen mit Diensten, nicht mit ihm.
     """
     return QuoteRepository(get_settings().database_path)
+
+
+def get_field_catalog() -> FieldCatalogService:
+    """Vertrag und Detailkatalog für `/fields` und `/instrument-types`."""
+    return FieldCatalogService(get_quote_store())
 
 
 def initialize_detail_catalog() -> None:
