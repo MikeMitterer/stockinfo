@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { NButton, NSelect } from 'naive-ui'
 
 import { UxCaret, useIsCompact } from '@mmit/ux-foundation'
-import { useTableSort, type SortKey } from '../composables/useTableSort'
+import { SORT_KEYS, useTableSort, type SortKey } from '../composables/useTableSort'
 import InfoHint from './InfoHint.vue'
 import InstrumentCard from './InstrumentCard.vue'
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
@@ -47,17 +47,19 @@ const compact = useIsCompact()
 const { sortKey, direction, toggle, setSortKey, setDirection, sort, init: initSort } = useTableSort()
 initSort()
 
-// Sortierbare Spaltenköpfe (Label-Key aus dem Katalog + optionale Zellklasse).
-const columns: { key: SortKey; label: string; align?: string }[] = [
-  { key: 'symbol', label: 'table.colSymbol' },
-  { key: 'isin', label: 'table.colIsin' },
-  { key: 'name', label: 'table.colName' },
-  { key: 'type', label: 'table.colType' },
-  { key: 'latest_price', label: 'table.colPrice', align: 'num' },
-  { key: 'ter', label: 'table.colTer', align: 'num' },
-  { key: 'volatility', label: 'table.colVola', align: 'num' },
-  { key: 'accumulating', label: 'table.colAccumulating', align: 'center' },
-]
+// Sortierbare Spaltenköpfe: Label-Key aus dem Katalog + optionale Zellklasse.
+// Spalten und Reihenfolge kommen aus `SORT_KEYS`; der `Record` lässt keine aus.
+const COLUMN_LAYOUT: Record<SortKey, { label: string; align?: string }> = {
+  symbol: { label: 'table.colSymbol' },
+  isin: { label: 'table.colIsin' },
+  name: { label: 'table.colName' },
+  type: { label: 'table.colType' },
+  latest_price: { label: 'table.colPrice', align: 'num' },
+  ter: { label: 'table.colTer', align: 'num' },
+  volatility: { label: 'table.colVola', align: 'num' },
+  accumulating: { label: 'table.colAccumulating', align: 'center' },
+}
+const columns = SORT_KEYS.map((key) => ({ key, ...COLUMN_LAYOUT[key] }))
 
 const sortedInstruments = computed(() => sort(props.instruments))
 
