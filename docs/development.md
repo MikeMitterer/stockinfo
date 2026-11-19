@@ -30,9 +30,9 @@ Installing and running the finished container is described in the
   ProjectTools and BashLib at the versions in `.dev-tools.conf.sh`
 
 `make setup`, the `dev-*` targets and `make up`/`down` work on a plain clone.
-`make test`, `make check`, `make docs-check`, `make status` and
-`make changelog` need ProjectTools; without it they stop and print the install
-command. Targets marked **[Maintainer]** in `make help` (`build`, `push`,
+`make test`, `make check`, `make docs-check`, `make status`, `make hints`
+and `make changelog` need ProjectTools; without it they stop and print the
+install command. Targets marked **[Maintainer]** in `make help` (`build`, `push`,
 `tag-*`, `version`) also need BashLib. To build the image yourself, run this
 instead of `make build`:
 
