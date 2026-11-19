@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { I18nT, useI18n } from 'vue-i18n'
 import { NButton, NModal } from 'naive-ui'
 
+import { focusComponent, useLastShown } from '../composables/useDialog'
 import type { IntakeConfirmation } from '../types'
 
 const props = defineProps<{ decision: IntakeConfirmation | null; identifier: string; busy: boolean }>()
@@ -10,20 +11,15 @@ const emit = defineEmits<{ (event: 'confirm'): void; (event: 'cancel'): void }>(
 const { t } = useI18n()
 const cancelButton = ref<InstanceType<typeof NButton> | null>(null)
 
-// Inhalt bis zum Ende der Ausblendung behalten.
-const shown = ref<IntakeConfirmation | null>(null)
+// Inhalt bis zum Ende der Ausblendung behalten, samt der Eingabe, zu der er gehört.
 const shownIdentifier = ref('')
-watch(() => props.decision, (decision) => {
-  if (decision) {
-    shown.value = decision
-    shownIdentifier.value = props.identifier
-  }
-}, { immediate: true })
+const shown = useLastShown(() => props.decision, () => {
+  shownIdentifier.value = props.identifier
+})
 
 /** Ein versehentliches Enter soll keine Aufnahme bestätigen. */
 function focusCancel(): void {
-  const element = cancelButton.value?.$el as HTMLElement | undefined
-  element?.focus()
+  focusComponent(cancelButton)
 }
 
 /** Escape und Klick außerhalb entsprechen Abbrechen, außer beim Speichern. */

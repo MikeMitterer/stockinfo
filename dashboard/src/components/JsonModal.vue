@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { consola } from 'consola'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton, NModal } from 'naive-ui'
 
+import { useLastShown } from '../composables/useDialog'
 import { useRawQuote } from '../composables/useRawQuote'
 import { refOf } from '../types'
 import type { InstrumentSummary } from '../types'
@@ -22,21 +23,9 @@ const { url, json, loading, error, load } = useRawQuote()
 const copied = ref<string | null>(null)
 const { t } = useI18n()
 
-/*
- * Eigene Kopie des Papiers, damit der Kasten sich beim Ausblenden nicht leert:
- * Der Aufrufer setzt seine Auswahl sofort zurück, die Animation läuft aber noch.
- */
-const shown = ref<InstrumentSummary | null>(null)
-
-watch(
-  () => props.item,
-  (item) => {
-    if (!item) return
-    shown.value = item
-    void load(refOf(item))
-  },
-  { immediate: true },
-)
+// Eigene Kopie des Papiers, damit der Kasten sich beim Ausblenden nicht leert;
+// ein neues Papier lädt seine Antwort.
+const shown = useLastShown(() => props.item, (item) => void load(refOf(item)))
 
 /** Kopiert Text in die Zwischenablage und zeigt kurz eine Bestätigung. */
 async function copy(text: string, what: string): Promise<void> {
