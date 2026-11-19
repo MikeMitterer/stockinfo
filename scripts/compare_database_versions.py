@@ -442,7 +442,13 @@ def main() -> int:
     if not unchanged:
         problems.append("Original verändert")
     for problem in problems:
-        print(f"ROT: {problem}")
+        print(f"✗ {problem}")
+    if problems:
+        # Die Laufdaten unter .tmp/t97/ bleiben mit --keep zum Nachsehen liegen.
+        print(
+            "Nächster Schritt: mit Laufdaten wiederholen: "
+            ".venv/bin/python scripts/compare_database_versions.py --keep"
+        )
     return 1 if problems else 0
 
 
