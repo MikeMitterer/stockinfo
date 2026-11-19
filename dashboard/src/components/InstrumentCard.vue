@@ -9,6 +9,7 @@ import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
 import { acceptsIsin, isinOf, symbolOf } from '../types'
 import type { OverridePatch, InstrumentSummary, OverrideField } from '../types'
+import { instrumentTypeLabel } from '../utils/instrumentTypes'
 import { formatTwoDecimals } from '../utils/numberFormat'
 
 const props = defineProps<{
@@ -75,7 +76,7 @@ function price(value: number | null): string {
           </span>
         </template>
       </span>
-      <span v-if="item.type" class="icard__type badge" :class="item.type">{{ item.type }}</span>
+      <span v-if="item.type" class="icard__type badge" :class="item.type">{{ instrumentTypeLabel(item.type) }}</span>
       <span class="icard__price mono">
         {{ price(item.latest_price) }}
         <span class="icard__ccy">{{ item.latest_currency ?? '' }}</span>
@@ -104,7 +105,7 @@ function price(value: number | null): string {
           :title="t('table.showJson')"
           @click="emit('json', item)"
         >
-          JSON
+          {{ t('table.jsonShort') }}
         </NButton>
         <NButton
           v-if="extraetfUrl"
@@ -117,7 +118,7 @@ function price(value: number | null): string {
           rel="noopener"
           :title="t('table.extraetfProfile')"
         >
-          eETF
+          {{ t('table.extraetfShort') }}
         </NButton>
         <NButton
           v-if="yahooUrl"
@@ -130,7 +131,7 @@ function price(value: number | null): string {
           rel="noopener"
           :title="t('table.yahooFinance')"
         >
-          Y!
+          {{ t('table.yahooShort') }}
         </NButton>
         <NButton
           class="icard__action icard__action--refresh"

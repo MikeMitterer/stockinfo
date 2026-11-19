@@ -19,7 +19,7 @@ export const LOCALES = ['de', 'en'] as const
 export type LocaleKey = (typeof LOCALES)[number]
 
 const STORAGE_KEY = 'stockinfo-lang'
-const FALLBACK_LOCALE: LocaleKey = 'en'
+export const FALLBACK_LOCALE: LocaleKey = 'en'
 
 /**
  * Ermittelt die Startsprache: gespeicherte Wahl → Browsersprache → Rückfall.

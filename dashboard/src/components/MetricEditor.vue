@@ -135,7 +135,7 @@ const numberDisplay = computed(() => {
   const formatted = n(numericValue.value, TWO_DECIMALS)
   return props.field === 'fund_size'
     ? fundSizeText(t, formatted, fundSizeCurrency(props.item, 'manual'))
-    : `${formatted} %`
+    : t('common.percent', { value: formatted })
 })
 
 function onNumber(value: number | null): void {

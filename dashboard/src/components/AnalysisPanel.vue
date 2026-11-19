@@ -7,10 +7,11 @@ import { isIsin } from '../api/paths'
 import { useAnalysis } from '../composables/useAnalysis'
 import { isinOf, refOf } from '../types'
 import type { AnalyzeStage, InstrumentRef, InstrumentSummary } from '../types'
+import { TWO_DECIMALS } from '../utils/numberFormat'
 
 const props = defineProps<{ instruments: InstrumentSummary[] }>()
 
-const { t } = useI18n()
+const { t, n } = useI18n()
 const { result, loading, error, analyze } = useAnalysis()
 
 /**
@@ -115,7 +116,7 @@ const instrumentOptions = computed(() =>
         <tr v-for="s in result.stages" :key="`${s.role}/${s.source}`" :class="s.status">
           <td>{{ t(`analysis.role.${s.role}`) }}</td>
           <td>{{ s.source }}</td>
-          <td class="num">{{ s.seconds.toFixed(2) }}s</td>
+          <td class="num">{{ t('analysis.seconds', { value: n(s.seconds, TWO_DECIMALS) }) }}</td>
           <td>
             {{ t(`analysis.status.${s.status}`) }}<span v-if="note(s)"> · {{ note(s) }}</span>
           </td>
@@ -123,7 +124,7 @@ const instrumentOptions = computed(() =>
         <tr class="total">
           <td>{{ t('analysis.total') }}</td>
           <td></td>
-          <td class="num">{{ result.total.toFixed(2) }}s</td>
+          <td class="num">{{ t('analysis.seconds', { value: n(result.total, TWO_DECIMALS) }) }}</td>
           <td></td>
         </tr>
       </tbody>

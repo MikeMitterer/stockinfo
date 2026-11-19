@@ -181,12 +181,21 @@ describe('MigrationGate · unbekannte Kennung', () => {
    * genau der ist der Zweck der Liste. Der Fall ist real — das Backend darf
    * eine Kennung ergänzen, bevor das UI sie kennt.
    */
-  it('zeigt die rohe Kennung, statt den Grund wegzulassen', () => {
-    const gate = mountGate({
-      preview: { ...PREVIEW, rejected: [makeRejected({ reason: 'brandneuer_grund' })] },
-    })
-
-    expect(gate.text()).toContain('brandneuer_grund')
+  it.each([
+    ['de', 'Grund, den diese Oberfläche nicht kennt: brandneuer_grund'],
+    ['en', 'A reason this interface does not know: brandneuer_grund'],
+  ] as const)('nennt sie übersetzt samt Kennung (%s), statt den Grund wegzulassen', (locale, expected) => {
+    // Seit T-138 nicht mehr roh: Die Kennung allein ist in keiner Sprache ein Satz.
+    const before = i18n.global.locale.value
+    i18n.global.locale.value = locale
+    try {
+      const gate = mountGate({
+        preview: { ...PREVIEW, rejected: [makeRejected({ reason: 'brandneuer_grund' })] },
+      })
+      expect(gate.text()).toContain(expected)
+    } finally {
+      i18n.global.locale.value = before
+    }
   })
 })
 

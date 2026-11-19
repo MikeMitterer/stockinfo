@@ -29,7 +29,15 @@ export const en = {
   app: { brandLead: 'Stock', brandAccent: 'Info' },
 
   /* The placeholder for an empty cell — see the German file. */
-  common: { noValue: '-' },
+  common: { noValue: '-', percent: '{value} %' },
+  instrumentTypes: {
+    stock: 'Stock',
+    etf: 'ETF',
+    etc: 'ETC',
+    fund: 'Fund',
+    crypto: 'Crypto',
+    bond: 'Bond',
+  },
 
   nav: {
     assets: 'Assets',
@@ -66,6 +74,10 @@ export const en = {
     yes: 'Yes',
     no: 'No',
     addIsin: 'Add ISIN',
+    addIsinShort: '+ ISIN',
+    jsonShort: 'JSON',
+    extraetfShort: 'eETF',
+    yahooShort: 'Y!',
     isinPlaceholder: 'Enter ISIN',
     isinInvalid: 'invalid ISIN',
     save: 'Save',
@@ -91,6 +103,13 @@ export const en = {
     close: 'Close',
     periodChange: 'Change over the period',
     vsStart: 'vs. start',
+    format: {
+      tooltipIntraday: 'MMM d, HH:mm',
+      tooltipDay: 'MM/dd/yyyy',
+      hour: 'HH:mm',
+      day: 'MM/dd',
+      month: 'MM/yy',
+    },
     ranges: {
       intraday: '1D',
       oneWeek: '1W',
@@ -187,6 +206,7 @@ export const en = {
     colSeconds: 'Duration',
     colStatus: 'Status',
     total: 'Total',
+    seconds: '{value} s',
     empty: 'No measurement yet — pick an instrument and click “Analyze”.',
   },
   fx: {
@@ -241,6 +261,7 @@ export const en = {
   },
   backups: {
     title: 'Database backups',
+    sizeKb: '{value} kB',
     hint:
       '{keep} backups are kept; the oldest gives way when the next one is ' +
       'created. Backups are taken on demand, not on a schedule.',
@@ -314,6 +335,7 @@ export const en = {
     financialContentLink: 'MangoLila: Financial content disclaimer (German)',
   },
   json: {
+    title: 'JSON — {symbol}',
     copyUrl: 'Copy URL',
     copyJson: 'Copy JSON',
     copied: 'copied ✓',
@@ -460,6 +482,7 @@ export const en = {
       'They remain in the report and can be added again with a complete identity.',
     lossSummary: 'This drops {quotes} intraday price points and {daily} daily closes.',
     rowLoss: '{quotes} price points, {daily} daily closes',
+    unknownReason: 'A reason this interface does not know: {code}',
 
     backupTitle: 'Back up first',
     backupBody:

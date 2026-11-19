@@ -12,6 +12,7 @@ import IsinEditor from './IsinEditor.vue'
 import MetricValue from './MetricValue.vue'
 import { acceptsIsin, isinOf, symbolOf } from '../types'
 import type { OverridePatch, InstrumentSummary, OverrideField } from '../types'
+import { instrumentTypeLabel } from '../utils/instrumentTypes'
 import { formatTwoDecimals } from '../utils/numberFormat'
 
 const props = defineProps<{
@@ -374,7 +375,7 @@ function price(value: number | null): string {
                 </button>
               </td>
               <td>
-                <span v-if="item.type" class="badge type" :class="item.type">{{ item.type }}</span>
+                <span v-if="item.type" class="badge type" :class="item.type">{{ instrumentTypeLabel(item.type) }}</span>
                 <span v-else class="dim">{{ t('common.noValue') }}</span>
               </td>
               <td class="num mono">
@@ -397,7 +398,7 @@ function price(value: number | null): string {
                   :title="t('table.showJson')"
                   @click="emit('json', item)"
                 >
-                  JSON
+                  {{ t('table.jsonShort') }}
                 </NButton>
                 <NButton
                   v-if="extraetfLink(item)"
@@ -410,7 +411,7 @@ function price(value: number | null): string {
                   rel="noopener"
                   :title="t('table.extraetfProfile')"
                 >
-                  eETF
+                  {{ t('table.extraetfShort') }}
                 </NButton>
                 <NButton
                   v-if="yahooLink(item)"
@@ -423,7 +424,7 @@ function price(value: number | null): string {
                   rel="noopener"
                   :title="t('table.yahooFinance')"
                 >
-                  Y!
+                  {{ t('table.yahooShort') }}
                 </NButton>
                 <NButton
                   class="icon"

@@ -3,12 +3,13 @@ import { computed, ref, watch } from 'vue'
 import { NButton, NSelect } from 'naive-ui'
 import { UxInlineNumber } from '@mmit/ux-foundation'
 import { useI18n } from 'vue-i18n'
+import { localizedLabel } from '../i18n/locales'
 import type { DetailDefinition, DetailInput, DetailValue } from '../types'
 
 const props = defineProps<{ definition: DetailDefinition; value: DetailValue; busy?: boolean; options?: string[]; currencyOptions?: string[] }>()
 const emit = defineEmits<{ (event: 'commit', value: DetailInput): void }>()
 const { t, locale, n } = useI18n()
-const label = computed(() => locale.value === 'de' ? props.definition.label_de || props.definition.label_en : props.definition.label_en)
+const label = computed(() => localizedLabel(props.definition, locale.value))
 const editable = computed(() => props.definition.overridable && props.value.origin !== 'provider')
 const numeric = computed(() => typeof props.value.manual_value === 'number' ? props.value.manual_value : null)
 const display = computed(() => {
@@ -19,9 +20,11 @@ const display = computed(() => {
   // Beim Bearbeiten steht die Währung in der eigenen Auswahl daneben.
   const currency = editable.value ? '' : props.value.currency || ''
   if (props.definition.unit === 'millions') return t('details.amountMillions', { amount: text, currency }).trim()
-  const unit = props.definition.currency_required
-    ? currency
-    : props.definition.unit === 'percent' ? '%' : props.definition.unit || ''
+  if (!props.definition.currency_required && props.definition.unit === 'percent') {
+    return t('common.percent', { value: text })
+  }
+  // Sonst die Währung oder die Einheit des Backend-Katalogs, wie sie dort steht.
+  const unit = props.definition.currency_required ? currency : props.definition.unit || ''
   return `${text}${unit ? ` ${unit}` : ''}`
 })
 const draftCurrency = ref(props.value.manual_currency || props.value.currency || '')
