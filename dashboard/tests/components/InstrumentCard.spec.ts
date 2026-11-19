@@ -106,8 +106,8 @@ describe('InstrumentCard', () => {
 
   it('emittiert refresh und remove aus den Aktionen', async () => {
     const wrapper = mountCard()
-    await wrapper.find('.icard__action--refresh').trigger('click')
-    await wrapper.find('.icard__action--remove').trigger('click')
+    await wrapper.find('.instrument-action--refresh').trigger('click')
+    await wrapper.find('.instrument-action--remove').trigger('click')
     expect(wrapper.emitted('refresh')).toHaveLength(1)
     expect(wrapper.emitted('remove')).toHaveLength(1)
     expect(wrapper.emitted('select')).toBeUndefined()

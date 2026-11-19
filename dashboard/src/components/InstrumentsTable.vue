@@ -6,6 +6,7 @@ import { NButton, NSelect } from 'naive-ui'
 import { UxCaret, useIsCompact } from '@mmit/ux-foundation'
 import { SORT_KEYS, useTableSort, type SortKey } from '../composables/useTableSort'
 import InfoHint from './InfoHint.vue'
+import InstrumentActions from './InstrumentActions.vue'
 import InstrumentCard from './InstrumentCard.vue'
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
@@ -393,62 +394,14 @@ function price(value: number | null): string {
               <td class="num mono dim"><MetricValue :item="item" field="volatility" /></td>
               <td class="center"><MetricValue :item="item" field="accumulating" /></td>
               <td class="actions" @click.stop>
-                <NButton
-                  class="ext"
-                  size="tiny"
-                  quaternary
-                  :title="t('table.showJson')"
-                  @click="emit('json', item)"
-                >
-                  {{ t('table.jsonShort') }}
-                </NButton>
-                <NButton
-                  v-if="extraetfLink(item)"
-                  class="ext"
-                  tag="a"
-                  size="tiny"
-                  quaternary
-                  :href="extraetfLink(item)"
-                  target="_blank"
-                  rel="noopener"
-                  :title="t('table.extraetfProfile')"
-                >
-                  {{ t('table.extraetfShort') }}
-                </NButton>
-                <NButton
-                  v-if="yahooLink(item)"
-                  class="ext"
-                  tag="a"
-                  size="tiny"
-                  quaternary
-                  :href="yahooLink(item)"
-                  target="_blank"
-                  rel="noopener"
-                  :title="t('table.yahooFinance')"
-                >
-                  {{ t('table.yahooShort') }}
-                </NButton>
-                <NButton
-                  class="icon"
-                  size="tiny"
-                  quaternary
-                  :loading="item.symbol === refreshingSymbol"
-                  :disabled="item.symbol === refreshingSymbol"
-                  :title="t('table.refresh')"
-                  @click="emit('refresh', item)"
-                >
-                  ↻
-                </NButton>
-                <NButton
-                  class="icon"
-                  size="tiny"
-                  quaternary
-                  type="error"
-                  :title="t('table.remove')"
-                  @click="emit('remove', item)"
-                >
-                  ✕
-                </NButton>
+                <InstrumentActions
+                  :extraetf-url="extraetfLink(item)"
+                  :yahoo-url="yahooLink(item)"
+                  :refreshing="item.symbol === refreshingSymbol"
+                  @json="emit('json', item)"
+                  @refresh="emit('refresh', item)"
+                  @remove="emit('remove', item)"
+                />
               </td>
             </tr>
             <tr v-if="isOpen(item)" :id="`details-${item.symbol}`" class="details-row">
