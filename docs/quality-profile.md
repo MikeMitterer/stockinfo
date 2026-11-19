@@ -50,13 +50,27 @@ Die Ordner und ihre Aufgaben beschreibt die
   `tests/test_persistence_boundary.py`.
 - **Routen sind dünn:** `app/routers/` übersetzt HTTP in Aufrufe der Dienste
   unter `app/services/` und deren Ergebnisse in die Modelle aus
-  `app/models.py`. Fachentscheidungen fallen im Dienst. Konvention.
+  `app/models.py`. Fachentscheidungen fallen im Dienst. Was mehrere Router
+  teilen, steht in einem eigenen Modul mit öffentlichen Namen
+  (`routers/source_errors.py`, `routers/validation.py`). Kein Router
+  importiert `app.persistence` oder private Namen eines anderen Routers;
+  durchgesetzt von `tests/test_router_boundary.py`. Dass keine
+  Fachentscheidung im Router fällt, ist darüber hinaus Konvention.
+- **Betriebszustand an einer Stelle:** Wie jede Lage des Migrationsriegels auf
+  `/ready`, `/operational` und die Sperrkennung des Guards abgebildet wird,
+  steht in `CONDITIONS` in `app/migration_guard.py`; jede Lage prüft
+  `tests/test_migration_endpoints.py`.
 - **Quellen über den Plugin-Vertrag:** Eigene Quellen liegen als Plugins unter
   `app/plugins/` und erfüllen denselben Vertrag wie fremde (`plugin_api/`).
-  Der Core nutzt die Werttypen des Vertrags (`stockinfo_plugin`) als eigene;
-  `app/plugin_adapters.py` übersetzt zwischen Plugin-Aufrufen und den
-  Diensten. Der Vertrag ist ein eigenes Paket und importiert nichts aus
-  `app/`. Konvention; die Vertragsseite prüft `make test-plugin-api`.
+  Der Core nutzt **Werttypen, Fehlfälle und Invarianten** des Vertrags
+  (`stockinfo_plugin`, etwa `Identity`, `Quote`, `NotFound`, `convert`) als
+  eigene. Die **Rollen** — die Protokolle, die ein Plugin erfüllt
+  (`QuoteSource`, `Resolver` …), `Source` und die Zuordnung
+  `ROLE_FOR_PROTOCOL`/`roles_of` — kennen nur `app/plugin_loader.py`,
+  `app/plugin_adapters.py`, `app/sources_config.py` (Kettennamen) und die
+  Plugins unter `app/plugins/`; durchgesetzt von
+  `tests/test_plugin_role_boundary.py`. Der Vertrag ist ein eigenes Paket und
+  importiert nichts aus `app/`; die Vertragsseite prüft `make test-plugin-api`.
 - **Dashboard:** `src/api/` spricht die REST-API, `src/composables/` hält
   Zustand und Abläufe, `src/components/` zeigt an. Speicher nur über
   `safeStorage` der UX-Foundation (ESLint). Sonst Konvention.

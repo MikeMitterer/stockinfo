@@ -1,7 +1,9 @@
-"""Dashboard-Endpoints — DB-Übersicht, Environment, Diagnose, Refresh, Löschen.
+"""Dashboard-Endpoints — Übersicht, Environment, Diagnose, Analyse, Refresh,
+eigene Werte, Löschen.
 
-Nur HTTP-Belange; Fachlogik liegt im `CachedQuoteService`, die Selbstauskunft
-über Börsenkatalog und Quellenlage in `services/diagnostics.py`.
+Nur HTTP-Belange. Fachlogik liegt im `CachedQuoteService` und im
+`QuoteAnalyzer`, die Selbstauskunft über Börsenkatalog und Quellenlage in
+`services/diagnostics.py`.
 
 **Die `by-symbol`-Wege antworten bei einem mehrdeutigen Symbol mit `409`**,
 ohne dass hier etwas davon steht: Die Mehrdeutigkeit stellt das Repository
