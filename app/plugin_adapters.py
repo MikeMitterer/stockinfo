@@ -53,7 +53,7 @@ from stockinfo_plugin.types import (
 
 from app.detail_models import DetailInput
 from app.details import definitions_for, validate_input
-from app.exchanges import EXCHANGES, provider_alias
+from app.exchanges import EXCHANGES, exchange_name, pair_symbol, provider_alias
 from app.providers.base import (
     INSTRUMENT_TYPES,
     EtfDetails,
@@ -168,7 +168,7 @@ def _symbol_of(answer: Resolved, fallback_isin: str) -> str:
     """
     identity = answer.identity
     if isinstance(identity, PairIdentity):
-        return f"{identity.base}-{identity.quote_currency}"
+        return pair_symbol(identity.base, identity.quote_currency)
     if isinstance(identity, IsinOnlyIdentity):
         return identity.isin
     return identity.ticker or fallback_isin
@@ -197,7 +197,7 @@ def _instrument_from(answer: Resolved, *, fallback_isin: str) -> ResolvedInstrum
 
     if isinstance(identity, PairIdentity):
         return ResolvedInstrument(
-            symbol=f"{identity.base}-{identity.quote_currency}",
+            symbol=pair_symbol(identity.base, identity.quote_currency),
             name=answer.name,
             type=answer.instrument_type,
             kind="pair",
@@ -214,7 +214,6 @@ def _instrument_from(answer: Resolved, *, fallback_isin: str) -> ResolvedInstrum
             kind="isin_only",
         )
 
-    definition = EXCHANGES.get(identity.mic)
     return ResolvedInstrument(
         symbol=provider_alias(identity.ticker, identity.mic),
         # **`None`, nicht der Leerstring.** Der Symbolweg reicht als
@@ -224,7 +223,7 @@ def _instrument_from(answer: Resolved, *, fallback_isin: str) -> ResolvedInstrum
         # `NULL` sind erlaubt, aber nur **ein** Leerstring. Das zweite
         # börsengehandelte Papier ohne ISIN scheiterte damit am `INSERT`.
         isin=identity.isin or fallback_isin or None,
-        exchange=definition.name if definition else None,
+        exchange=exchange_name(identity.mic),
         name=answer.name,
         type=answer.instrument_type,
         kind="listed",

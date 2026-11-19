@@ -14,7 +14,7 @@ import structlog
 from stockinfo_plugin.types import Identity, Unavailable, Unsupported
 
 from app.contract import required_fields
-from app.exchanges import EXCHANGES, provider_alias, split_symbol
+from app.exchanges import exchange_name, provider_alias, split_symbol
 from app.models import (
     IDENTITY_KEYS,
     IdentityOut,
@@ -565,12 +565,11 @@ class QuoteService:
         if isinstance(described, Unavailable):
             raise QuoteUnavailableError(f"{symbol}: {described.error}")
 
-        definition = EXCHANGES.get(mic)
         bare = ResolvedInstrument(
             symbol=symbol,
             ticker=ticker,
             mic=mic,
-            exchange=definition.name if definition else None,
+            exchange=exchange_name(mic),
         )
         if not isinstance(described, ResolvedInstrument):
             return bare

@@ -31,7 +31,7 @@ from stockinfo_plugin import (
 )
 from stockinfo_plugin.types import MONEY_UNITS
 
-from app.exchanges import EXCHANGES
+from app.exchanges import exchange_name
 from app.plugins.exchange_support import ONLINE_MICS
 from app.providers.base import EtfDetails
 from app.providers.justetf_provider import JustEtfProvider
@@ -148,10 +148,9 @@ class JustEtfMetadataPlugin(MetadataSource):
         Ein fremdes Plugin konnte die Regel damit gar nicht formulieren, und
         die „einheitliche Schnittstelle" war eine Behauptung.
         """
-        definition = EXCHANGES.get(request.preferred_mic)
         return self._provider.is_responsible(
             request.isin,
-            exchange=definition.name if definition else None,
+            exchange=exchange_name(request.preferred_mic),
             currency=request.currency,
         )
 

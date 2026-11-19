@@ -27,7 +27,7 @@ from stockinfo_plugin import (
     ResolveRequest,
 )
 
-from app.exchanges import EXCHANGES
+from app.exchanges import exchange_name
 from app.plugins.exchange_support import ONLINE_MICS
 from app.providers.yfinance_etf_provider import YFinanceEtfEnricher
 
@@ -81,10 +81,9 @@ class YFinanceMetadataPlugin(MetadataSource):
         Wie bei justETF über den Vertrag ausgedrückt: Währung aus der Anfrage,
         Börsenname aus `EXCHANGES` zum `preferred_mic`.
         """
-        definition = EXCHANGES.get(request.preferred_mic)
         return self._enricher.is_responsible(
             request.isin,
-            exchange=definition.name if definition else None,
+            exchange=exchange_name(request.preferred_mic),
             currency=request.currency,
         )
 

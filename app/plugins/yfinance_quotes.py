@@ -44,7 +44,7 @@ from stockinfo_plugin import (
 from stockinfo_plugin.invariants import currency_problem, is_finite_price
 from stockinfo_plugin.sources import DailyCloseSource, FxSource, QuoteSource
 
-from app.exchanges import EXCHANGES, provider_alias
+from app.exchanges import EXCHANGES, pair_symbol, provider_alias
 from app.plugins.exchange_support import ONLINE_MICS
 from app.providers.base import INSTRUMENT_TYPES
 from app.providers.yfinance_provider import YFinanceProvider
@@ -114,7 +114,7 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
         Handelsplatzes darf das Plugin keinen Kurs liefern.
         """
         if isinstance(identity, PairIdentity):
-            return f"{identity.base}-{identity.quote_currency}"
+            return pair_symbol(identity.base, identity.quote_currency)
         if not isinstance(identity, ListedIdentity):
             return None
         if identity.mic not in EXCHANGES:
