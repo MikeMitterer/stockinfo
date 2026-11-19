@@ -27,16 +27,21 @@ Was `make check` aufruft, steht im `Makefile` (Target `check`) und in der
 
 | Prüfung | Quelle | Wirkung |
 |---|---|---|
-| ruff mit den Standardregeln (Fehler, Importe, Namen) | `Makefile`, Target `check` | bricht `make check` für `app`, `tests`, `scripts`, `plugin_api` |
+| ruff mit den Standardregeln (Fehler, Importe, Namen) | `pyproject.toml`, `[tool.ruff]` | bricht `make check` (über `make quality`) für `app`, `tests`, `scripts`, `plugin_api` |
+| ruff: Komplexität (`C901`, max. 10), Rückgaben, Zweige, Argumente, Anweisungen (`PLR09`), Vereinfachungen (`SIM`, `RET`) | `pyproject.toml`, `[tool.ruff.lint]` | bricht `make check` (über `make quality`) für `app`, `scripts`, `plugin_api`; `tests/` ausgenommen |
+| pylint: Modulgröße (max. 1000 Zeilen) und doppelter Code (ab 8 Zeilen) | `pyproject.toml`, `[tool.pylint.*]` | bricht `make check` (über `make quality`) für `app`, `scripts`, `plugin_api`; doppelter Code in Tests nur Bericht |
 | Typen des Dashboards (`vue-tsc`), Schlüssel des englischen Katalogs gegen den deutschen (`satisfies typeof de` in `dashboard/src/i18n/en.ts`) | `dashboard/tsconfig*.json` | bricht `make check` |
 | ESLint samt Speicherregeln der UX-Foundation | `dashboard/eslint.config.js` | bricht `make check` (über `test-dashboard`) |
 | Nutzerdoku gegen das Projekt | `.docs-check.conf.sh` | bricht `make check` und den Pre-Commit-Hook |
 
-Komplexität, Modulgröße, doppelter Code und bekannte Lücken in Abhängigkeiten
-misst bisher kein Prüflauf; der Qualitätslauf misst sie von Hand (ruff `C90`,
-`SIM`, `RET`, `PLR09`; pylint `duplicate-code`; `pip-audit`; `npm audit`).
-Kehrt eine Fundart im nächsten Lauf wieder, wird sie hier zur Schranke oder ihr
-Grund steht dabei (L-175).
+Eine begründete Ausnahme steht an der Stelle selbst: `# noqa: <Regel> - Grund`
+für ruff, `# pylint: disable=too-many-lines` mit Grund am Dateianfang.
+
+Bekannte Lücken in Abhängigkeiten zeigt `make audit` (`pip-audit` für
+`requirements.txt`, `npm audit` für das Dashboard ohne Entwicklungspakete).
+Es braucht Netz, gehört deshalb nicht zu `make check` und bricht nicht ab; der
+Qualitätslauf ruft es auf. Kehrt eine Fundart im nächsten Lauf wieder, wird sie
+hier zur Schranke oder ihr Grund steht dabei (L-175).
 
 [↑ Übersicht](#übersicht)
 

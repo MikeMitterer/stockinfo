@@ -287,10 +287,32 @@ docs-check: require-tools ## Nutzerdoku gegen das Projekt prüfen (Links, Befehl
 # echte Online-Anbieter und bleiben bei `test`. Dazu Ruff und die Typprüfung
 # des Dashboards, die `test` nicht enthält.
 .PHONY: check
-check: docs-check test-plugin-api test-example test-dashboard ## Alle netzfreien Prüfungen — Doku, Backend ohne Online-Tests, Plugin-API, Beispiel, Dashboard, Ruff, Typen
+check: docs-check test-plugin-api test-example test-dashboard quality ## Alle netzfreien Prüfungen — Doku, Backend ohne Online-Tests, Plugin-API, Beispiel, Dashboard, Grenzen, Typen
 	$(PYTEST) -q -m "not integration"
-	$(VENV)/bin/ruff check app tests scripts plugin_api
 	cd dashboard && npx vue-tsc -b
+
+# Messbare Grenzen (T-144). Die Zahlen stehen nur in pyproject.toml. Ruff mit
+# Komplexität und Vereinfachungen sowie Modulgröße und doppelter Code in App,
+# Skripten und Plugin-API brechen `check`; doppelter Code in Tests ist nur Bericht.
+.PHONY: quality
+quality: require-setup ## Messbare Grenzen — Ruff (Komplexität, Vereinfachungen), Modulgröße, doppelter Code
+	@$(PRINT_ROWS); heading "Ruff: Fehler, Komplexität, Vereinfachungen"
+	$(VENV)/bin/ruff check app tests scripts plugin_api
+	@$(PRINT_ROWS); heading "Pylint: Modulgröße und doppelter Code"
+	$(VENV)/bin/python -m pylint app scripts plugin_api/src plugin_api/examples \
+		--disable=all --enable=too-many-lines,duplicate-code --score=n
+	@$(PRINT_ROWS); heading "Bericht, bricht nicht: doppelter Code in Tests"
+	@$(VENV)/bin/python -m pylint tests plugin_api/tests \
+		--disable=all --enable=duplicate-code --score=n --exit-zero
+
+# Braucht Netz und gehört deshalb nicht zu `check`. Ein Fund bricht den Lauf
+# nicht ab (Entscheidung q-11); beide Prüfungen laufen immer.
+.PHONY: audit
+audit: require-setup ## Bekannte Lücken in Abhängigkeiten — pip-audit und npm audit (Bericht, braucht Netz)
+	@$(PRINT_ROWS); heading "Python (pip-audit, requirements.txt)"
+	-$(VENV)/bin/pip-audit -r requirements.txt
+	@$(PRINT_ROWS); heading "Dashboard (npm audit, ohne Entwicklungspakete)"
+	-npm --prefix dashboard audit --omit=dev
 
 .PHONY: test-backend
 test-backend: require-setup ## Backend-Tests (pytest)  [ARGS="-k name"]

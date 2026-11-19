@@ -1,3 +1,6 @@
+# pylint: disable=too-many-lines
+# Ausnahme (T-144): die eine Umsetzung von `QuoteStore`; eine Teilung nach
+# Tabellen ist ein eigener Umbau und kein Nebenprodukt.
 """SQLite-Repository über SQLModel — kapselt allen Datenbankzugriff.
 
 Jede Methode öffnet eine eigene, kurz gehaltene Session (`open_session`) —

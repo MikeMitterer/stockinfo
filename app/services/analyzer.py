@@ -133,7 +133,7 @@ def _elapsed(start: float) -> float:
 _UNREACHABLE = "Quelle nicht erreichbar"
 
 
-def _classify(value: Any) -> tuple[str, str | None, int | None, str | None]:
+def _classify(value: Any) -> tuple[str, str | None, int | None, str | None]:  # noqa: PLR0911 - eine Rückgabe je Antwortart einer Quelle
     """Was die Antwort einer Quelle bedeutet — Status, Grund, Werte.
 
     **Diese Stelle komponiert keinen Satz mehr.** Was der Analyzer selbst zu

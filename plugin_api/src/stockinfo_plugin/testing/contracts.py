@@ -1,3 +1,6 @@
+# pylint: disable=too-many-lines
+# Ausnahme (T-144): Plugin-Autoren importieren die Vertragsklassen aller Rollen
+# aus diesem einen Modul; der Importpfad ist Teil des Vertrags.
 """Contract-Tests — der eigentliche Zweck dieses Pakets.
 
 Ein Plugin-Autor erbt von der Vertragsklasse seiner Rolle, nennt zwei oder drei

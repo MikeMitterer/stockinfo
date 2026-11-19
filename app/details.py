@@ -115,22 +115,27 @@ def merge_definitions(groups: Iterable[list[DetailDefinition]]) -> list[DetailDe
     return list(merged.values())
 
 
+def _check_number(definition: DetailDefinition, value: object) -> None:
+    """Eine endliche Zahl (kein bool) innerhalb der Grenzen der Definition."""
+    try:
+        finite = type(value) in (int, float) and math.isfinite(value)
+    except OverflowError:
+        finite = False
+    if not finite:
+        raise ValueError(f'{definition.name}: endliche Zahl erforderlich')
+    if definition.minimum is not None and value < definition.minimum:
+        raise ValueError(f'{definition.name}: Wert unter Minimum')
+    if definition.maximum is not None and value > definition.maximum:
+        raise ValueError(f'{definition.name}: Wert über Maximum')
+
+
 def validate_input(definition: DetailDefinition, entry: DetailInput) -> DetailInput:
     """Prüft manuelle Werte und normalisierte Quellenwerte ohne Typkoercion."""
     value = entry.value
     if value is None:
         return DetailInput(value=None)
     if definition.kind == 'number':
-        try:
-            finite = type(value) in (int, float) and math.isfinite(value)
-        except OverflowError:
-            finite = False
-        if not finite:
-            raise ValueError(f'{definition.name}: endliche Zahl erforderlich')
-        if definition.minimum is not None and value < definition.minimum:
-            raise ValueError(f'{definition.name}: Wert unter Minimum')
-        if definition.maximum is not None and value > definition.maximum:
-            raise ValueError(f'{definition.name}: Wert über Maximum')
+        _check_number(definition, value)
     elif definition.kind == 'boolean':
         if type(value) is not bool:
             raise ValueError(f'{definition.name}: Wahrheitswert erforderlich')

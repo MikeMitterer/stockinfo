@@ -33,7 +33,7 @@ class MicCoverage:
     scope: CoverageScope = "market"
 
 
-def validate_exchanges(declaration: object, roles: frozenset[str]) -> None:
+def validate_exchanges(declaration: object, roles: frozenset[str]) -> None:  # noqa: C901 - eine Prüfung je Vertragsregel, jede mit eigener Meldung
     """Prüft Struktur und Werte; Katalogkonflikte prüft der Host separat."""
     exchanges = getattr(declaration, "EXCHANGES", ())
     support = getattr(declaration, "MIC_SUPPORT", {})

@@ -1,3 +1,6 @@
+# pylint: disable=too-many-lines
+# Ausnahme (T-144): Alle REST-Modelle samt OpenAPI-Beschreibungen an einer Stelle;
+# eine Teilung nach Bereich ist ein eigener Umbau und kein Nebenprodukt.
 """Pydantic-Response-Modelle der API."""
 
 from collections.abc import Callable

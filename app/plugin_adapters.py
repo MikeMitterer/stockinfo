@@ -516,7 +516,7 @@ class MetadataAdapter(_Adapter):
             isin=isin, symbol=symbol, preferred_mic=mic, currency=currency
         )
 
-    def fetch_etf(
+    def fetch_etf(  # noqa: C901 - Prüfen, Umrechnen und Plausibilität je Messwert sind eine Kette; getrennt ginge die Reihenfolge verloren
         self,
         isin: str | None,
         symbol: str | None = None,
@@ -722,7 +722,7 @@ class ResolverAdapter(_Adapter):
             )
         return answer
 
-    def _translate(self, answer: object, *, fallback_isin: str) -> Resolution:
+    def _translate(self, answer: object, *, fallback_isin: str) -> Resolution:  # noqa: PLR0911 - eine Rückgabe je Antwortart des Vertrags
         """Die Antwort des Plugins prüfen und in die Sprache des Core bringen.
 
         **Eine Fassung für beide Einstiege.** ISIN- und Symbolweg stellen

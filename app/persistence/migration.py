@@ -402,7 +402,7 @@ def schema_outdated(connection: sqlite3.Connection) -> bool:
     columns = {
         row["name"]: row for row in connection.execute("PRAGMA table_info(instruments)")
     }
-    if not T31_COLUMNS <= set(columns):
+    if not set(columns) >= T31_COLUMNS:
         return True
     if "identity_status" in columns:
         return True
