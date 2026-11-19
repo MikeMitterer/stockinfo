@@ -36,6 +36,7 @@ import structlog
 from stockinfo_plugin.sources import ROLE_FOR_PROTOCOL, Source, roles_of
 from stockinfo_plugin.types import API_VERSION
 
+from app.error_text import error_text
 from app.sources_registry import SourceSpec
 
 logger = structlog.get_logger()
@@ -187,7 +188,7 @@ def load_entry_point_sources() -> LoadResult:
             problems.append(
                 LoadProblem(
                     f"entry-point {point.name}",
-                    f"Import fehlgeschlagen: {type(error).__name__}: {error}",
+                    f"Import fehlgeschlagen: {error_text(error)}",
                 )
             )
     result = _collect(candidates)
@@ -219,7 +220,7 @@ def load_directory_sources(directory: Path) -> LoadResult:
         except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
             problems.append(
                 LoadProblem(
-                    origin, f"Import fehlgeschlagen: {type(error).__name__}: {error}"
+                    origin, f"Import fehlgeschlagen: {error_text(error)}"
                 )
             )
             continue

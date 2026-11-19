@@ -12,6 +12,7 @@ import structlog
 from fastapi import Depends
 
 from app.config import get_settings
+from app.error_text import error_text
 from app.exchange_catalog import covered_quote_mics
 from app.persistence.quote_store import QuoteStore
 from app.persistence.repository import QuoteRepository
@@ -100,7 +101,7 @@ def warm_all_chains() -> None:
             logger.warning(
                 "chain_warmup_failed",
                 role=role,
-                error=f"{type(error).__name__}: {error}",
+                error=error_text(error),
             )
 
 

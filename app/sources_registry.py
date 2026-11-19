@@ -25,6 +25,7 @@ from stockinfo_plugin.exchanges import validate_exchanges
 
 from app.calculated_metrics import CalculatedMetrics
 from app.config import Settings
+from app.error_text import error_text
 from app.detail_models import DetailDefinition
 from app.details import definitions_for, merge_definitions
 from app.exchange_catalog import prepare_catalog, reset_catalog
@@ -371,7 +372,7 @@ def close_all() -> None:
                     "source_close_failed",
                     role=role,
                     source=getattr(source, "name", type(source).__name__),
-                    error=f"{type(error).__name__}: {error}",
+                    error=error_text(error),
                 )
     _CHAINS.clear()
 
@@ -618,12 +619,12 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings: Settings) ->
     try:
         source = spec.build(role, config, settings)
     except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
-        _LAST_REASON[spec.name] = f"Konstruktor: {type(error).__name__}: {error}"
+        _LAST_REASON[spec.name] = f"Konstruktor: {error_text(error)}"
         logger.warning(
             "source_construction_failed",
             source=spec.name,
             role=role,
-            error=f"{type(error).__name__}: {error}",
+            error=error_text(error),
         )
         return None
 
@@ -674,7 +675,7 @@ def _diagnosis_of(source: object) -> str:
     try:
         return str(ask() or "")
     except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
-        return f"configuration_problem() wirft: {type(error).__name__}: {error}"
+        return f"configuration_problem() wirft: {error_text(error)}"
 
 
 def _diagnosis(spec: SourceSpec, source: object) -> str:
@@ -689,4 +690,4 @@ def _diagnosis(spec: SourceSpec, source: object) -> str:
     try:
         return str(ask() or "")
     except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
-        return f"configuration_problem() wirft: {type(error).__name__}: {error}"
+        return f"configuration_problem() wirft: {error_text(error)}"

@@ -34,6 +34,8 @@ from typing import Any
 import structlog
 from stockinfo_plugin.types import Unavailable
 
+from app.error_text import error_text
+
 logger = structlog.get_logger()
 
 FAILURE_THRESHOLD = 3
@@ -241,10 +243,10 @@ class GuardedSource:
                     "source_raised",
                     source=source_name,
                     method=name,
-                    error=f"{type(error).__name__}: {error}",
+                    error=error_text(error),
                     failures=self._breaker.failures,
                 )
-                return Unavailable(f"{source_name}: {type(error).__name__}: {error}")
+                return Unavailable(f"{source_name}: {error_text(error)}")
 
             if not records:
                 # Eine Auskunft ist kein Arbeitsergebnis. Sie hier zu verbuchen

@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app import __version__, plugin_env
 from app.config import Settings, get_settings
+from app.error_text import error_text
 from app.container import (
     get_backup_service,
     get_cached_quote_service,
@@ -161,7 +162,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 # nötigsten.
                 logger.error(
                     "scheduler_unavailable",
-                    error=f"{type(error).__name__}: {error}",
+                    error=error_text(error),
                 )
                 return
             # `scheduler.start()` meldet `scheduler_started` selbst, mit Intervall.
