@@ -276,6 +276,21 @@ describe('BackupsPanel', () => {
     }
   })
 
+  it.each([
+    ['de', '1.206 kB'],
+    ['en', '1,206 kB'],
+  ] as const)('schreibt die Größe in der Sprache der Oberfläche (%s)', async (locale, expected) => {
+    i18n.global.locale.value = locale
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      listing({ backups: [{ ...FITTING, size: 1_234_567 }] }),
+    )
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain(expected)
+    wrapper.unmount()
+  })
+
   it('übersetzt beide Sprachen und lässt keinen Schlüssel roh stehen', async () => {
     // Ein fehlender Schlüssel fällt in der Oberfläche nur auf, wenn jemand
     // hinsieht — hier sieht der Test hin.

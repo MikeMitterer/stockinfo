@@ -1,21 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  NConfigProvider,
-  NDialogProvider,
-  NMessageProvider,
-  darkTheme,
-  dateDeDE,
-  dateEnUS,
-  deDE,
-  enUS,
-} from 'naive-ui'
+import { NConfigProvider, NDialogProvider, NMessageProvider, darkTheme } from 'naive-ui'
 import { buildNaiveOverrides, THEMES, UxNotificationProvider } from '@mmit/ux-foundation'
 
 import AppGate from './components/AppGate.vue'
 import { useNaiveOverrides } from './composables/useNaiveOverrides'
 import { useTheme } from './composables/useTheme'
+import { localeSettings } from './i18n/locales'
 
 /**
  * Der Rahmen: Theme-Brücke, Locale und die Provider von Naive UI.
@@ -47,8 +39,8 @@ const isDark = computed(() => THEMES[currentTheme.value].isDark)
  * „Abbrechen" in jeder Rückfrage — kämen sonst englisch heraus, während die
  * Oberfläche deutsch ist.
  */
-const naiveLocale = computed(() => (locale.value === 'de' ? deDE : enUS))
-const naiveDateLocale = computed(() => (locale.value === 'de' ? dateDeDE : dateEnUS))
+const naiveLocale = computed(() => localeSettings(locale.value).naive)
+const naiveDateLocale = computed(() => localeSettings(locale.value).naiveDate)
 </script>
 
 <template>

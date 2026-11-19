@@ -36,7 +36,7 @@ describe('InstrumentCard', () => {
   it('zeigt Symbol, Typ, Kurs und Name', () => {
     const wrapper = mountCard()
     expect(wrapper.find('.icard__symbol').text()).toBe('APC.DE')
-    expect(wrapper.find('.icard__type').text()).toBe('stock')
+    expect(wrapper.find('.icard__type').text()).toBe('Aktie')
     expect(wrapper.find('.icard__price').text()).toContain('265,00')
     expect(wrapper.find('.icard__name').text()).toBe('Apple Inc.')
   })

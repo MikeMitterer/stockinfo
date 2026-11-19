@@ -109,7 +109,7 @@ function confirmIsin(): void {
     :title="t('table.addIsin')"
     @click.stop="startIsin"
   >
-    + ISIN
+    {{ t('table.addIsinShort') }}
   </NButton>
 </template>
 

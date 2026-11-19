@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 
+import { reasonText } from '../api/reason'
 import type { RejectedInstrument } from '../types'
 
 /**
@@ -23,19 +24,18 @@ import type { RejectedInstrument } from '../types'
  */
 defineProps<{ items: RejectedInstrument[] }>()
 
-const { t, te } = useI18n()
+const { t } = useI18n()
 
 /**
  * Der Satz zu einer Ablehnungskennung.
  *
  * Die Kennung kommt stabil vom Server, der Text steht im Katalog. Eine
- * **unbekannte** Kennung fällt nicht stumm heraus, sondern wird angezeigt, wie
- * sie ist: Sonst stünde für ein entferntes Papier gar kein Grund da — und der
- * ist der eigentliche Zweck dieser Liste.
+ * **unbekannte** Kennung fällt nicht stumm heraus: Sonst stünde für ein
+ * entferntes Papier gar kein Grund da — und der ist der eigentliche Zweck
+ * dieser Liste. Sie erscheint übersetzt mit ihrer Kennung.
  */
-function reasonText(reason: string): string {
-  const key = `migration.reason.${reason}`
-  return te(key) ? t(key) : reason
+function rejectionReason(reason: string): string {
+  return reasonText(reason, {}, ['migration.reason'], 'migration.unknownReason')
 }
 </script>
 
@@ -47,7 +47,7 @@ function reasonText(reason: string): string {
         <span v-if="item.name" class="rejected__name">{{ item.name }}</span>
         <span v-if="item.isin" class="rejected__isin">{{ item.isin }}</span>
       </div>
-      <p class="rejected__reason">{{ reasonText(item.reason) }}</p>
+      <p class="rejected__reason">{{ rejectionReason(item.reason) }}</p>
       <p class="rejected__loss">
         {{ t('migration.rowLoss', { quotes: item.quotes, daily: item.daily_closes }) }}
       </p>

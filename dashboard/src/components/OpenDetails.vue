@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { apiClient } from '../api/client'
 import { describeFailure } from '../api/reason'
 import DetailEditor from './DetailEditor.vue'
+import { localizedLabel } from '../i18n/locales'
 import type { DetailDefinition, InstrumentSummary, OverridePatch } from '../types'
 
 const props = defineProps<{ item: InstrumentSummary; busy?: boolean; fieldOptions?: Partial<Record<string, string[]>> }>()
@@ -34,7 +35,7 @@ onMounted(async () => {
     <p v-else-if="fields.length === 0">{{ t('details.empty') }}</p>
     <dl v-else class="open-details__fields">
       <div v-for="definition in fields" :key="definition.name">
-        <dt>{{ locale === 'de' ? definition.label_de || definition.label_en : definition.label_en }}</dt>
+        <dt>{{ localizedLabel(definition, locale) }}</dt>
         <dd><DetailEditor :definition="definition" :value="item.details![definition.name]!" :busy="busy" :options="fieldOptions?.[definition.name]"
           :currency-options="fieldOptions?.fund_currency"
           @commit="emit('commit', { details: { [definition.name]: $event } })" /></dd>

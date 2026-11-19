@@ -3,18 +3,41 @@ import { i18n } from '../i18n'
 import { ApiError } from './client'
 
 /**
- * Wo ein Satz zu einer Kennung stehen kann — in dieser Reihenfolge.
+ * Wo ein Satz zu einer Fehlerkennung stehen kann — in dieser Reihenfolge.
  *
  * Ein aufnahmespezifischer Satz unter `errors.reason` gewinnt vor einem
  * gemeinsam mit dem Migrationsbericht verwendeten Satz.
- *
- * @param code - Strukturierte Fehlerkennung des Backends.
- * @returns Übersetzungsschlüssel in fachlicher Vorrangfolge.
  */
-const reasonKeys = (code: string): readonly string[] => [
-  `errors.reason.${code}`,
-  `migration.reason.${code}`,
-]
+const ERROR_REASON_CATALOGS = ['errors.reason', 'migration.reason'] as const
+
+/**
+ * Der Satz zu einer Kennung des Backends, in der Sprache der Oberfläche.
+ *
+ * **Auch das Unbekannte wird übersetzt.** Die rohe Kennung stehen zu lassen
+ * ist ein Bezeichner für Maschinen und in keiner Sprache ein Satz. Der
+ * Rückfall sagt ehrlich, dass die Oberfläche sie nicht kennt, und nennt sie —
+ * damit sie in einer Meldung trotzdem weiterhilft.
+ *
+ * @param code - Kennung, wie das Backend sie liefert.
+ * @param params - Werte für den Satz.
+ * @param catalogs - Katalogpräfixe in Vorrangfolge, etwa `['migration.reason']`.
+ * @param unknownKey - Satz mit `{code}` für eine Kennung, die kein Katalog kennt.
+ */
+export function reasonText(
+  code: string,
+  params: Record<string, unknown>,
+  catalogs: readonly string[],
+  unknownKey: string,
+): string {
+  for (const catalog of catalogs) {
+    const key = `${catalog}.${code}`
+    // `te` fragt, ob der Katalog die Kennung kennt. Ohne diese Frage lieferte
+    // vue-i18n den Schlüssel selbst zurück — der Benutzer läse dann
+    // `errors.reason.instrument_not_found`, was schlimmer ist als nichts.
+    if (i18n.global.te(key)) return i18n.global.t(key, params)
+  }
+  return i18n.global.t(unknownKey, { code })
+}
 
 /**
  * Der **Grund** hinter einem fehlgeschlagenen Aufruf, in der Sprache des UI.
@@ -34,18 +57,7 @@ export function reasonOf(error: unknown): string | null {
 
   if (typeof body.code === 'string') {
     const params = isRecord(body.params) ? body.params : {}
-    for (const key of reasonKeys(body.code)) {
-      // `te` fragt, ob der Katalog die Kennung kennt. Ohne diese Frage lieferte
-      // vue-i18n den Schlüssel selbst zurück — der Benutzer läse dann
-      // `errors.reason.instrument_not_found`, was schlimmer ist als nichts.
-      if (i18n.global.te(key)) return i18n.global.t(key, params)
-    }
-    // **Auch das Unbekannte wird übersetzt.** Die rohe Kennung stehen zu
-    // lassen war der erste Anlauf; sie ist ein Bezeichner für Maschinen und in
-    // keiner Sprache ein Satz. Der Rückfall sagt ehrlich, dass die Oberfläche
-    // sie nicht kennt, und nennt sie — damit sie in einer Fehlermeldung
-    // trotzdem weiterhilft.
-    return i18n.global.t('errors.reason.unknown', { code: body.code })
+    return reasonText(body.code, params, ERROR_REASON_CATALOGS, 'errors.reason.unknown')
   }
 
   return null
