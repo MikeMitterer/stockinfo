@@ -6,7 +6,7 @@
 
 # BashLib: make build/push setzen BASH_LIBS; direkt aufgerufen hilft bashlib-path (pipx).
 BASH_LIBS="${BASH_LIBS:-$(bashlib-path 2>/dev/null || true)}"
-if [[ -z "${BASH_LIBS}" ]]; then echo "BashLib nicht gefunden: BASH_LIBS setzen oder make install-tools"; exit 1; fi
+if [[ -z "${BASH_LIBS}" ]]; then echo "✗ BashLib nicht gefunden. Installieren: make install-tools" >&2; exit 1; fi
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # -e  bricht bei erstem Fehler ab   (Ausnahme: 'command || true')
@@ -60,7 +60,8 @@ readonly PROJECT_NAME="${NAMESPACE}.${NAME}"
 # würde den Exit-Code des Subshell-Befehls verschlucken).
 _BASE_IMAGE=$(\grep "^FROM " < Dockerfile | head -1 | sed "s/FROM //;s/ AS.*//") || _BASE_IMAGE=""
 if [[ -z "${_BASE_IMAGE}" ]]; then
-    echo -e "\n${RED}Fehler:${NC} Kein 'FROM' im Dockerfile gefunden (${SCRIPTPATH}/Dockerfile).\n" >&2
+    echo -e "\n${RED}✗ Fehler:${NC} Kein 'FROM' im Dockerfile gefunden (${SCRIPTPATH}/Dockerfile)." >&2
+    echo -e "${YELLOW}Prüfen:${NC} grep -n '^FROM' docker/Dockerfile\n" >&2
     exit 1
 fi
 readonly DOCKER_BASE_IMAGE="${_BASE_IMAGE}"
@@ -96,7 +97,8 @@ case "${TARGET}" in
     ghcr)
         GITHUB_OWNER="${GITHUB_OWNER:-MikeMitterer}"
         if [[ -z "${GITHUB_OWNER}" ]]; then
-            echo -e "\n${RED}TARGET=ghcr:${NC} Var 'GITHUB_OWNER' nicht gesetzt!" >&2
+            echo -e "\n${RED}✗ TARGET=ghcr:${NC} Var 'GITHUB_OWNER' nicht gesetzt!" >&2
+            echo -e "${YELLOW}Setzen:${NC} GITHUB_OWNER=<user> TARGET=ghcr make build" >&2
             exit 1
         fi
         readonly GITHUB_OWNER
@@ -114,7 +116,7 @@ case "${TARGET}" in
     ;;
     ecr)
         if [[ -z "${AMAZON_REPO_URI:-}" ]]; then
-            echo -e "\n${RED}TARGET=ecr:${NC} Var 'AMAZON_REPO_URI' nicht gesetzt." >&2
+            echo -e "\n${RED}✗ TARGET=ecr:${NC} Var 'AMAZON_REPO_URI' nicht gesetzt." >&2
             echo -e "${YELLOW}Beispiel:${NC} AMAZON_REPO_URI=123456789012.dkr.ecr.eu-west-1.amazonaws.com\n" >&2
             exit 1
         fi
@@ -123,7 +125,8 @@ case "${TARGET}" in
         readonly IMAGE="${REGISTRY}/${NAME}"
     ;;
     *)
-        echo -e "\n${RED}Unbekanntes TARGET: '${TARGET}'${NC} — erlaubt: ${YELLOW}ghcr | dockerhub | ecr${NC}\n" >&2
+        echo -e "\n${RED}✗ Unbekanntes TARGET: '${TARGET}'${NC} — erlaubt: ${YELLOW}ghcr | dockerhub | ecr${NC}" >&2
+        echo -e "${YELLOW}Zum Beispiel:${NC} TARGET=dockerhub make build\n" >&2
         exit 1
     ;;
 esac
@@ -138,11 +141,6 @@ readonly OPTION=${2:-""}
 if [[ "${CMDLINE}" == "-b" || "${CMDLINE}" == "--build" ]]; then
     rm -f "${TAGFILE}"
 fi
-
-# DEV_LOCAL ist bei den Jenkins-Tests bzw. in Docker-Containern nicht gesetzt,
-# IS_CI geht also auf "true"
-readonly IS_CI="${DEV_LOCAL:-"true"}"
-readonly HAS_DEV_LOCAL="[[ ${IS_CI} != 'true' ]]"
 
 # Die möglichen Plattformen:
 #   https://docs.docker.com/build/building/multi-platform/
@@ -167,7 +165,8 @@ while [ $# -ne 0 ]; do
             elif [[ "${OPTION}" == "arm" || "${OPTION}" == "m1" ]]; then
                 PLATFORM="linux/arm64"
             elif [[ "${OPTION}" == "all" ]]; then
-                echo -e "${RED}Build abgebrochen:${NC} PLATFORM=all würde vor der Image-Prüfung automatisch veröffentlichen. x86 oder arm verwenden." >&2
+                echo -e "${RED}✗ Build abgebrochen:${NC} PLATFORM=all würde vor der Image-Prüfung automatisch veröffentlichen. x86 oder arm verwenden." >&2
+                echo -e "${YELLOW}Stattdessen:${NC} make build PLATFORM=x86" >&2
                 exit 1
             else
                 PLATFORM="${DEFAULT_PLATFORM}"
@@ -192,26 +191,29 @@ readonly STRICT=${STRICT:-2}
 # best-effort (STRICT=0) — so funktioniert --help auch ohne Git-Tag im Clone.
 if [[ "${CMDLINE}" == "-b" || "${CMDLINE}" == "--build" ]]; then
     BUILD_SOURCE_COMMIT=$(git -C .. rev-parse HEAD) || exit 1
-    _tag_rc=0
-    TAG="$(gitDockerTag "${STRICT}")" || _tag_rc=$?
-    if [[ $_tag_rc -eq 2 ]]; then
-        echo -e "\n${RED}Build abgebrochen:${NC} Kein Git-Tag gefunden." >&2
+    TAG_RC=0
+    TAG="$(gitDockerTag "${STRICT}")" || TAG_RC=$?
+    if [[ ${TAG_RC} -eq 2 ]]; then
+        echo -e "\n${RED}✗ Build abgebrochen:${NC} Kein Git-Tag gefunden." >&2
         echo -e "${YELLOW}Tipp:${NC} semVerBump patch  ${BLUE}# oder manuell:${NC} git tag -a v0.1.0+$(date +%y%m%d.%H%M) -m 'Initial release'\n" >&2
         exit 1
-    elif [[ $_tag_rc -eq 3 ]]; then
-        echo -e "\n${RED}Build abgebrochen:${NC} Working-Tree ist dirty." >&2
+    elif [[ ${TAG_RC} -eq 3 ]]; then
+        echo -e "\n${RED}✗ Build abgebrochen:${NC} Working-Tree ist dirty." >&2
         echo -e "${YELLOW}Tipp:${NC} git commit oder git stash\n" >&2
         exit 1
-    elif [[ $_tag_rc -eq 4 ]]; then
-        echo -e "\n${RED}Build abgebrochen:${NC} Repo ist ahead vom letzten Tag (STRICT=1)." >&2
+    elif [[ ${TAG_RC} -eq 4 ]]; then
+        echo -e "\n${RED}✗ Build abgebrochen:${NC} Repo ist ahead vom letzten Tag (STRICT=1)." >&2
         echo -e "${YELLOW}Tipp:${NC} semVerBump patch — oder mit ${BLUE}STRICT=2 ./build.sh --build${NC} (ahead erlaubt)\n" >&2
         exit 1
-    elif [[ $_tag_rc -ne 0 ]]; then
-        echo -e "\n${RED}Build abgebrochen:${NC} gitDockerTag fehlgeschlagen (rc=${_tag_rc}).\n" >&2
+    elif [[ ${TAG_RC} -ne 0 ]]; then
+        echo -e "\n${RED}✗ Build abgebrochen:${NC} gitDockerTag fehlgeschlagen (rc=${TAG_RC})." >&2
+        echo -e "${YELLOW}Prüfen:${NC} git describe --tags --match 'v[0-9]*'\n" >&2
         exit 1
     fi
+    unset TAG_RC
     if [[ "$(git -C .. rev-parse HEAD)" != "${BUILD_SOURCE_COMMIT}" ]]; then
-        echo -e "${RED}Build abgebrochen:${NC} Quellcommit hat sich während der Tag-Ermittlung geändert." >&2
+        echo -e "${RED}✗ Build abgebrochen:${NC} Quellcommit hat sich während der Tag-Ermittlung geändert." >&2
+        echo -e "${YELLOW}Neu bauen:${NC} make build" >&2
         exit 1
     fi
 else
@@ -226,15 +228,17 @@ readonly BUILD_SOURCE_COMMIT
 #
 
 verifySourceTree() {
-    local _untracked
+    local UNTRACKED
     if ! git -C .. diff --quiet HEAD --; then
-        echo -e "${RED}Abgebrochen:${NC} Der Quellstand enthält vorgemerkte oder ungespeicherte Änderungen." >&2
+        echo -e "${RED}✗ Abgebrochen:${NC} Der Quellstand enthält vorgemerkte oder ungespeicherte Änderungen." >&2
+        echo -e "${YELLOW}Ansehen und committen:${NC} git status --short" >&2
         return 1
     fi
-    _untracked=$(git -C .. ls-files --others --exclude-standard -- app dashboard plugin_api contract docker/entrypoint.sh) || return 1
-    if [[ -n "${_untracked}" ]]; then
-        echo -e "${RED}Abgebrochen:${NC} Nicht versionierte Dateien liegen im Docker-Build-Kontext:${NC}" >&2
-        printf '%s\n' "${_untracked}" >&2
+    UNTRACKED=$(git -C .. ls-files --others --exclude-standard -- app dashboard plugin_api contract docker/entrypoint.sh) || return 1
+    if [[ -n "${UNTRACKED}" ]]; then
+        echo -e "${RED}✗ Abgebrochen:${NC} Nicht versionierte Dateien liegen im Docker-Build-Kontext:${NC}" >&2
+        printf '%s\n' "${UNTRACKED}" >&2
+        echo -e "${YELLOW}Versionieren oder entfernen:${NC} git add <datei>" >&2
         return 1
     fi
 }
@@ -243,13 +247,14 @@ verifySourceTree() {
 # direkt aus dem Repository; es gibt keinen manuellen Vorbereitungsschritt.
 #
 prepareConfig() {
-    local _file
+    local FILE
     if (( STRICT >= 1 )); then
         verifySourceTree || return 1
     fi
-    for _file in "${LICENSE_FILES[@]}"; do
-        if [[ ! -s "../${_file}" ]]; then
-            echo -e "${RED}Build abgebrochen:${NC} Lizenz fehlt oder ist leer: ${_file}" >&2
+    for FILE in "${LICENSE_FILES[@]}"; do
+        if [[ ! -s "../${FILE}" ]]; then
+            echo -e "${RED}✗ Build abgebrochen:${NC} Lizenz fehlt oder ist leer: ${FILE}" >&2
+            echo -e "${YELLOW}Wiederherstellen:${NC} git restore -- ${FILE}" >&2
             return 1
         fi
     done
@@ -258,61 +263,65 @@ prepareConfig() {
 # verifyBuiltImage — Den tatsächlich gebauten Tag und die kopierten Lizenzen
 # prüfen. Erst danach darf der Tag als pushbar gespeichert werden.
 verifyBuiltImage() {
-    local _local_image="${NAMESPACE}/${NAME}:${TAG}"
-    local _image_id _latest_id _registry_id _registry_latest_id _arch
-    local _license _expected _actual
+    local -r LOCAL_IMAGE="${NAMESPACE}/${NAME}:${TAG}"
+    local IMAGE_ID LATEST_ID REGISTRY_ID REGISTRY_LATEST_ID ARCH
+    local LICENSE EXPECTED ACTUAL
 
-    _image_id=$(docker image inspect "${_local_image}" --format '{{.Id}}') || return 1
-    _latest_id=$(docker image inspect "${NAMESPACE}/${NAME}:latest" --format '{{.Id}}') || return 1
-    _registry_id=$(docker image inspect "${IMAGE}:${TAG}" --format '{{.Id}}') || return 1
-    _registry_latest_id=$(docker image inspect "${IMAGE}:latest" --format '{{.Id}}') || return 1
-    if [[ "${_image_id}" != "${_latest_id}" ]] \
-       || [[ "${_image_id}" != "${_registry_id}" ]] \
-       || [[ "${_image_id}" != "${_registry_latest_id}" ]]; then
-        echo -e "${RED}Build-Prüfung fehlgeschlagen:${NC} Image-Tags zeigen auf unterschiedliche Images." >&2
+    IMAGE_ID=$(docker image inspect "${LOCAL_IMAGE}" --format '{{.Id}}') || return 1
+    LATEST_ID=$(docker image inspect "${NAMESPACE}/${NAME}:latest" --format '{{.Id}}') || return 1
+    REGISTRY_ID=$(docker image inspect "${IMAGE}:${TAG}" --format '{{.Id}}') || return 1
+    REGISTRY_LATEST_ID=$(docker image inspect "${IMAGE}:latest" --format '{{.Id}}') || return 1
+    if [[ "${IMAGE_ID}" != "${LATEST_ID}" ]] \
+       || [[ "${IMAGE_ID}" != "${REGISTRY_ID}" ]] \
+       || [[ "${IMAGE_ID}" != "${REGISTRY_LATEST_ID}" ]]; then
+        echo -e "${RED}✗ Build-Prüfung fehlgeschlagen:${NC} Image-Tags zeigen auf unterschiedliche Images." >&2
+        echo -e "${YELLOW}Neu bauen:${NC} make build" >&2
         return 1
     fi
 
-    _arch=$(docker image inspect "${_local_image}" --format '{{.Architecture}}') || return 1
-    if [[ "linux/${_arch}" != "${PLATFORM}" ]]; then
-        echo -e "${RED}Build-Prüfung fehlgeschlagen:${NC} Architektur ${_arch} statt ${PLATFORM}." >&2
+    ARCH=$(docker image inspect "${LOCAL_IMAGE}" --format '{{.Architecture}}') || return 1
+    if [[ "linux/${ARCH}" != "${PLATFORM}" ]]; then
+        echo -e "${RED}✗ Build-Prüfung fehlgeschlagen:${NC} Architektur ${ARCH} statt ${PLATFORM}." >&2
+        echo -e "${YELLOW}Mit Plattform neu bauen:${NC} make build PLATFORM=x86" >&2
         return 1
     fi
 
-    if [[ "$(docker image inspect "${_local_image}" --format '{{index .Config.Labels "org.opencontainers.image.licenses"}}')" != "EUPL-1.2" \
-       || "$(docker image inspect "${_local_image}" --format '{{index .Config.Labels "org.opencontainers.image.source"}}')" != "https://github.com/MikeMitterer/stockinfo" ]]; then
-        echo -e "${RED}Build-Prüfung fehlgeschlagen:${NC} Lizenz- oder Quelllabel fehlt." >&2
+    if [[ "$(docker image inspect "${LOCAL_IMAGE}" --format '{{index .Config.Labels "org.opencontainers.image.licenses"}}')" != "EUPL-1.2" \
+       || "$(docker image inspect "${LOCAL_IMAGE}" --format '{{index .Config.Labels "org.opencontainers.image.source"}}')" != "https://github.com/MikeMitterer/stockinfo" ]]; then
+        echo -e "${RED}✗ Build-Prüfung fehlgeschlagen:${NC} Lizenz- oder Quelllabel fehlt." >&2
+        echo -e "${YELLOW}Labels im Dockerfile prüfen:${NC} grep -n 'org.opencontainers' docker/Dockerfile" >&2
         return 1
     fi
 
-    for _license in "${LICENSE_FILES[@]}"; do
-        _expected=$(shasum -a 256 "../${_license}") || return 1
-        _expected=${_expected%% *}
-        _actual=$(docker run --rm --platform "${PLATFORM}" --entrypoint sha256sum "${_local_image}" "/app/${_license}") || return 1
-        _actual=${_actual%% *}
-        if [[ "${_expected}" != "${_actual}" ]]; then
-            echo -e "${RED}Build-Prüfung fehlgeschlagen:${NC} Lizenz weicht ab: ${_license}" >&2
+    for LICENSE in "${LICENSE_FILES[@]}"; do
+        EXPECTED=$(shasum -a 256 "../${LICENSE}") || return 1
+        EXPECTED=${EXPECTED%% *}
+        ACTUAL=$(docker run --rm --platform "${PLATFORM}" --entrypoint sha256sum "${LOCAL_IMAGE}" "/app/${LICENSE}") || return 1
+        ACTUAL=${ACTUAL%% *}
+        if [[ "${EXPECTED}" != "${ACTUAL}" ]]; then
+            echo -e "${RED}✗ Build-Prüfung fehlgeschlagen:${NC} Lizenz weicht ab: ${LICENSE}" >&2
+            echo -e "${YELLOW}Neu bauen:${NC} make build" >&2
             return 1
         fi
     done
 
-    echo -e "${GREEN}Build geprüft:${NC} ${_local_image} (${_arch}, ${_image_id}); ${#LICENSE_FILES[@]} Lizenzdokumente und OCI-Labels stimmen."
+    echo -e "${GREEN}Build geprüft:${NC} ${LOCAL_IMAGE} (${ARCH}, ${IMAGE_ID}); ${#LICENSE_FILES[@]} Lizenzdokumente und OCI-Labels stimmen."
 }
 
 # pushImage — Delegiert an die Registry-spezifische Lib-Push-Funktion (nach TARGET)
 #
-#   Jede Lib-Push-Funktion kapselt ihren eigenen Login und pusht ${_tag} + latest.
+#   Jede Lib-Push-Funktion kapselt ihren eigenen Login und pusht den Tag + latest.
 #
 #   Params:
 #     - Tag des zu pushenden Images
 #
 pushImage() {
-    local _tag=${1:?}
+    local -r PUSH_TAG=${1:?}
 
     case "${TARGET}" in
-        ghcr)      pushImage2GHCR      "${GITHUB_OWNER,,}"  "${NAMESPACE}-${NAME}" "${_tag}" ;;
-        dockerhub) pushImage2DockerHub "${NAMESPACE}"       "${NAME}"              "${_tag}" ;;
-        ecr)       pushImage2Amazon    "${AMAZON_REPO_URI}" "${NAME}" "${_tag}" "${AWS_REGION}" ;;
+        ghcr)      pushImage2GHCR      "${GITHUB_OWNER,,}"  "${NAMESPACE}-${NAME}" "${PUSH_TAG}" ;;
+        dockerhub) pushImage2DockerHub "${NAMESPACE}"       "${NAME}"              "${PUSH_TAG}" ;;
+        ecr)       pushImage2Amazon    "${AMAZON_REPO_URI}" "${NAME}" "${PUSH_TAG}" "${AWS_REGION}" ;;
     esac
 }
 
@@ -342,15 +351,16 @@ build() {
     verifyBuiltImage
     verifySourceTree
     if [[ "$(git -C .. rev-parse HEAD)" != "${BUILD_SOURCE_COMMIT}" ]]; then
-        echo -e "${RED}Build abgebrochen:${NC} Quellcommit hat sich während des Builds geändert." >&2
+        echo -e "${RED}✗ Build abgebrochen:${NC} Quellcommit hat sich während des Builds geändert." >&2
+        echo -e "${YELLOW}Neu bauen:${NC} make build" >&2
         return 1
     fi
     showBuiltImages
 
     # Tag, Zeitpunkt, Image-ID, Quellcommit und Registry-Ziel festhalten.
-    local _image_id
-    _image_id=$(docker image inspect "${NAMESPACE}/${NAME}:${TAG}" --format '{{.Id}}')
-    printf '%s\n' "${TAG}" "$(date +%s)" "${_image_id}" "${BUILD_SOURCE_COMMIT}" "${TARGET}" > "${TAGFILE}"
+    local BUILT_IMAGE_ID
+    BUILT_IMAGE_ID=$(docker image inspect "${NAMESPACE}/${NAME}:${TAG}" --format '{{.Id}}')
+    printf '%s\n' "${TAG}" "$(date +%s)" "${BUILT_IMAGE_ID}" "${BUILD_SOURCE_COMMIT}" "${TARGET}" > "${TAGFILE}"
 }
 
 # loadLastBuildTag — Tag des letzten Builds lesen und zurückgeben
@@ -361,32 +371,32 @@ build() {
 #   Gibt eine Warnung aus wenn der Build älter als WARN_DAYS Tage ist.
 #
 #   Verwendung:
-#     local _tag
-#     _tag=$(loadLastBuildTag) || exit 1
+#     local LAST_TAG
+#     LAST_TAG=$(loadLastBuildTag) || exit 1
 #
 loadLastBuildTag() {
     if [[ ! -f "${TAGFILE}" ]]; then
-        echo -e "\n${RED}Kein gespeicherter Build-Tag gefunden: ${TAGFILE}${NC}" >&2
-        echo -e "${YELLOW}Zuerst '--build' ausführen.${NC}\n" >&2
+        echo -e "\n${RED}✗ Kein gespeicherter Build-Tag gefunden: ${TAGFILE}${NC}" >&2
+        echo -e "${YELLOW}Zuerst bauen:${NC} make build\n" >&2
         exit 1
     fi
 
-    local _saved_tag _build_ts _now _age_days _build_date
-    _saved_tag=$(sed -n '1p' "${TAGFILE}")
-    _build_ts=$(sed -n '2p'  "${TAGFILE}")
-    _now=$(date +%s)
-    _age_days=$(( (_now - _build_ts) / 86400 ))
-    _build_date=$(date -d "@${_build_ts}" "+%Y-%m-%d" 2>/dev/null \
-               || date -r "${_build_ts}" "+%Y-%m-%d" 2>/dev/null \
+    local SAVED_TAG BUILD_TS NOW AGE_DAYS BUILD_DATE
+    SAVED_TAG=$(sed -n '1p' "${TAGFILE}")
+    BUILD_TS=$(sed -n '2p'  "${TAGFILE}")
+    NOW=$(date +%s)
+    AGE_DAYS=$(( (NOW - BUILD_TS) / 86400 ))
+    BUILD_DATE=$(date -d "@${BUILD_TS}" "+%Y-%m-%d" 2>/dev/null \
+               || date -r "${BUILD_TS}" "+%Y-%m-%d" 2>/dev/null \
                || echo "unbekannt")
 
-    if (( _age_days >= WARN_DAYS )); then
-        echo -e "\n${YELLOW}Warnung: Build ist ${_age_days} Tage alt (gebaut am ${_build_date}).${NC}" >&2
+    if (( AGE_DAYS >= WARN_DAYS )); then
+        echo -e "\n${YELLOW}Warnung: Build ist ${AGE_DAYS} Tage alt (gebaut am ${BUILD_DATE}).${NC}" >&2
         echo -e "${YELLOW}         Neu bauen? → $(basename "$0") --build${NC}\n" >&2
     fi
 
-    echo -e "Build vom ${YELLOW}${_build_date}${NC}: ${BLUE}${_saved_tag}${NC}" >&2
-    echo "${_saved_tag}"
+    echo -e "Build vom ${YELLOW}${BUILD_DATE}${NC}: ${BLUE}${SAVED_TAG}${NC}" >&2
+    echo "${SAVED_TAG}"
 }
 
 # verifyRemoteReleaseTag — Release-Tag des Quellcommits liegt unverändert in origin
@@ -402,19 +412,21 @@ loadLastBuildTag() {
 #     $1 - Quellcommit des Builds
 #
 verifyRemoteReleaseTag() {
-    local _commit="${1:?verifyRemoteReleaseTag: commit fehlt}"
-    local _release_tag _local_object _remote_line
-    _release_tag=$(git -C .. describe --tags --abbrev=0 --match 'v[0-9]*' "${_commit}") || {
-        echo -e "${RED}Push abgebrochen:${NC} Kein Release-Tag für ${_commit}." >&2
+    local -r SOURCE_COMMIT="${1:?verifyRemoteReleaseTag: commit fehlt}"
+    local RELEASE_TAG LOCAL_OBJECT REMOTE_LINE
+    RELEASE_TAG=$(git -C .. describe --tags --abbrev=0 --match 'v[0-9]*' "${SOURCE_COMMIT}") || {
+        echo -e "${RED}✗ Push abgebrochen:${NC} Kein Release-Tag für ${SOURCE_COMMIT}." >&2
+        echo -e "${YELLOW}Version taggen:${NC} make tag-patch" >&2
         return 1
     }
-    _local_object=$(git -C .. rev-parse "refs/tags/${_release_tag}") || return 1
-    _remote_line=$(git -C .. ls-remote --tags origin "refs/tags/${_release_tag}") || {
-        echo -e "${RED}Push abgebrochen:${NC} origin nicht erreichbar; Tag ${_release_tag} nicht geprüft." >&2
+    LOCAL_OBJECT=$(git -C .. rev-parse "refs/tags/${RELEASE_TAG}") || return 1
+    REMOTE_LINE=$(git -C .. ls-remote --tags origin "refs/tags/${RELEASE_TAG}") || {
+        echo -e "${RED}✗ Push abgebrochen:${NC} origin nicht erreichbar; Tag ${RELEASE_TAG} nicht geprüft." >&2
+        echo -e "${YELLOW}Verbindung prüfen:${NC} git ls-remote --tags origin" >&2
         return 1
     }
-    if [[ "${_remote_line%%[[:space:]]*}" != "${_local_object}" ]]; then
-        echo -e "${RED}Push abgebrochen:${NC} Git-Tag ${_release_tag} liegt nicht in origin." >&2
+    if [[ "${REMOTE_LINE%%[[:space:]]*}" != "${LOCAL_OBJECT}" ]]; then
+        echo -e "${RED}✗ Push abgebrochen:${NC} Git-Tag ${RELEASE_TAG} liegt nicht in origin." >&2
         echo -e "${YELLOW}Zuerst veröffentlichen:${NC} git push --follow-tags" >&2
         return 1
     fi
@@ -427,38 +439,40 @@ verifyRemoteReleaseTag() {
 #   Voraussetzung: der jeweilige Registry-Login ist vorhanden bzw. möglich.
 #
 push() {
-    local _tag _saved_image_id _saved_commit _saved_target _current_commit _ref _current_image_id
+    local LAST_TAG SAVED_IMAGE_ID SAVED_COMMIT SAVED_TARGET CURRENT_COMMIT REF CURRENT_IMAGE_ID
     verifySourceTree || return 1
-    _tag=$(loadLastBuildTag) || exit 1
-    _saved_image_id=$(sed -n '3p' "${TAGFILE}")
-    _saved_commit=$(sed -n '4p' "${TAGFILE}")
-    _saved_target=$(sed -n '5p' "${TAGFILE}")
-    _current_commit=$(git -C .. rev-parse HEAD) || return 1
-    if [[ -z "${_saved_image_id}" || -z "${_saved_commit}" || "${_saved_commit}" != "${_current_commit}" ]]; then
-        echo -e "${RED}Push abgebrochen:${NC} Build-Nachweis fehlt oder der Quellcommit hat sich geändert. Erneut make build ausführen." >&2
+    LAST_TAG=$(loadLastBuildTag) || exit 1
+    SAVED_IMAGE_ID=$(sed -n '3p' "${TAGFILE}")
+    SAVED_COMMIT=$(sed -n '4p' "${TAGFILE}")
+    SAVED_TARGET=$(sed -n '5p' "${TAGFILE}")
+    CURRENT_COMMIT=$(git -C .. rev-parse HEAD) || return 1
+    if [[ -z "${SAVED_IMAGE_ID}" || -z "${SAVED_COMMIT}" || "${SAVED_COMMIT}" != "${CURRENT_COMMIT}" ]]; then
+        echo -e "${RED}✗ Push abgebrochen:${NC} Build-Nachweis fehlt oder der Quellcommit hat sich geändert. Erneut make build ausführen." >&2
         return 1
     fi
-    if [[ "${_saved_target}" != "${TARGET}" ]]; then
-        echo -e "${RED}Push abgebrochen:${NC} Build-Ziel ${_saved_target:-unbekannt} passt nicht zu ${TARGET}. Mit TARGET=${TARGET} make build neu bauen." >&2
+    if [[ "${SAVED_TARGET}" != "${TARGET}" ]]; then
+        echo -e "${RED}✗ Push abgebrochen:${NC} Build-Ziel ${SAVED_TARGET:-unbekannt} passt nicht zu ${TARGET}. Mit TARGET=${TARGET} make build neu bauen." >&2
         return 1
     fi
-    verifyRemoteReleaseTag "${_saved_commit}" || return 1
-    for _ref in "${NAMESPACE}/${NAME}:${_tag}" "${NAMESPACE}/${NAME}:latest" "${IMAGE}:${_tag}" "${IMAGE}:latest"; do
-        _current_image_id=$(docker image inspect "${_ref}" --format '{{.Id}}') || return 1
-        if [[ "${_current_image_id}" != "${_saved_image_id}" ]]; then
-            echo -e "${RED}Push abgebrochen:${NC} ${_ref} gehört nicht zum zuletzt geprüften Build." >&2
+    verifyRemoteReleaseTag "${SAVED_COMMIT}" || return 1
+    for REF in "${NAMESPACE}/${NAME}:${LAST_TAG}" "${NAMESPACE}/${NAME}:latest" "${IMAGE}:${LAST_TAG}" "${IMAGE}:latest"; do
+        CURRENT_IMAGE_ID=$(docker image inspect "${REF}" --format '{{.Id}}') || return 1
+        if [[ "${CURRENT_IMAGE_ID}" != "${SAVED_IMAGE_ID}" ]]; then
+            echo -e "${RED}✗ Push abgebrochen:${NC} ${REF} gehört nicht zum zuletzt geprüften Build." >&2
+            echo -e "${YELLOW}Neu bauen:${NC} make build" >&2
             return 1
         fi
     done
 
-    echo -e "\nPushing ${YELLOW}${IMAGE}:${_tag}${NC} → ${YELLOW}${REGISTRY}${NC} (target: ${YELLOW}${TARGET}${NC})\n"
-    pushImage "${_tag}"
+    echo -e "\nPushing ${YELLOW}${IMAGE}:${LAST_TAG}${NC} → ${YELLOW}${REGISTRY}${NC} (target: ${YELLOW}${TARGET}${NC})\n"
+    pushImage "${LAST_TAG}"
 
-    echo -e "\n${GREEN}Push erfolgreich: ${IMAGE}:${_tag}${NC}"
+    echo -e "\n${GREEN}Push erfolgreich: ${IMAGE}:${LAST_TAG}${NC}"
     if [[ "${TARGET}" == "dockerhub" ]]; then
         # dockerhub-readme hat im pipx-Paket noch keinen Befehl (ProjectTools T-16).
         if [[ ! -r "${PROJECT_TOOLS:-}/bash/dockerhub-readme.sh" ]]; then
-            echo -e "${RED}Docker-Hub-Beschreibung nicht übertragen:${NC} PROJECT_TOOLS zeigt nicht auf ProjectTools/src." >&2
+            echo -e "${RED}✗ Docker-Hub-Beschreibung nicht übertragen:${NC} PROJECT_TOOLS zeigt nicht auf ProjectTools/src." >&2
+            echo -e "${YELLOW}Setzen und wiederholen:${NC} PROJECT_TOOLS=<pfad>/ProjectTools/src make push" >&2
             return 1
         fi
         if ! DOCKER_README_AFTER_PUSH=1 \
