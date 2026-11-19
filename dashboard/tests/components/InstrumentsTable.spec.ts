@@ -225,15 +225,13 @@ describe('InstrumentsTable — Detailbereich', () => {
    * intuitiv". Der Pfeil steht deshalb vorne in der Zeile, wie ihn die
    * Kartenliste unter `md` längst zeigt (`InstrumentCard.vue`).
    */
-  it('zeigt vorne in der Zeile einen Pfeil, der den Zustand des Detailbereichs spiegelt', async () => {
+  it('zeigt vorne in der Zeile einen Pfeil', () => {
+    // Ob er auf- oder zugeklappt zeigt, ist Sache des Fundaments (`UxCaret`);
+    // dass der Zustand stimmt, belegt `aria-expanded` im Test darunter.
     stubMatchMedia(false)
     const wrapper = mountTable()
 
-    expect(wrapper.get('.ux-caret').classes()).not.toContain('ux-caret--open')
-
-    await wrapper.get('.row-toggle').trigger('click')
-
-    expect(wrapper.get('.ux-caret').classes()).toContain('ux-caret--open')
+    expect(wrapper.get('tbody tr').find('td:first-child .ux-caret').exists()).toBe(true)
   })
 
   it('markiert den geöffneten Zustand am Knopf', async () => {
@@ -514,10 +512,8 @@ describe('InstrumentsTable · Identitätsformen', () => {
     })
 
     const wrapper = mountTable([crypto])
-    const badge = wrapper.find('.badge.type')
 
-    expect(badge.exists()).toBe(true)
-    expect(badge.classes()).toContain('crypto')
+    expect(wrapper.find('.badge.type').text()).toBe(i18n.global.t('instrumentTypes.crypto'))
   })
 
   it.each([

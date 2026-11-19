@@ -199,8 +199,7 @@ describe('InstrumentCard', () => {
     })
     const badge = wrapper.find('.icard__type')
 
-    expect(badge.exists()).toBe(true)
-    expect(badge.classes()).toContain('crypto')
+    expect(badge.text()).toBe(i18n.global.t('instrumentTypes.crypto'))
   })
 
 })
