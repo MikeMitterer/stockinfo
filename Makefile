@@ -193,8 +193,8 @@ hints: require-tools ## Links, URLs und Tipps für die tägliche Arbeit
 	@$(call hint_row,Unraid-Test,wget -O /boot/config/plugins/dockerMan/templates-user/stockinfo-test.xml https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml)
 	@echo
 	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Werkzeuge (Tag und Quelle in .dev-tools.conf.sh)$(RESET)"
-	@CMD=$$($(DEV_TOOLS) command projecttools 2>/dev/null) || CMD="nicht abrufbar: make info"; $(call hint_row,ProjectTools,$$CMD)
-	@CMD=$$($(DEV_TOOLS) command bashlib 2>/dev/null) || CMD="nicht abrufbar: make info"; $(call hint_row,BashLib (Maintainer),$$CMD)
+	@$(call hint_row,Stand zeigen,make setup)
+	@$(call hint_row,Auf Stand bringen,make install-tools)
 	@echo
 
 # Läuft vor den Maintainer-Zielen; ohne Hilfeeintrag. Verlangt BashLib in Mindestversion und

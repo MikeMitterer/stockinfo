@@ -10,7 +10,7 @@
 # EDITABLE=yes bindet eine Arbeitskopie bearbeitbar ein (pipx install -e), no als festen Stand.
 # make install-tools bringt die Werkzeuge auf diesen Stand; make setup zeigt ihn.
 
-# DevTools selbst (devtools status|install|check|command), aufgerufen mit pipx run. Ohne
+# DevTools selbst (devtools status|install|check), aufgerufen mit pipx run. Ohne
 # DEVTOOLS_PACKAGE installiert devtools sich nicht selbst; SOURCE dient devtools upgrade.
 DEVTOOLS_TAG=v0.2.0+261101.1319.09840
 DEVTOOLS_SOURCE=git+https://github.com/MikeMitterer/python-devtools.git
