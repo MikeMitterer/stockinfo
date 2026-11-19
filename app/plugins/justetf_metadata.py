@@ -29,9 +29,9 @@ from stockinfo_plugin import (
     ResolveRequest,
     Unit,
 )
-from stockinfo_plugin.types import MONEY_UNITS
 
 from app.exchanges import exchange_name
+from app.plugins.etf_readings import etf_readings
 from app.plugins.exchange_support import ONLINE_MICS
 from app.providers.base import EtfDetails
 from app.providers.justetf_provider import JustEtfProvider
@@ -94,7 +94,6 @@ FIELDS: tuple[FieldSpec, ...] = (
     ),
 )
 
-_BY_NAME = {spec.name: spec for spec in FIELDS}
 
 
 class JustEtfMetadataPlugin(MetadataSource):
@@ -182,42 +181,19 @@ class JustEtfMetadataPlugin(MetadataSource):
 
         return as_readings(details, self.name) or None
 
-    def declared(self, name: str) -> FieldSpec | None:
-        """Wie ein Feld zu lesen ist — oder ``None``, wenn es nicht von hier stammt."""
-        return _BY_NAME.get(name)
-
     def configuration_problem(self) -> str:
         """justETF braucht keinen Schlüssel — und sagt das."""
         return ""
 
 
 def as_readings(details: EtfDetails, source: str = "justetf") -> list[Reading]:
-    """`EtfDetails` → Messwerte. Die **einzige** Stelle, an der das passiert.
+    """`EtfDetails` → Messwerte mit den Feldern und der Betragswährung von justETF.
 
-    `fetch` ruft sie auf; ein Test kann sie ohne Netz aufrufen. Sie zweimal zu
-    schreiben — einmal im Abrufweg, einmal für die Prüfung — hätte bedeutet,
-    dass eine Prüfung ihre eigene Übersetzung mitbringt und damit sich selbst
-    bestätigt.
-
-    Leere Felder fallen weg: Ein `Reading` mit ``None`` wäre die Aussage „dieser
-    Wert ist None", und das ist etwas anderes als „justETF nennt ihn nicht".
+    Die Übersetzung selbst steht in `etf_readings`. Die Betragswährung ist
+    **EUR und nicht `fund_currency`.** Der Provider liest
+    `overview["fund_size_eur"]`; das Volumen ist also bereits umgerechnet.
+    `fund_currency` ist die Währung des **Fonds** — bei `IE00B4L5Y983` USD —,
+    und den EUR-Betrag damit zu beschriften hätte ihn um den Wechselkurs
+    verfälscht, ohne dass irgendwo ein Fehler entstünde.
     """
-    return [
-        Reading(
-            field=spec.name,
-            value=getattr(details, spec.name),
-            unit=spec.unit,
-            source=source,
-            # **Ein Betrag ohne Währung ist bedeutungslos** — auch in Millionen.
-            #
-            # Die Währung ist **EUR und nicht `fund_currency`.** Der Provider
-            # liest `overview["fund_size_eur"]`; das Volumen ist also bereits
-            # umgerechnet. `fund_currency` ist die Währung des **Fonds** — bei
-            # `IE00B4L5Y983` USD —, und den EUR-Betrag damit zu beschriften
-            # hätte ihn um den Wechselkurs verfälscht, ohne dass irgendwo ein
-            # Fehler entstünde.
-            currency=FUND_SIZE_CURRENCY if spec.unit in MONEY_UNITS else None,
-        )
-        for spec in FIELDS
-        if getattr(details, spec.name, None) is not None
-    ]
+    return etf_readings(details, source, FIELDS, money_currency=FUND_SIZE_CURRENCY)

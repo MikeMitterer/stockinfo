@@ -28,6 +28,7 @@ from stockinfo_plugin import (
 )
 
 from app.exchanges import exchange_name
+from app.plugins.etf_readings import etf_readings
 from app.plugins.exchange_support import ONLINE_MICS
 from app.providers.yfinance_etf_provider import YFinanceEtfEnricher
 
@@ -43,7 +44,6 @@ Genau deshalb steht justETF in der Vorgabekette **vorn**: Für europäische
 UCITS-Papiere hat es ungleich mehr. Yahoo ist der Weg für alles andere.
 """
 
-_BY_NAME = {spec.name: spec for spec in FIELDS}
 
 
 class YFinanceMetadataPlugin(MetadataSource):
@@ -102,16 +102,8 @@ class YFinanceMetadataPlugin(MetadataSource):
         if details is None:
             return None
 
-        readings = [
-            Reading(field=spec.name, value=getattr(details, spec.name), source=self.name)
-            for spec in FIELDS
-            if getattr(details, spec.name, None) is not None
-        ]
-        return readings or None
-
-    def declared(self, name: str) -> FieldSpec | None:
-        """Wie ein Feld zu lesen ist — oder ``None``, wenn es nicht von hier stammt."""
-        return _BY_NAME.get(name)
+        # Yahoo liefert keine Beträge; eine Betragswährung gibt es deshalb nicht.
+        return etf_readings(details, self.name, FIELDS, money_currency=None) or None
 
     def configuration_problem(self) -> str:
         """Yahoo braucht keinen Schlüssel — und sagt das."""
