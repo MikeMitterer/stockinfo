@@ -35,7 +35,7 @@ from app.plugin_adapters import (
     MetadataAdapter,
     QuoteAdapter,
     ResolverAdapter,
-    unwrap,
+    configuration_problem_of,
 )
 from app.plugin_guard import GuardedSource
 from app.plugins.justetf_metadata import JustEtfMetadataPlugin
@@ -631,7 +631,7 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings: Settings) ->
     if role == "etf_meta" and spec.declaration is None:
         if not _register_detail_schema(spec.name, source):
             return None
-    problem = _diagnosis(spec, source)
+    problem = configuration_problem_of(source)
     if problem:
         _LAST_REASON[spec.name] = problem
         logger.warning("source_not_operational", source=spec.name, reason=problem)
@@ -657,37 +657,9 @@ def _with_live_reason(entry: "ChainEntry", source: object | None) -> "ChainEntry
     """
     if source is None or not entry.known or not entry.role_ok:
         return entry
-    problem = _diagnosis_of(source)
+    problem = configuration_problem_of(source)
     if not problem:
         return entry
     return replace(entry, configured=False, reason=problem)
 
 
-def _diagnosis_of(source: object) -> str:
-    """Was die Quelle **jetzt** über ihre Arbeitsfähigkeit sagt.
-
-    Gefragt wird die Quelle unter Adapter und Kapsel: Die Auskunft gehört ihr,
-    nicht der Übersetzungsschicht darüber.
-    """
-    ask = getattr(unwrap(source), "configuration_problem", None)
-    if not callable(ask):
-        return ""
-    try:
-        return str(ask() or "")
-    except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
-        return f"configuration_problem() wirft: {error_text(error)}"
-
-
-def _diagnosis(spec: SourceSpec, source: object) -> str:
-    """Was die Quelle selbst über ihre Arbeitsfähigkeit sagt.
-
-    Auch das Fragen ist gekapselt: Eine Diagnose, die wirft, ist selbst ein
-    Grund, die Quelle nicht zu nehmen — aber kein Grund, die App zu beenden.
-    """
-    ask = getattr(source, "configuration_problem", None)
-    if not callable(ask):
-        return ""
-    try:
-        return str(ask() or "")
-    except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
-        return f"configuration_problem() wirft: {error_text(error)}"

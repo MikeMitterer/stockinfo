@@ -31,6 +31,7 @@ from datetime import date
 
 import structlog
 from stockinfo_plugin.invariants import identity_problem, resolution_problem
+from stockinfo_plugin.sources import Source
 from stockinfo_plugin.types import (
     DailyRequest,
     DailySeries,
@@ -53,6 +54,7 @@ from stockinfo_plugin.types import (
 
 from app.detail_models import DetailInput
 from app.details import definitions_for, validate_input
+from app.error_text import error_text
 from app.exchanges import EXCHANGES, exchange_name, pair_symbol, provider_alias
 from app.providers.base import (
     INSTRUMENT_TYPES,
@@ -125,7 +127,7 @@ class _Adapter:
             ``True``, wenn die Quelle gefragt werden darf.
         """
         source = unwrap(self._source)
-        kinds = getattr(source, "SUPPORTED_KINDS", frozenset({"listed"}))
+        kinds = supported_kinds(source)
         if identity.kind not in kinds:
             logger.debug(
                 "source_skipped_kind",
@@ -251,6 +253,31 @@ def unwrap(source: object) -> object:
         seen = inner
 
 
+def supported_kinds(source: object) -> frozenset[str]:
+    """Die Identitätsformen, die die Quelle unter Adapter und Kapsel deklariert.
+
+    Ohne eigene Angabe gilt die Vorgabe des Vertrags (`Source.SUPPORTED_KINDS`).
+    """
+    return getattr(unwrap(source), "SUPPORTED_KINDS", Source.SUPPORTED_KINDS)
+
+
+def configuration_problem_of(source: object) -> str:
+    """Was die Quelle **jetzt** über ihre Arbeitsfähigkeit sagt — leer heißt arbeitsfähig.
+
+    Gefragt wird die Quelle unter Adapter und Kapsel: Die Auskunft gehört ihr,
+    nicht der Übersetzungsschicht darüber. Auch das Fragen ist gekapselt: Eine
+    Diagnose, die wirft, ist selbst ein Grund, die Quelle nicht zu nehmen —
+    aber kein Grund, die App zu beenden.
+    """
+    ask = getattr(unwrap(source), "configuration_problem", None)
+    if not callable(ask):
+        return ""
+    try:
+        return str(ask() or "")
+    except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
+        return f"configuration_problem() wirft: {error_text(error)}"
+
+
 class QuoteAdapter(_Adapter):
     """Ein Plugin der Kursrolle, in der Sprache des Core.
 
@@ -284,11 +311,8 @@ class QuoteAdapter(_Adapter):
         Dann lässt sich nicht sagen, ob sie dieses Papier bedient hätte — ihre
         Auskunft hängt an dem, was gerade nicht lesbar ist.
         """
-        ask = getattr(unwrap(self._source), "configuration_problem", None)
-        try:
-            return bool(callable(ask) and ask())
-        except Exception:  # noqa: BLE001 — fremder Code; eine Störung bleibt eine
-            return True
+        # Eine Diagnose, die wirft, liefert ihren Fehler als Text — also auch „gestört".
+        return bool(configuration_problem_of(self._source))
 
     def cacheable_for(self, instrument: ResolvedInstrument) -> bool:
         """Darf eine Antwort zu diesem Papier zwischengespeichert werden?
@@ -796,7 +820,7 @@ class ResolverAdapter(_Adapter):
             return Unavailable(error=f"{self.name}: {incomplete}")
 
         source = unwrap(self._source)
-        declared_kinds = getattr(source, "SUPPORTED_KINDS", frozenset())
+        declared_kinds = supported_kinds(source)
         if answer.identity.kind not in declared_kinds:
             logger.warning(
                 "plugin_delivered_undeclared_kind",
