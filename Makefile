@@ -16,8 +16,9 @@ export WORKSPACE WORKSPACE_SQ PROJECT_NAME
 -include .env
 
 # Entwicklungs-Targets (setup, dev-*, up/down) laufen ohne die Entwicklungswerkzeuge.
-# Prüf-Targets (test, check, docs-check, status, changelog) brauchen ProjectTools,
-# Maintainer-Targets (build, push, tag-*, version) BashLib; beide kommen über pipx.
+# Prüf-Targets (test, check, docs-check, status, hints, changelog) brauchen ProjectTools,
+# Maintainer-Targets (build, push, tag-*, version) BashLib; alle kommen über pipx. help, info
+# und hints geben mit BashLib und CLITheme im Theme aus, ohne sie schlicht.
 #
 # Tag und Quelle (Git oder Arbeitskopie) beider Werkzeuge stehen nur in .dev-tools.conf.sh;
 # devtools (Paket mmit-devtools) liest sie, prüft, zeigt und installiert. pipx run holt
@@ -37,25 +38,29 @@ BASHLIB_FROM_PIPX := $(if $(BASH_LIBS),yes)
 endif
 export BASH_LIBS
 
-# Farben und Spalten der Hilfe, wie in agent-lessons ohne MakeLib. Von außen überschreibbar.
+# Farben der Statuszeilen (✓, ✗, ⚠) in den übrigen Rezepten. Von außen überschreibbar.
 YELLOW ?= $(shell printf "\033[38;5;11m")
 GREEN  ?= $(shell printf "\033[38;5;10m")
 BLUE   ?= $(shell printf "\033[38;5;33m")
 RED    ?= $(shell printf "\033[38;5;196m")
 WHITE  ?= $(shell printf "\033[38;5;15m")
 RESET  ?= $(shell printf "\033[0m")
-THEME_COLOR_GROUP   ?= $(YELLOW)
-THEME_COLOR_TARGET  ?= $(BLUE)
-THEME_COLOR_DESC    ?= $(GREEN)
-THEME_COLOR_DANGER  ?= $(RED)
-THEME_INDENT_GROUP  ?= $(shell printf '%2s' '')
-THEME_INDENT_TARGET ?= $(shell printf '%7s' '')
-THEME_WIDTH_TARGET  ?= 22
-THEME_COLUMN_GAP    ?= 1
 
-# Kennzeichnet in der Hilfe Targets, die BashLib brauchen. In der
-# Target-Beschreibung steht dafür am Ende „— Maintainer“.
-MAINTAINER_MARK = $(THEME_COLOR_DANGER)[Maintainer]$(THEME_COLOR_DESC)
+# help, info und hints geben über make.lib.sh aus BashLib im CLI-Theme aus: BASH_ENV lädt es
+# in jede Rezeptzeile, CLITHEME_EXPORT reicht die Werte von clitheme export einmal je make-Lauf
+# weiter. Ohne BashLib zeigt bash keinen Fehler (BASH_ENV auf eine fehlende Datei), und die
+# Ausgabe bleibt schlicht; Entwicklungs-Targets brauchen BashLib nicht.
+clitheme_export = $(eval clitheme_export := $$(shell clitheme export --bash 2>/dev/null))$(clitheme_export)
+help info hints: export BASH_ENV := $${BASH_LIBS}/make.lib.sh
+help info hints: export CLITHEME_EXPORT = $(clitheme_export)
+
+# heading TEXT und value BEZEICHNUNG WERT: mit make.lib.sh im Theme, sonst schlicht. Gewählt
+# wird danach, ob die Funktion geladen ist, nicht ob die Datei existiert.
+# Im Rezept: @$(PRINT_ROWS); value "Bezeichnung" "Wert"
+PRINT_ROWS = heading() { if declare -F printMakeHeading >/dev/null; then printMakeHeading "$$1"; \
+		else printf '\n  %s\n' "$$1"; fi; }; \
+	value() { if declare -F printMakeValue >/dev/null; then printMakeValue "$$@"; \
+		else printf '       %-22s %s\n' "$$1" "$${2-}"; fi; }
 
 # Prüft vor Maintainer-Targets, ob BashLib vorhanden ist.
 # Optionaler Parameter: ein Hinweis, wie es ohne BashLib geht.
@@ -119,82 +124,59 @@ export RELEASE_TAG := $(shell repo-info --release-tag 2>/dev/null)
 # Liste der Makefiles unausgewertet über die Umgebung (siehe Kopf).
 export HELP_FILES = $(value MAKEFILE_LIST)
 
-# Platzhalter {major}, {minor} und {patch} der Hilfe: „<jetzt> → <danach>“ aus der
-# Version, die help mit readProjectVersion liest; gerechnet wie semVerBump.
-HELP_VALUES += if (ver ~ /^[0-9]+\.[0-9]+\.[0-9]+$$/ && split(ver, v, ".") == 3) { \
-	  value["major"] = ver " → " (v[1] + 1) ".0.0"; \
-	  value["minor"] = ver " → " v[1] "." (v[2] + 1) ".0"; \
-	  value["patch"] = ver " → " v[1] "." v[2] "." (v[3] + 1) } \
-	else { value["major"] = value["minor"] = value["patch"] = "(Version unbekannt: make version)" };
-
+# Kopf, Gruppen und Targets über make.lib.sh; {major}, {minor} und {patch} füllt
+# showMakeTargets mit „<jetzt> → <danach>“, „ — Maintainer“ wird zur Markierung
+# [Maintainer]. Ohne BashLib eine schlichte Liste der Targets.
 .PHONY: help
 help: ## Alle verfügbaren Befehle anzeigen
-	@echo
-	@echo "Please use \`make <$(THEME_COLOR_GROUP)target$(RESET)>' where <target> is one of"
-	@echo
-	@echo "Project: $(THEME_COLOR_GROUP)$${PROJECT_NAME}$(RESET)"
-	@echo
-	@set -o pipefail; \
-	 VER=$$(source "$${BASH_LIBS}/version.lib.sh" 2>/dev/null && readProjectVersion 2>/dev/null); \
-	 grep -hE '^(##@|[a-zA-Z0-9_-]+:.*?## )' $${HELP_FILES} | \
-	  awk -v ver="$$VER" 'BEGIN {FS = ":.*?## "; $(HELP_VALUES)}; \
-	    /^##@/ { printf "\n$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)%s$(RESET)\n", substr($$0, 4); next }; \
-	    /^[^#]/ { desc = $$2; sub(/ — Maintainer$$/, " $(MAINTAINER_MARK)", desc); \
-	      for (k in value) gsub("\\{" k "\\}", value[k], desc); \
-	      printf "$(THEME_INDENT_TARGET)$(THEME_COLOR_TARGET)%-$(THEME_WIDTH_TARGET)s%$(THEME_COLUMN_GAP)s$(THEME_COLOR_DESC)%s$(RESET)\n", $$1, "", desc }'
-	@echo
+	@if declare -F showMakeTargets >/dev/null; then \
+		showMakeHeader "$${PROJECT_NAME}" && echo && showMakeTargets $${HELP_FILES}; \
+	else \
+		printf '\nmake <target>, Projekt %s:\n\n' "$${PROJECT_NAME}"; \
+		grep -hE '^[a-zA-Z0-9_-]+:.*## ' $${HELP_FILES} | sed -E 's/^([^:]+):.*## /  \1\t/'; \
+		echo; \
+	fi
 
 .PHONY: info
 info: ## Projektpfade, Ports und Werkzeugstand anzeigen
+	@$(PRINT_ROWS); heading "Umgebung"
+	@$(PRINT_ROWS); value WORKSPACE        "$${WORKSPACE}"
+	@$(PRINT_ROWS); value VENV             '$(VENV)'
+	@$(PRINT_ROWS); value BASH_LIBS        "$${BASH_LIBS:-nicht gesetzt}"
+	@$(PRINT_ROWS); value PROJECT_TOOLS    "$${PROJECT_TOOLS:-nicht gesetzt}"
+	@$(PRINT_ROWS); value "Dev-Ports"      '$(DASHBOARD_PORT) (Dashboard) · $(BACKEND_PORT) (Backend)'
+	@$(PRINT_ROWS); value "PORT (make up)" "$${PORT}"
+	@$(PRINT_ROWS); heading "Werkzeuge (.dev-tools.conf.sh)"
+	@# devtools status gibt je Werkzeug „  Name  Stand“ aus; Name und Stand gehen einzeln an
+	@# value, so stehen sie in denselben Spalten wie die Zeilen darüber.
+	@$(PRINT_ROWS); set -o pipefail; $(DEV_TOOLS) status | while read -r TOOL_NAME TOOL_STATE; do \
+		[[ -z "$$TOOL_NAME" ]] || value "$$TOOL_NAME" "$$TOOL_STATE"; done || \
+		value "Stand" "nicht abrufbar: pipx run devtools"
 	@echo
-	@printf '    $(YELLOW)%-16s$(RESET) = $(BLUE)%s$(RESET)\n' \
-		'WORKSPACE' "$${WORKSPACE}" \
-		'VENV' '$(VENV)' \
-		'BASH_LIBS' "$${BASH_LIBS:-nicht gesetzt}" \
-		'PROJECT_TOOLS' "$${PROJECT_TOOLS:-nicht gesetzt}" \
-		'Dev-Ports' '$(DASHBOARD_PORT) (Dashboard) · $(BACKEND_PORT) (Backend)' \
-		'PORT (make up)' "$${PORT}"
-	@echo
-	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Werkzeuge (.dev-tools.conf.sh)$(RESET)"
-	@# devtools rückt um zwei Zeichen ein; zwei mehr stellen die Zeilen unter die Variablen.
-	@set -o pipefail; $(DEV_TOOLS) status | sed 's/^/  /'
-	@echo
-
-# Eine Zeile für hints: Beschriftung auf THEME_WIDTH_TARGET Zeichen aufgefüllt, dann der Wert.
-# printf füllt nach Bytes auf; gezählt werden deshalb Zeichen (UTF-8-Folgebytes nicht).
-# Aufruf: $(call hint_row,Beschriftung,Wert), ohne Komma in den Werten.
-hint_row = LABEL="$(1)"; \
-	CHARS=$$(printf '%s' "$$LABEL" | LC_ALL=C tr -d '\200-\277' | wc -c); \
-	printf "$(THEME_INDENT_TARGET)$(THEME_COLOR_TARGET)%s$(RESET)%*s$(THEME_COLOR_DESC)%s$(RESET)\n" \
-		"$$LABEL" $$(( $(THEME_WIDTH_TARGET) - CHARS + $(THEME_COLUMN_GAP) )) "" "$(2)"
 
 # Links, URLs und Tipps für den Alltag; das Einrichten beschreibt docs/development.md.
 .PHONY: hints
 hints: require-tools ## Links, URLs und Tipps für die tägliche Arbeit
-	@echo
-	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Links$(RESET)"
-	@$(call hint_row,Repository,$${REPO_URL})
-	@$(call hint_row,Entwicklerdoku,$(if $(filter https://%,$(REPO_URL)),$${REPO_URL}/blob/master/docs/development.md,docs/development.md))
-	@$(call hint_row,Letzter Release,$${RELEASE_TAG})
-	@$(call hint_row,Docker Hub,https://hub.docker.com/r/$${IMAGE_NAME})
-	@echo
-	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)URLs nach make dev-up (http://, nicht https)$(RESET)"
-	@$(call hint_row,Dashboard,http://localhost:$(DASHBOARD_PORT)/)
-	@$(call hint_row,API,http://localhost:$(BACKEND_PORT)/)
-	@$(call hint_row,Swagger,http://localhost:$(BACKEND_PORT)/docs)
-	@$(call hint_row,Health,http://localhost:$(BACKEND_PORT)/health)
-	@$(call hint_row,Container (make up),http://localhost:$${PORT}/)
-	@echo
-	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Im Alltag$(RESET)"
-	@$(call hint_row,Vor dem Commit,make check)
-	@$(call hint_row,Einzelne Tests,make test-backend ARGS='-k name')
-	@$(call hint_row,Stack hängt,make dev-down; dann make dev-up)
-	@$(call hint_row,Erster Kurs,curl http://localhost:$(BACKEND_PORT)/quote/IE00B4L5Y983)
-	@$(call hint_row,Unraid-Test,wget -O /boot/config/plugins/dockerMan/templates-user/stockinfo-test.xml https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml)
-	@echo
-	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Werkzeuge (Tag und Quelle in .dev-tools.conf.sh)$(RESET)"
-	@$(call hint_row,Stand zeigen,make setup)
-	@$(call hint_row,Auf Stand bringen,make install-tools)
+	@$(PRINT_ROWS); heading "Links"
+	@$(PRINT_ROWS); value "Repository"      "$${REPO_URL}"
+	@$(PRINT_ROWS); value "Entwicklerdoku"  "$(if $(filter https://%,$(REPO_URL)),$${REPO_URL}/blob/master/docs/development.md,docs/development.md)"
+	@$(PRINT_ROWS); value "Letzter Release" "$${RELEASE_TAG}"
+	@$(PRINT_ROWS); value "Docker Hub"      "https://hub.docker.com/r/$${IMAGE_NAME}"
+	@$(PRINT_ROWS); heading "URLs nach make dev-up (http://, nicht https)"
+	@$(PRINT_ROWS); value "Dashboard"           "http://localhost:$(DASHBOARD_PORT)/"
+	@$(PRINT_ROWS); value "API"                 "http://localhost:$(BACKEND_PORT)/"
+	@$(PRINT_ROWS); value "Swagger"             "http://localhost:$(BACKEND_PORT)/docs"
+	@$(PRINT_ROWS); value "Health"              "http://localhost:$(BACKEND_PORT)/health"
+	@$(PRINT_ROWS); value "Container (make up)" "http://localhost:$${PORT}/"
+	@$(PRINT_ROWS); heading "Im Alltag"
+	@$(PRINT_ROWS); value "Vor dem Commit" "make check"
+	@$(PRINT_ROWS); value "Einzelne Tests" "make test-backend ARGS='-k name'"
+	@$(PRINT_ROWS); value "Stack hängt"    "make dev-down; dann make dev-up"
+	@$(PRINT_ROWS); value "Erster Kurs"    "curl http://localhost:$(BACKEND_PORT)/quote/IE00B4L5Y983"
+	@$(PRINT_ROWS); value "Unraid-Test"    "wget -O /boot/config/plugins/dockerMan/templates-user/stockinfo-test.xml https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml"
+	@$(PRINT_ROWS); heading "Werkzeuge (Tag und Quelle in .dev-tools.conf.sh)"
+	@$(PRINT_ROWS); value "Stand zeigen"      "make setup"
+	@$(PRINT_ROWS); value "Auf Stand bringen" "make install-tools"
 	@echo
 
 # Läuft vor den Maintainer-Zielen; ohne Hilfeeintrag. Verlangt BashLib in Mindestversion und
@@ -224,7 +206,7 @@ setup: ## Git-Hooks, Python-.venv und Dashboard-Pakete einrichten; zeigt den Wer
 	@$(DEV_TOOLS) status 2>/dev/null || echo -e "  $(YELLOW)⚠$(RESET) Werkzeugstand nicht abrufbar (pipx run devtools); Prüf-Targets brauchen ProjectTools: $(YELLOW)make install-tools$(RESET)"
 
 .PHONY: install-tools
-install-tools: ## ProjectTools und BashLib auf den Stand aus .dev-tools.conf.sh bringen (pipx)
+install-tools: ## ProjectTools, BashLib und CLITheme auf den Stand aus .dev-tools.conf.sh bringen (pipx)
 	@command -v pipx >/dev/null || { echo -e "  $(RED)✗$(RESET) pipx fehlt; etwa mit $(YELLOW)brew install pipx$(RESET) installieren." >&2; exit 1; }
 	@$(DEV_TOOLS) install
 
