@@ -13,6 +13,7 @@ from dataclasses import dataclass
 
 import structlog
 from stockinfo_plugin.invariants import ISIN_PATTERN as _PLUGIN_ISIN_PATTERN
+from stockinfo_plugin.exchanges import Region
 from stockinfo_plugin.invariants import isin_check_digit_is_valid, mic_is_wellformed
 
 logger = structlog.get_logger()
@@ -107,7 +108,7 @@ class ExchangeDef:
 
     alias: str | None
     name: str
-    region: str  # "germany" | "usa" | "europe" | "global"
+    region: Region
     currency: str
 
 
