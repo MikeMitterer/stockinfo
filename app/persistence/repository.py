@@ -34,9 +34,9 @@ from app.detail_models import DetailDefinition
 from app.exchanges import canonical_identity, identity_from_symbol
 from app.models import (
     IDENTITY_COLUMNS,
+    IDENTITY_KEYS,
     OVERRIDE_FIELDS,
     IdentityOut,
-    IsinOnlyIdentityOut,
     ListedIdentityOut,
     PairIdentityOut,
     QuoteResponse,
@@ -116,18 +116,12 @@ def identity_condition(identity: IdentityOut) -> ColumnElement[bool]:
     Returns:
         Die Bedingung für ein ``select(...).where(...)``.
     """
-    if isinstance(identity, PairIdentityOut):
-        return and_(
-            col(InstrumentRecord.kind) == "pair",
-            col(InstrumentRecord.base) == identity.base,
-            col(InstrumentRecord.quote_currency) == identity.quote_currency,
-        )
-    if isinstance(identity, IsinOnlyIdentityOut):
-        return and_(col(InstrumentRecord.kind) == "isin_only", col(InstrumentRecord.isin) == identity.isin)
     return and_(
-        col(InstrumentRecord.kind) == "listed",
-        col(InstrumentRecord.ticker) == identity.ticker,
-        col(InstrumentRecord.mic) == identity.mic,
+        col(InstrumentRecord.kind) == identity.kind,
+        *(
+            col(getattr(InstrumentRecord, field)) == getattr(identity, field)
+            for field in IDENTITY_KEYS[identity.kind]
+        ),
     )
 
 

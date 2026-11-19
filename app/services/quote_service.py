@@ -16,6 +16,7 @@ from stockinfo_plugin.types import Identity, Unavailable, Unsupported
 from app.contract import required_fields
 from app.exchanges import EXCHANGES, provider_alias, split_symbol
 from app.models import (
+    IDENTITY_KEYS,
     IdentityOut,
     ListedIdentityOut,
     PairIdentityOut,
@@ -187,21 +188,12 @@ def _resolved_from(
     abzuleiten — die Identität *ist* die Angabe, und sie kommt aus der
     gespeicherten Zeile.
     """
-    if isinstance(identity, PairIdentityOut):
-        return ResolvedInstrument(
-            symbol=symbol,
-            exchange=exchange,
-            type=instrument_type,
-            kind="pair",
-            base=identity.base,
-            quote_currency=identity.quote_currency,
-        )
     return ResolvedInstrument(
         symbol=symbol,
-        isin=identity.isin,
         exchange=exchange,
         type=instrument_type,
-        kind="isin_only",
+        kind=identity.kind,
+        **{field: getattr(identity, field) for field in IDENTITY_KEYS[identity.kind]},
     )
 
 

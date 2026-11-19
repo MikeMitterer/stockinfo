@@ -32,6 +32,7 @@ from app.migration_guard import (
     static_allowlist,
 )
 from app.models import (
+    IDENTITY_KEYS,
     AmbiguousSymbolDetail,
     BackupErrorDetail,
     ErrorDetail,
@@ -251,9 +252,10 @@ async def identity_conflict(
     # ausmacht — und `kind` immer, damit die Oberfläche weiß, welchen Satz sie
     # bilden kann.
     params = {"kind": exc.identity.kind}
-    for field in ("ticker", "mic", "base", "quote_currency"):
+    # Die ISIN folgt darunter aus `exc.isin`, auch für ein Listing, das sie trägt.
+    for field in IDENTITY_KEYS[exc.identity.kind]:
         value = getattr(exc.identity, field, None)
-        if value:
+        if value and field != "isin":
             params[field] = value
     if exc.isin:
         params["isin"] = exc.isin
