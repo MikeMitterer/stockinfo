@@ -20,7 +20,7 @@ export WORKSPACE WORKSPACE_SQ PROJECT_NAME
 # Maintainer-Targets (build, push, tag-*, version) BashLib; alle kommen über pipx. help, info
 # und hints geben mit BashLib und CLITheme im Theme aus, ohne sie schlicht.
 #
-# Tag und Quelle (Git oder Arbeitskopie) beider Werkzeuge stehen nur in .dev-tools.conf.sh;
+# Tag und Quelle (Git oder Arbeitskopie) der Werkzeuge stehen nur in .dev-tools.conf.sh;
 # devtools (Paket mmit-devtools) liest sie, prüft, zeigt und installiert. pipx run holt
 # devtools am Tag aus DEVTOOLS_TAG und hält die Umgebung zwischen den Aufrufen; der Tag
 # geht über die Umgebung in die Befehle, nicht als Text.
