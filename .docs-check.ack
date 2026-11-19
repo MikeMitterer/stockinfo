@@ -6,3 +6,4 @@ unraid/screenshots/dashboard.png|dashboard/src/App.vue,dashboard/src/components,
 unraid/screenshots/detail-area.png|dashboard/src/App.vue,dashboard/src/components,dashboard/src/i18n,dashboard/src/styles|f3fe2bb10fa44938e124d652c754f3439c7780fc|2026-11-03
 README.md|dashboard/src/i18n/en.ts|f3fe2bb10fa44938e124d652c754f3439c7780fc|2026-11-03
 README.de.md|dashboard/src/i18n/de.ts|f3fe2bb10fa44938e124d652c754f3439c7780fc|2026-11-03
+docs/development.md|Makefile|9f4c6919e45a99fcbc7a143c7ea01695b1ed046d|2026-11-19
