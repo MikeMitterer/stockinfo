@@ -10,18 +10,17 @@ from typing import Any
 
 import structlog
 from stockinfo_plugin import (
-    ListedIdentity,
     MicCoverage,
     NotFound,
     NotResponsible,
     Resolution,
-    Resolved,
     Resolver,
     ResolveRequest,
 )
 from stockinfo_plugin.invariants import isin_check_digit_is_valid
 
 from app.plugins.exchange_support import ONLINE_MICS
+from app.plugins.resolution import listed_resolution
 from app.providers.base import ResolvedInstrument
 from app.providers.openfigi_provider import OpenFigiClient
 from app.resolver import OpenFigiResolver as CoreOpenFigiResolver
@@ -135,15 +134,7 @@ class OpenFigiResolverPlugin(Resolver):
             )
             return NotFound()
 
-        return Resolved(
-            identity=ListedIdentity(
-                ticker=answer.ticker,
-                mic=answer.mic,
-                isin=answer.isin or request.isin,
-            ),
-            name=answer.name,
-            instrument_type=answer.type,
-        )
+        return listed_resolution(answer, request.isin)
 
     def configuration_problem(self) -> str:
         """Diese Quelle läuft auch ohne Schlüssel — und sagt das.
