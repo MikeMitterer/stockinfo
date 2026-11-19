@@ -391,3 +391,24 @@ class FxSource(Source):
             `Unavailable`.
         """
         raise NotImplementedError
+
+
+ROLE_FOR_PROTOCOL: tuple[tuple[type[Source], str], ...] = (
+    (Resolver, "resolvers"),
+    (MetadataSource, "etf_meta"),
+    (QuoteSource, "quotes"),
+    (DailyCloseSource, "daily"),
+    (FxSource, "fx"),
+)
+"""Rolle im Vertrag → Rolle in `sources.yaml`, in der Reihenfolge der Konfiguration.
+
+Die App kennt fünf Ketten, dieses Paket fünf Protokolle. Die Namen
+unterscheiden sich, weil die App aus der Sicht des Betreibers benennt
+(„etf_meta") und der Vertrag aus der Sicht des Autors („MetadataSource").
+Die Rollennamen gehören zum Vertrag: `validate_exchanges` nimmt sie entgegen.
+"""
+
+
+def roles_of(source_class: type) -> frozenset[str]:
+    """Die Rollen in `sources.yaml`, die eine Quellenklasse über ihre Protokolle besetzt."""
+    return frozenset(role for protocol, role in ROLE_FOR_PROTOCOL if issubclass(source_class, protocol))

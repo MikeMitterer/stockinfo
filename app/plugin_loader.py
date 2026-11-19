@@ -33,14 +33,7 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-from stockinfo_plugin.sources import (
-    DailyCloseSource,
-    FxSource,
-    MetadataSource,
-    QuoteSource,
-    Resolver,
-    Source,
-)
+from stockinfo_plugin.sources import ROLE_FOR_PROTOCOL, Source, roles_of
 from stockinfo_plugin.types import API_VERSION
 
 from app.sources_registry import SourceSpec
@@ -56,17 +49,9 @@ PLUGIN_DIRNAME = "plugins"
 MODULE_EXPORT = "SOURCES"
 """Der Name, unter dem eine Plugin-Datei ihre Klassen bereitstellt."""
 
-# Rolle im Vertrag → Rolle in `sources.yaml`. Die App kennt fünf Ketten, das
-# Plugin-Paket fünf Protokolle; die Namen unterscheiden sich, weil die App aus
-# der Sicht des Betreibers benennt („etf_meta") und der Vertrag aus der Sicht
-# des Autors („MetadataSource").
-ROLE_FOR_PROTOCOL: tuple[tuple[type, str], ...] = (
-    (Resolver, "resolvers"),
-    (MetadataSource, "etf_meta"),
-    (QuoteSource, "quotes"),
-    (DailyCloseSource, "daily"),
-    (FxSource, "fx"),
-)
+# Rolle im Vertrag → Rolle in `sources.yaml` und die Ableitung daraus
+# (`ROLE_FOR_PROTOCOL`, `roles_of`) stehen im Vertragspaket; Quellen und
+# Vertragstests dort lesen sie ebenso.
 
 
 @dataclass(frozen=True)
@@ -95,19 +80,10 @@ class LoadResult:
     problems: tuple[LoadProblem, ...] = ()
 
 
-def roles_of(source_class: type) -> frozenset[str]:
-    """Welche Ketten diese Klasse bedienen kann.
-
-    Abgeleitet aus den Protokollen, die sie erbt — **nicht** aus einer
-    Deklaration. Eine Quelle, die `QuoteSource` erbt, kann Kurse; das noch
-    einmal hinzuschreiben wäre eine zweite Wahrheit, die beim ersten Umbau
-    auseinanderläuft.
-    """
-    return frozenset(
-        role
-        for protocol, role in ROLE_FOR_PROTOCOL
-        if issubclass(source_class, protocol)
-    )
+# `roles_of` (aus dem Vertrag) leitet die Ketten einer Klasse aus den
+# Protokollen ab, die sie erbt — **nicht** aus einer Deklaration. Eine Quelle,
+# die `QuoteSource` erbt, kann Kurse; das noch einmal hinzuschreiben wäre eine
+# zweite Wahrheit, die beim ersten Umbau auseinanderläuft.
 
 
 def spec_from_class(source_class: type) -> SourceSpec:
@@ -172,8 +148,8 @@ def _check(source_class: Any, origin: str) -> LoadProblem | None:
     if not roles_of(source_class):
         return LoadProblem(
             origin,
-            f"{source_class.name} erbt keine der fünf Rollen "
-            "(Resolver, MetadataSource, QuoteSource, DailyCloseSource, FxSource)",
+            f"{source_class.name} erbt keine der {len(ROLE_FOR_PROTOCOL)} Rollen "
+            f"({', '.join(protocol.__name__ for protocol, _ in ROLE_FOR_PROTOCOL)})",
         )
     return None
 

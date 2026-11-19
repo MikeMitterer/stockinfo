@@ -22,7 +22,7 @@ from app.providers.composite_market import (
     CompositeQuoteProvider,
 )
 from app.resolver import CompositeResolver
-from app.services.analyzer import ROLES as ANALYZED_ROLES
+from app.services.analyzer import INSTRUMENT_ROLES
 from app.services.analyzer import QuoteAnalyzer
 from app.services.backup import BackupService
 from app.services.daily_history import DailyHistoryService
@@ -239,7 +239,7 @@ def get_quote_analyzer() -> QuoteAnalyzer:
     im Analyzer selbst: Eine Instanz ohne Online-Quelle maß damit Yahoo und
     justETF — Zahlen zu einer Kette, die sie gar nicht führt.
     """
-    return QuoteAnalyzer({role: _chain(role) for role in ANALYZED_ROLES})
+    return QuoteAnalyzer({role: _chain(role) for role in INSTRUMENT_ROLES})
 
 
 @lru_cache
