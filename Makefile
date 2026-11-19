@@ -108,12 +108,11 @@ export PORT PLATFORM IMAGE_NAME CONTAINER DATA_VOLUME
 
 IMAGE_HINT = Image ohne BashLib bauen: $(GREEN)docker build -f docker/Dockerfile -t $${IMAGE_NAME}:latest .$(RESET)
 
-# Repo-Adresse aus git remote origin (SSH oder HTTPS) als https-URL; leer ohne Remote.
-# Werte von außen landen im Rezept; Ref-Namen dürfen $, ( und ) enthalten. Nur
-# erlaubte Zeichen übernehmen, sonst leer – ein Tag wie v1$(touch x) liefe sonst.
-REPO_URL    := $(shell git remote get-url origin 2>/dev/null | sed -E 's|^git@([^:]+):|https://\1/|; s|\.git$$||' | grep -xE '[A-Za-z0-9._:/@+~-]+')
-RELEASE_TAG := $(or $(shell git describe --tags --abbrev=0 2>/dev/null | grep -xE '[A-Za-z0-9._+-]+'),noch kein Release)
-NO_REMOTE   := kein Remote origin (git remote add origin …)
+# Repo-Adresse (https) und letzter Release-Tag (nur v[0-9]*) für hints, von repo-info aus
+# ProjectTools; ohne Remote oder Tag gibt es selbst einen lesbaren Ersatz aus. Die Rezepte
+# lesen beide über die Umgebung, nicht als Text im Rezept.
+export REPO_URL    := $(shell repo-info --url 2>/dev/null)
+export RELEASE_TAG := $(shell repo-info --release-tag 2>/dev/null)
 
 # ─── Hilfe ────────────────────────────────────────────────────────────────────
 
@@ -171,12 +170,12 @@ hint_row = LABEL="$(1)"; \
 
 # Links, URLs und Tipps für den Alltag; das Einrichten beschreibt docs/development.md.
 .PHONY: hints
-hints: ## Links, URLs und Tipps für die tägliche Arbeit
+hints: require-tools ## Links, URLs und Tipps für die tägliche Arbeit
 	@echo
 	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)Links$(RESET)"
-	@$(call hint_row,Repository,$(or $(REPO_URL),$(NO_REMOTE)))
-	@$(call hint_row,Entwicklerdoku,$(if $(REPO_URL),$(REPO_URL)/blob/master/docs/development.md,docs/development.md))
-	@$(call hint_row,Letzter Release,$(RELEASE_TAG))
+	@$(call hint_row,Repository,$${REPO_URL})
+	@$(call hint_row,Entwicklerdoku,$(if $(filter https://%,$(REPO_URL)),$${REPO_URL}/blob/master/docs/development.md,docs/development.md))
+	@$(call hint_row,Letzter Release,$${RELEASE_TAG})
 	@$(call hint_row,Docker Hub,https://hub.docker.com/r/$${IMAGE_NAME})
 	@echo
 	@echo "$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)URLs nach make dev-up (http://, nicht https)$(RESET)"

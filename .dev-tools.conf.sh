@@ -15,10 +15,10 @@
 DEVTOOLS_TAG=v0.2.0+261101.1319.09840
 DEVTOOLS_SOURCE=git+https://github.com/MikeMitterer/python-devtools.git
 
-# ProjectTools (docs-check, repo-status, changelog), aus der lokalen Arbeitskopie.
+# ProjectTools (docs-check, repo-status, changelog, repo-info), aus der lokalen Arbeitskopie.
 PROJECTTOOLS_PACKAGE=mmit-projecttools
 PROJECTTOOLS_LABEL=ProjectTools
-PROJECTTOOLS_TAG=v0.3.2+261029.1600.c7bbd
+PROJECTTOOLS_TAG=v0.11.0+261118.1922.975db
 PROJECTTOOLS_SOURCE=/Volumes/DevLocal/DevBash/Production/ProjectTools
 PROJECTTOOLS_EDITABLE=yes
 
