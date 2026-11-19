@@ -33,10 +33,10 @@ from app.models import (
     QuoteResponse,
     invalid_isin_response,
 )
-from app.routers.instruments import (
+from app.routers.source_errors import (
     REASON_QUOTE_UNAVAILABLE,
-    _currency_mismatch,
-    _unsupported_type,
+    currency_mismatch_response,
+    unsupported_type_response,
 )
 from app.routers.validation import IsinPath, SymbolPath, TimeRange, normalize_symbol
 from app.services.daily_history import DailyHistoryService, DailySeriesNotFoundError
@@ -135,9 +135,9 @@ def quote_by_symbol(
     try:
         return service.get_by_symbol(symbol)
     except QuoteCurrencyMismatchError as exc:
-        return _currency_mismatch(exc)
+        return currency_mismatch_response(exc)
     except UnsupportedInstrumentTypeError as exc:
-        return _unsupported_type(exc)
+        return unsupported_type_response(exc)
     except UnresolvableSymbolError:
         # 400 und nicht 502: Der Aufrufer kann es besser machen, und der Text
         # sagt ihm wie. Ein 502 behauptete einen Ausfall, den es nicht gab.
@@ -178,7 +178,7 @@ def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
         # Dieselbe Auskunft wie am Symboleingang. Bis Runde 6 fiel ein
         # erkannter Index hier in das 404 darunter — für den Benutzer nicht
         # zu unterscheiden von einer erfundenen ISIN.
-        return _unsupported_type(exc)
+        return unsupported_type_response(exc)
     except InstrumentNotFoundError:
         return _not_found(isin)
     except QuoteUnavailableError as exc:

@@ -25,6 +25,7 @@ from stockinfo_plugin.exchanges import validate_exchanges
 
 from app.calculated_metrics import CalculatedMetrics
 from app.config import Settings
+from app.error_text import error_text
 from app.detail_models import DetailDefinition
 from app.details import definitions_for, merge_definitions
 from app.exchange_catalog import prepare_catalog, reset_catalog
@@ -34,7 +35,7 @@ from app.plugin_adapters import (
     MetadataAdapter,
     QuoteAdapter,
     ResolverAdapter,
-    unwrap,
+    configuration_problem_of,
 )
 from app.plugin_guard import GuardedSource
 from app.plugins.justetf_metadata import JustEtfMetadataPlugin
@@ -371,7 +372,7 @@ def close_all() -> None:
                     "source_close_failed",
                     role=role,
                     source=getattr(source, "name", type(source).__name__),
-                    error=f"{type(error).__name__}: {error}",
+                    error=error_text(error),
                 )
     _CHAINS.clear()
 
@@ -530,7 +531,7 @@ def build_chain(role: str, config: SourcesConfig, settings: Settings) -> list[ob
         # nebeneinander, und `close()` erreichte nur eine davon.
         return cached[1]
 
-    if role == "etf_meta":
+    if role == DETAIL_SCHEMA_ROLE:
         _DETAIL_SCHEMAS.clear()
     evaluated = _evaluate(role, config, settings)
 
@@ -577,6 +578,10 @@ aus.
 """
 
 
+DETAIL_SCHEMA_ROLE = "etf_meta"
+"""Die Rolle, deren Quellen Felder für den Detailkatalog deklarieren."""
+
+
 def _register_detail_schema(name: str, declaration: object) -> bool:
     """Validiert Feldzusagen unabhängig von der Betriebsfähigkeit der Quelle."""
     try:
@@ -612,25 +617,34 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings: Settings) ->
         Die einsatzbereite Quelle, oder ``None`` — dann steht der Grund im
         Protokoll und die Kette geht ohne sie weiter.
     """
-    if role == "etf_meta" and spec.declaration is not None:
-        if not _register_detail_schema(spec.name, spec.declaration):
-            return None
+    # Ein geladenes Plugin meldet seine Felder **vor** dem Bau an: Die Zusagen
+    # gelten auch dann, wenn der Konstruktor gleich scheitert. Eine eingebaute
+    # Quelle (ohne Deklaration) meldet sie nach dem Bau über das Objekt an.
+    if (
+        role == DETAIL_SCHEMA_ROLE
+        and spec.declaration is not None
+        and not _register_detail_schema(spec.name, spec.declaration)
+    ):
+        return None
     try:
         source = spec.build(role, config, settings)
     except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
-        _LAST_REASON[spec.name] = f"Konstruktor: {type(error).__name__}: {error}"
+        _LAST_REASON[spec.name] = f"Konstruktor: {error_text(error)}"
         logger.warning(
             "source_construction_failed",
             source=spec.name,
             role=role,
-            error=f"{type(error).__name__}: {error}",
+            error=error_text(error),
         )
         return None
 
-    if role == "etf_meta" and spec.declaration is None:
-        if not _register_detail_schema(spec.name, source):
-            return None
-    problem = _diagnosis(spec, source)
+    if (
+        role == DETAIL_SCHEMA_ROLE
+        and spec.declaration is None
+        and not _register_detail_schema(spec.name, source)
+    ):
+        return None
+    problem = configuration_problem_of(source)
     if problem:
         _LAST_REASON[spec.name] = problem
         logger.warning("source_not_operational", source=spec.name, reason=problem)
@@ -656,37 +670,9 @@ def _with_live_reason(entry: "ChainEntry", source: object | None) -> "ChainEntry
     """
     if source is None or not entry.known or not entry.role_ok:
         return entry
-    problem = _diagnosis_of(source)
+    problem = configuration_problem_of(source)
     if not problem:
         return entry
     return replace(entry, configured=False, reason=problem)
 
 
-def _diagnosis_of(source: object) -> str:
-    """Was die Quelle **jetzt** über ihre Arbeitsfähigkeit sagt.
-
-    Gefragt wird die Quelle unter Adapter und Kapsel: Die Auskunft gehört ihr,
-    nicht der Übersetzungsschicht darüber.
-    """
-    ask = getattr(unwrap(source), "configuration_problem", None)
-    if not callable(ask):
-        return ""
-    try:
-        return str(ask() or "")
-    except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
-        return f"configuration_problem() wirft: {type(error).__name__}: {error}"
-
-
-def _diagnosis(spec: SourceSpec, source: object) -> str:
-    """Was die Quelle selbst über ihre Arbeitsfähigkeit sagt.
-
-    Auch das Fragen ist gekapselt: Eine Diagnose, die wirft, ist selbst ein
-    Grund, die Quelle nicht zu nehmen — aber kein Grund, die App zu beenden.
-    """
-    ask = getattr(source, "configuration_problem", None)
-    if not callable(ask):
-        return ""
-    try:
-        return str(ask() or "")
-    except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
-        return f"configuration_problem() wirft: {type(error).__name__}: {error}"

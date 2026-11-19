@@ -11,7 +11,7 @@ from sqlalchemy.dialects.sqlite import insert
 from sqlmodel import Session, col
 
 from app.detail_models import DetailDefinition
-from app.details import CANONICAL, merge_value
+from app.details import CANONICAL, is_boolean_field, merge_value, needs_currency
 from app.persistence.meta_store import get_meta, put_meta
 from app.persistence.session import fetch_all
 from app.persistence.tables import (
@@ -38,19 +38,19 @@ def migrate_legacy_values(session: Session) -> None:
         for field in CANONICAL:
             value = row.get(field)
             if value is not None:
-                if field == 'accumulating':
+                if is_boolean_field(field):
                     value = bool(value)
                 put_provider(session, row['id'], field, {
                     'value': value, 'source': row.get('source') or 'legacy',
-                    'currency': row.get('fund_currency') if field == 'fund_size' else None,
+                    'currency': row.get('fund_currency') if needs_currency(field) else None,
                     'as_of': row.get('meta_fetched_at'),
                 })
     for row in fetch_all(session, select(table_of(InstrumentOverrideRecord))):
         for field in CANONICAL:
             value = row.get(field)
-            if field == 'accumulating' and value is not None:
+            if is_boolean_field(field) and value is not None:
                 value = bool(value)
-            currency = (row.get('fund_currency') or fund_currencies.get(row['instrument_id'])) if field == 'fund_size' else None
+            currency = (row.get('fund_currency') or fund_currencies.get(row['instrument_id'])) if needs_currency(field) else None
             put_manual(session, row['instrument_id'], field, value, currency, row['updated_at'])
     # Nach erfolgreicher Übernahme existiert nur eine schreibbare Wahrheit.
     session.execute(update(InstrumentRecord).values({field: None for field in CANONICAL}))

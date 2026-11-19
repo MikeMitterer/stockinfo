@@ -34,6 +34,11 @@ from app.services.intake_service import (
     IntakeRejected,
     IntakeService,
 )
+from app.routers.source_errors import (
+    REASON_QUOTE_UNAVAILABLE,
+    currency_mismatch_response,
+    unsupported_type_response,
+)
 from app.services.quote_service import (
     QuoteCurrencyMismatchError,
     QuoteUnavailableError,
@@ -43,53 +48,6 @@ from app.services.quote_service import (
 router = APIRouter(tags=["instruments"])
 
 IntakeDep = Annotated[IntakeService, Depends(get_intake_service)]
-
-# Die Quelle hat nicht geantwortet — kein Fehler des Aufrufers.
-REASON_QUOTE_UNAVAILABLE = "quote_unavailable"
-
-# Anders als die Symbolform-Gründe in `app.exchanges` beschreibt diese Kennung
-# eine verstandene Eingabe, deren Gattung bewusst nicht aufgenommen wird.
-# Sie gehört deshalb zur gemeinsamen REST-Abbildung der Quellenantwort.
-REASON_UNSUPPORTED_TYPE = "unsupported_instrument_type"
-
-# Die Quelle liefert eine andere Währung als das Paar verlangt. Der Aufrufer
-# kann das nicht korrigieren: ein Quelldatenfehler, deshalb 502 statt 400.
-REASON_CURRENCY_MISMATCH = "quote_currency_mismatch"
-
-
-def _unsupported_type(exc: UnsupportedInstrumentTypeError) -> JSONResponse:
-    """Dieselbe Gattungsablehnung an Kurs- und Aufnahme-Eingang.
-
-    Eine eigene Kennung unterscheidet eine verstandene, bewusst abgelehnte
-    Gattung von einer unauflösbaren Eingabe. Zwei Antwortfassungen würden
-    auseinanderlaufen; deshalb teilen Kurs- und Aufnahmewege diese Funktion.
-
-    Der Parameter `symbol` darf auch eine ISIN enthalten: Er bezeichnet die
-    Benutzereingabe und ist unter diesem Namen im UI-Katalog verankert. Eine
-    Umbenennung würde den stabilen Kennungsvertrag der Fehlerantwort brechen.
-    """
-    return JSONResponse(
-        status_code=400,
-        content=ErrorDetail(
-            code=REASON_UNSUPPORTED_TYPE,
-            params={"symbol": exc.symbol, "instrument_type": exc.instrument_type},
-        ).model_dump(),
-    )
-
-
-def _currency_mismatch(exc: QuoteCurrencyMismatchError) -> JSONResponse:
-    """Eine falsche Paarwährung ist ein Quellenfehler, kein Eingabefehler."""
-    return JSONResponse(
-        status_code=502,
-        content=ErrorDetail(
-            code=REASON_CURRENCY_MISMATCH,
-            params={
-                "symbol": exc.symbol,
-                "expected": exc.expected,
-                "delivered": exc.delivered,
-            },
-        ).model_dump(),
-    )
 
 
 @router.post(
@@ -122,9 +80,9 @@ def intake(payload: IntakeRequest, service: IntakeDep, response: Response):
             content=ErrorDetail(code=exc.code, params=exc.params).model_dump(),
         )
     except UnsupportedInstrumentTypeError as exc:
-        return _unsupported_type(exc)
+        return unsupported_type_response(exc)
     except QuoteCurrencyMismatchError as exc:
-        return _currency_mismatch(exc)
+        return currency_mismatch_response(exc)
     except QuoteUnavailableError as exc:
         return JSONResponse(
             status_code=502,

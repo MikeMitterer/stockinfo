@@ -2,9 +2,17 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, get_args
 
 from stockinfo_plugin.invariants import currency_is_valid, mic_is_wellformed
+
+Region = Literal["germany", "usa", "europe", "global"]
+"""Die Regionen, nach denen Börsen gruppiert werden."""
+REGIONS: tuple[str, ...] = get_args(Region)
+
+CoverageScope = Literal["market", "inventory"]
+"""Ganzer Markt oder nur der Bestand einer Datei."""
+COVERAGE_SCOPES: tuple[str, ...] = get_args(CoverageScope)
 
 
 @dataclass(frozen=True)
@@ -13,7 +21,7 @@ class ExchangeSpec:
 
     mic: str
     name: str
-    region: str
+    region: Region
     currency: str
 
 
@@ -22,10 +30,10 @@ class MicCoverage:
     """Deklarierte Unterstützung, gegebenenfalls nur für den Dateibestand."""
 
     mics: tuple[str, ...]
-    scope: Literal["market", "inventory"] = "market"
+    scope: CoverageScope = "market"
 
 
-def validate_exchanges(declaration: object, roles: frozenset[str]) -> None:
+def validate_exchanges(declaration: object, roles: frozenset[str]) -> None:  # noqa: C901 - eine Prüfung je Vertragsregel, jede mit eigener Meldung
     """Prüft Struktur und Werte; Katalogkonflikte prüft der Host separat."""
     exchanges = getattr(declaration, "EXCHANGES", ())
     support = getattr(declaration, "MIC_SUPPORT", {})
@@ -39,7 +47,7 @@ def validate_exchanges(declaration: object, roles: frozenset[str]) -> None:
             raise ValueError("Exchange MIC must be canonical and unique")
         if not isinstance(exchange.name, str) or not exchange.name.strip():
             raise ValueError("Exchange name must not be empty")
-        if exchange.region not in ("germany", "usa", "europe", "global"):
+        if exchange.region not in REGIONS:
             raise ValueError("Unknown exchange region")
         if not currency_is_valid(exchange.currency):
             raise ValueError("Invalid exchange currency")
@@ -51,7 +59,7 @@ def validate_exchanges(declaration: object, roles: frozenset[str]) -> None:
             coverage.mics, tuple
         ):
             raise ValueError("MIC_SUPPORT requires MicCoverage with a MIC tuple")
-        if coverage.scope not in ("market", "inventory"):
+        if coverage.scope not in COVERAGE_SCOPES:
             raise ValueError("Unknown MIC coverage scope")
         if any(not mic_is_wellformed(mic) for mic in coverage.mics):
             raise ValueError("Coverage MIC must be canonical")

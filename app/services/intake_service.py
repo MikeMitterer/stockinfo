@@ -25,6 +25,7 @@ from app.exchanges import (
     EXCHANGES,
     REASON_INVALID_ISIN,
     REASON_NO_SUFFIX,
+    exchange_name,
     identity_from_input,
     input_failure,
     is_isin,
@@ -253,9 +254,8 @@ class IntakeService:
             return
         if identity.mic == self._preferred_mic or identity == confirmed:
             return
-        actual = EXCHANGES.get(identity.mic)
         raise ExchangeConfirmationRequired(IntakeConfirmation(
             identity=identity, name=quote.name, currency=quote.currency,
-            exchange=actual.name if actual else identity.mic,
+            exchange=exchange_name(identity.mic) or identity.mic,
             preferred=PreferredExchange(mic=self._preferred_mic, name=preferred.name, currency=preferred.currency),
         ))

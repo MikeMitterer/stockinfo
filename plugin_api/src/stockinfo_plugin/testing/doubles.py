@@ -133,7 +133,7 @@ class FakeSource(Source):
     name = "fake"
     api_version = API_VERSION
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - Testattrappe; jede Einstellung ist ein eigenes Schlüsselwort
         self,
         answers: object = (),
         *,

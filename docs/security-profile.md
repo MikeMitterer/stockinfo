@@ -59,8 +59,8 @@ dort keine Zusage.
   gesetzt ist (`openfigi_key_set`); `GET /sources` nennt je Quelle Name,
   Rolle, Rang, Datenversion, ob sie arbeiten kann, einen Grund und die
   Kostenart, nicht
-  ihren Abschnitt (`app/routers/dashboard.py`, `SourceEntry` in
-  `app/models.py:785`).
+  ihren Abschnitt (`source_overview` in `app/services/diagnostics.py`, `SourceEntry` in
+  `app/models.py`).
 - **Logs:** Kein Log-Aufruf der App übergibt Header, Schlüssel oder den
   Inhalt eines `providers`-Abschnitts. Belegt ist das mit einem
   `ast`-Inventar aller Argumente der 104 Log-Aufrufe in `app/`. Aus der

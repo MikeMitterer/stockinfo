@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app import __version__, plugin_env
 from app.config import Settings, get_settings
+from app.error_text import error_text
 from app.container import (
     get_backup_service,
     get_cached_quote_service,
@@ -26,12 +27,16 @@ from app.container import (
 )
 from app.docs import register_docs
 from app.migration_guard import (
+    DATABASE_UNREACHABLE,
     HEALTHCHECK_PATH,
     REASON_MIGRATION_PENDING,
+    OperatingCondition,
+    get_gate,
     is_allowed,
     static_allowlist,
 )
 from app.models import (
+    IDENTITY_KEYS,
     AmbiguousSymbolDetail,
     BackupErrorDetail,
     ErrorDetail,
@@ -51,7 +56,6 @@ from app.persistence.repository import (
 )
 from app.plugin_loader import load_all
 from app.routers import backups, dashboard, fields, fx, instruments, migration, quotes
-from app.routers.migration import get_gate
 from app.routers.validation import REASON_INVALID_ISIN, InvalidIsinError
 from app.scheduler import RefreshScheduler
 from app.services.backup import (
@@ -160,7 +164,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 # nötigsten.
                 logger.error(
                     "scheduler_unavailable",
-                    error=f"{type(error).__name__}: {error}",
+                    error=error_text(error),
                 )
                 return
             # `scheduler.start()` meldet `scheduler_started` selbst, mit Intervall.
@@ -251,9 +255,10 @@ async def identity_conflict(
     # ausmacht — und `kind` immer, damit die Oberfläche weiß, welchen Satz sie
     # bilden kann.
     params = {"kind": exc.identity.kind}
-    for field in ("ticker", "mic", "base", "quote_currency"):
+    # Die ISIN folgt darunter aus `exc.isin`, auch für ein Listing, das sie trägt.
+    for field in IDENTITY_KEYS[exc.identity.kind]:
         value = getattr(exc.identity, field, None)
-        if value:
+        if value and field != "isin":
             params[field] = value
     if exc.isin:
         params["isin"] = exc.isin
@@ -440,39 +445,12 @@ async def ready(response: Response) -> ReadinessResponse:
         Zustand samt Version. Der Statuscode ist die eigentliche Aussage —
         503 heißt „gerade nicht bedienbar", nicht „tot".
     """
-    try:
-        get_cached_quote_service().count_instruments()
-    except Exception as exc:
-        logger.warning("readiness_check_failed", error=str(exc))
+    condition = _operating_condition("readiness_check_failed")
+    if not condition.ready_ok:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return ReadinessResponse(status="degraded", version=__version__, database="error")
-
-    if get_gate().pending:
-        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return ReadinessResponse(
-            status="migration_pending", version=__version__, database="ok"
-        )
-
-    if get_gate().starting:
-        # Der Umzug ist festgeschrieben, der Betrieb läuft gerade an. Hier
-        # schon `ok` zu melden war der Befund aus Runde 32: Zwischen Commit
-        # und zurückgekehrtem `RefreshScheduler.start()` stand der Riegel
-        # bereits offen — bei einem hängenden Start unbegrenzt lange.
-        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return ReadinessResponse(
-            status="starting", version=__version__, database="ok"
-        )
-
-    if get_gate().startup_failed:
-        # Der Umzug ist durch, der Hintergrund-Refresh läuft nicht. Hier `ok`
-        # zu melden wäre die Lüge aus Runde 31: Der Dienst lieferte normal
-        # aus, und seine Kurse veralteten unbemerkt.
-        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return ReadinessResponse(
-            status="degraded", version=__version__, database="ok"
-        )
-
-    return ReadinessResponse(status="ok", version=__version__, database="ok")
+    return ReadinessResponse(
+        status=condition.ready_status, version=__version__, database=condition.database
+    )
 
 
 @app.get(HEALTHCHECK_PATH, response_model=OperationalResponse)
@@ -498,37 +476,27 @@ async def operational(response: Response) -> OperationalResponse:
     Returns:
         Der Betriebsmodus samt Version.
     """
+    condition = _operating_condition("operational_check_failed")
+    if not condition.operational_ok:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return OperationalResponse(mode=condition.operational_mode, version=__version__)
+
+
+def _operating_condition(failure_event: str) -> OperatingCondition:
+    """Die Lage für `/ready` und `/operational` — Datenbank zuerst, dann Riegel.
+
+    Abgebildet wird sie an **einer** Stelle, in `migration_guard.CONDITIONS`.
+
+    Args:
+        failure_event: Unter welchem Namen eine unerreichbare Datenbank
+            geloggt wird.
+    """
     try:
         get_cached_quote_service().count_instruments()
     except Exception as exc:
-        logger.warning("operational_check_failed", error=str(exc))
-        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return OperationalResponse(mode="degraded", version=__version__)
-
-    if get_gate().pending:
-        return OperationalResponse(mode="migration_pending", version=__version__)
-
-    if get_gate().starting:
-        # **`200`, wie beim Warten auf die Bestätigung** — und aus demselben
-        # Grund: Der Prozess tut genau das, was er tun soll. Ein `503` machte
-        # den Docker-`HEALTHCHECK` auf dem **erfolgreichen** Weg kurz
-        # `unhealthy`; das wäre ein Fehlalarm auf dem Normalpfad.
-        #
-        # `serving` wäre trotzdem falsch: Der Refresh läuft noch nicht, und
-        # ein hängender Start bliebe unter diesem Wort unsichtbar. `/ready`
-        # sagt in derselben Lage `503` — dort ist die Frage die Freigabe des
-        # Fachbetriebs, hier die Aufgabe des Prozesses.
-        return OperationalResponse(mode="starting", version=__version__)
-
-    if get_gate().startup_failed:
-        # **Hier ist `degraded` richtig**, anders als beim Warten auf die
-        # Bestätigung: Der Prozess kann seine derzeitige Aufgabe *nicht*
-        # erfüllen. Er hält keine Rückfrage offen, ihm fehlt der Refresh. Ein
-        # `unhealthy` ist genau die Auskunft, die der Healthcheck geben soll.
-        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return OperationalResponse(mode="degraded", version=__version__)
-
-    return OperationalResponse(mode="serving", version=__version__)
+        logger.warning(failure_event, error=str(exc))
+        return DATABASE_UNREACHABLE
+    return get_gate().condition
 
 
 def mount_dashboard(app: FastAPI, static_dir: str) -> bool:

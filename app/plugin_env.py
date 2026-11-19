@@ -42,6 +42,8 @@ from pathlib import Path
 
 import structlog
 
+from app.error_text import error_text
+
 logger = structlog.get_logger()
 
 ENV_DIRNAME = "plugin-env"
@@ -178,7 +180,7 @@ def ensure(
         logger.warning(
             "plugin_env_install_failed",
             packages=wanted,
-            error=f"{type(error).__name__}: {error}",
+            error=error_text(error),
         )
         return None
 

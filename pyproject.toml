@@ -16,3 +16,39 @@ markers = [
     # wenn gerade kein Netz da ist.
     "integration: fragt eine echte, fremde API",
 ]
+
+# Messbare Grenzen (T-144, Entscheidung q-11): Sie brechen `make check` über
+# `make quality`. Die Zahlen stehen nur hier; ruff und pylint lesen sie beide.
+# Gilt auch für `plugin_api/`, dessen pyproject.toml keinen ruff-Abschnitt hat.
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+# Zu den Vorgaben (E4, E7, E9, F): Komplexität (C901), Rückgaben, Zweige,
+# Argumente und Anweisungen je Funktion (PLR09) sowie Vereinfachungen (SIM, RET).
+# Eine begründete Ausnahme steht je Zeile: `# noqa: PLR0913 - Grund`.
+extend-select = ["C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "SIM", "RET"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pylint]
+max-args = 7
+max-branches = 15
+max-returns = 6
+max-statements = 60
+
+[tool.ruff.lint.per-file-ignores]
+# Ein Test darf ein langer Ablauf sein, und pytest-Fixtures kommen als
+# Parameter; die Grenzen je Funktion gelten für App, Skripte und Plugin-API.
+"tests/**" = ["C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "SIM", "RET"]
+"plugin_api/tests/**" = ["C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "SIM", "RET"]
+
+[tool.pylint.format]
+max-module-lines = 1000
+
+[tool.pylint.similarities]
+min-similarity-lines = 8
+ignore-comments = true
+ignore-docstrings = true
+ignore-imports = true

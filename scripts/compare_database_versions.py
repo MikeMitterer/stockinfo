@@ -360,7 +360,7 @@ def run_browser_check(run_dir: Path, snapshot: Path, expected: dict) -> bool:
     return subprocess.run(["node", "e2e/visual-check.mjs"], cwd=ROOT / "dashboard", env=env).returncode == 0
 
 
-def main() -> int:
+def main() -> int:  # noqa: C901, PLR0912, PLR0915 - Ablauf eines Prüfskripts von Anfang bis Aufräumen in einem Block lesbar
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--source", type=Path, default=ROOT / "data" / "stockinfo.db")
     parser.add_argument("--before", default="de620e9")
@@ -442,7 +442,13 @@ def main() -> int:
     if not unchanged:
         problems.append("Original verändert")
     for problem in problems:
-        print(f"ROT: {problem}")
+        print(f"✗ {problem}")
+    if problems:
+        # Die Laufdaten unter .tmp/t97/ bleiben mit --keep zum Nachsehen liegen.
+        print(
+            "Nächster Schritt: mit Laufdaten wiederholen: "
+            ".venv/bin/python scripts/compare_database_versions.py --keep"
+        )
     return 1 if problems else 0
 
 

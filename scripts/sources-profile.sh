@@ -297,7 +297,8 @@ requireWritableTarget() {
         return 1
     fi
     seedDefaultAssets || {
-        echo -e "\n  ${RED}✗${NC} Fachdaten konnten nicht angelegt werden: ${BLUE}${ASSETS_FILE}${NC}\n" >&2
+        echo -e "\n  ${RED}✗${NC} Fachdaten konnten nicht angelegt werden: ${BLUE}${ASSETS_FILE}${NC}" >&2
+        echo -e "      Schreibrechte prüfen: ${GREEN}ls -ld $(configDir)${NC}\n" >&2
         return 1
     }
     if [[ ! -f "${ASSETS_FILE}" ]]; then
@@ -338,12 +339,14 @@ switchTo() {
     local _ASSETS_PATH
     _ASSETS_PATH="$(placeAssets)" || {
         echo -e "  ${RED}✗${NC} Fachdaten konnten nicht nach ${BLUE}$(configDir)${NC} kopiert werden" >&2
+        echo -e "      Ansehen, was dort liegt und wer schreiben darf: ${GREEN}ls -l $(configDir)${NC}" >&2
         return 1
     }
 
     backupConfig || return 1
     writeProfile "${_ASSETS_PATH}" || {
-        echo -e "  ${RED}✗${NC} Schreiben fehlgeschlagen" >&2
+        echo -e "  ${RED}✗${NC} Schreiben fehlgeschlagen: ${BLUE}$(configFile)${NC}" >&2
+        echo -e "      Schreibrechte prüfen: ${GREEN}ls -ld $(configDir)${NC}" >&2
         return 1
     }
 
@@ -595,12 +598,14 @@ done
 
 if [[ -n "${VOLUME_OPTION}" ]]; then
     if [[ "${TARGET}" != "docker" || -n "${DATA_DIR}" ]]; then
-        echo "--volume gilt nur für Docker ohne --data-dir" >&2
+        echo -e "  ${RED}✗${NC} --volume gilt nur für Docker ohne --data-dir" >&2
+        echo -e "      Zum Beispiel: ${GREEN}${APPNAME} --show --target docker --volume ${DOCKER_VOLUME}${NC}" >&2
         exit 1
     fi
 fi
 if [[ ! "${DOCKER_VOLUME}" =~ ^[a-zA-Z0-9][a-zA-Z0-9_.-]*$ ]]; then
-    echo "Ungültiger Docker-Volume-Name: ${DOCKER_VOLUME}" >&2
+    echo -e "  ${RED}✗${NC} Ungültiger Docker-Volume-Name: ${DOCKER_VOLUME}" >&2
+    echo -e "      Erlaubt sind Buchstaben, Ziffern, _ . - — etwa: ${GREEN}${APPNAME} --show --target docker --volume stockinfo-data${NC}" >&2
     exit 1
 fi
 

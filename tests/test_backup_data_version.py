@@ -134,10 +134,9 @@ def test_dateiplugin_wird_vor_restore_neu_geladen(tmp_path, monkeypatch):
     from app.main import app
 
     def reset():
-        from app.migration_guard import MigrationGate
-        from app.routers import migration
+        from app import migration_guard
 
-        migration._gate = MigrationGate()
+        migration_guard._gate = migration_guard.MigrationGate()
         for cached in (get_settings, get_sources_config, get_backup_service):
             cached.cache_clear()
 
