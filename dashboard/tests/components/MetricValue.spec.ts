@@ -92,13 +92,7 @@ describe('MetricValue', () => {
     expect(wrapper.find('.metric__mark').exists()).toBe(true)
   })
 
-  /*
-   * T-15-Nacharbeit (Befund 1): `MetricValue` wird jetzt auch im gesperrten
-   * Zweig von `MetricEditor.vue` verwendet — dort für alle acht Felder, nicht
-   * nur für die drei, die die Tabellenspalten zeigen. Ohne diese Erweiterung
-   * bliebe ein Textfeld (Anbieter, Replikationsart, …) und das Fondsvolumen
-   * dort leer.
-   */
+  // `MetricValue` deckt alle acht Felder ab, auch Textfelder (T-15-Nacharbeit, Befund 1).
   it('zeigt einen Textwert unformatiert', () => {
     const wrapper = mount(MetricValue, {
       global: { plugins: [i18n] },

@@ -15,10 +15,44 @@ export function isIsin(value: string): boolean {
  * @returns Pfad der Form `{prefix}/{isin}{suffix}` bzw. `{prefix}/by-symbol/{symbol}{suffix}`
  */
 export function instrumentPath(prefix: string, ref: InstrumentRef, suffix = ''): string {
-  const identifier = ref.isin
-    ? `/${encodeURIComponent(ref.isin)}`
-    : `/by-symbol/${encodeURIComponent(ref.symbol)}`
-  return `${prefix}${identifier}${suffix}`
+  return ref.isin
+    ? `${prefix}/${encodeURIComponent(ref.isin)}${suffix}`
+    : symbolPath(prefix, ref.symbol, suffix)
+}
+
+/**
+ * Baut einen API-Pfad über das Symbol, auch wenn das Instrument eine ISIN hat.
+ *
+ * @param prefix - Pfad-Präfix, z.B. '/instruments'
+ * @param symbol - Symbol des Instruments
+ * @param suffix - Optionaler Pfad-Anhang, z.B. '/isin'
+ * @returns `{prefix}/by-symbol/{symbol}{suffix}`
+ */
+export function symbolPath(prefix: string, symbol: string, suffix = ''): string {
+  return `${prefix}/by-symbol/${encodeURIComponent(symbol)}${suffix}`
+}
+
+/**
+ * Baut einen API-Pfad über die Listing-Kennung.
+ *
+ * @param prefix - Pfad-Präfix, z.B. '/instruments'
+ * @param listingId - Stabile Kennung des Listings
+ * @param suffix - Optionaler Pfad-Anhang, z.B. '/details'
+ * @returns `{prefix}/by-id/{listingId}{suffix}`
+ */
+export function listingPath(prefix: string, listingId: string, suffix = ''): string {
+  return `${prefix}/by-id/${encodeURIComponent(listingId)}${suffix}`
+}
+
+/**
+ * Baut den Pfad, der eine Sicherung zurückspielt.
+ *
+ * @param name - Dateiname der Sicherung
+ * @param force - Auch eine unpassende Sicherung zurückspielen
+ * @returns `/backups/{name}/restore`, mit `?force=true` bei `force`
+ */
+export function backupRestorePath(name: string, force: boolean): string {
+  return `/backups/${encodeURIComponent(name)}/restore${force ? '?force=true' : ''}`
 }
 
 /**

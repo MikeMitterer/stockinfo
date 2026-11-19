@@ -1209,6 +1209,9 @@ class BackupList(BaseModel):
             "Start wieder zu. Eine neue Anforderung löst den Zustand ab"
         ),
     )
+    keep: int = Field(
+        description="Wie viele Sicherungen bleiben; beim Anlegen weicht die älteste"
+    )
     backups: list[BackupEntry]
 
 

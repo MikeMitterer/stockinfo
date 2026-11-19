@@ -137,12 +137,14 @@ export function refOf(instrument: { identity: Identity; symbol: string }): Instr
 
 export interface InstrumentSummary {
   listing_id: string
-  details?: Record<string, DetailValue>
+  /** Immer gesetzt, notfalls leer (`InstrumentSummary.details` im Backend). */
+  details: Record<string, DetailValue>
   identity: Identity
   symbol: string
   exchange: string | null
-  name: string | null
-  type: string | null
+  // Pflicht im Backend (`InstrumentSummary`, app/models.py).
+  name: string
+  type: string
   currency: string | null
   provider: string | null
   ter: number | null
@@ -279,14 +281,14 @@ export interface QuotePoint {
   price: number
   quote_time: string
   volume: number | null
-  currency: string | null
+  currency: string
   fetched_at: string
 }
 
 export interface DailyPoint {
   date: string
   close: number
-  currency: string | null
+  currency: string
 }
 
 export interface RefreshResult {
@@ -426,6 +428,8 @@ export interface BackupList {
   pending_restore: string | null
   /** Warum der letzte Tausch scheiterte; dann steht kein Neustart mehr aus. */
   restore_error: string
+  /** Wie viele Sicherungen bleiben (`KEEP_BACKUPS` im Backend). */
+  keep: number
   backups: BackupEntry[]
 }
 

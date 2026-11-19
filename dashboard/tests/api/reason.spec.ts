@@ -220,7 +220,7 @@ describe('Erklaertexte im Aufklappbereich', () => {
   it('haben fuer jeden Fall einen echten Satz', () => {
     for (const locale of LOCALES) {
       const messages = i18n.global.getLocaleMessage(locale) as LocaleMessages
-      for (const key of ['explain', 'notEtf', 'noIsin', 'nothingProvided']) {
+      for (const key of ['explain']) {
         expect(String(messages.drilldown[key]).trim().length, `${locale}.${key}`)
           .toBeGreaterThan(25)
       }

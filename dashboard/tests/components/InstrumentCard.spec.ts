@@ -52,11 +52,14 @@ describe('InstrumentCard', () => {
     expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(true)
   })
 
-  it('bietet mobil dieselben acht Felder wie am Schreibtisch (Task 8)', async () => {
-    const wrapper = mountCard()
+  it('bietet mobil dieselben Felder wie am Schreibtisch (Task 8)', async () => {
+    const wrapper = mountCard({ symbol: 'VGWL.DE' })
     await wrapper.find('.icard__toggle').trigger('click')
 
-    expect(wrapper.findAllComponents({ name: 'MetricEditor' })).toHaveLength(8)
+    // Derselbe Detailweg wie in der Tabelle, für dasselbe Papier.
+    const details = wrapper.findComponent({ name: 'OpenDetails' })
+    expect(details.exists()).toBe(true)
+    expect(details.props('item').symbol).toBe('VGWL.DE')
   })
 
   it('zeigt keine Anzahl gespeicherter Kurspunkte', async () => {
@@ -106,8 +109,8 @@ describe('InstrumentCard', () => {
 
   it('emittiert refresh und remove aus den Aktionen', async () => {
     const wrapper = mountCard()
-    await wrapper.find('.icard__action--refresh').trigger('click')
-    await wrapper.find('.icard__action--remove').trigger('click')
+    await wrapper.find('.instrument-action--refresh').trigger('click')
+    await wrapper.find('.instrument-action--remove').trigger('click')
     expect(wrapper.emitted('refresh')).toHaveLength(1)
     expect(wrapper.emitted('remove')).toHaveLength(1)
     expect(wrapper.emitted('select')).toBeUndefined()
@@ -199,8 +202,7 @@ describe('InstrumentCard', () => {
     })
     const badge = wrapper.find('.icard__type')
 
-    expect(badge.exists()).toBe(true)
-    expect(badge.classes()).toContain('crypto')
+    expect(badge.text()).toBe(i18n.global.t('instrumentTypes.crypto'))
   })
 
 })

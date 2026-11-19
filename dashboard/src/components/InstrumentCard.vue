@@ -5,6 +5,7 @@ import { NButton } from 'naive-ui'
 import { UxCaret } from '@mmit/ux-foundation'
 
 import InfoHint from './InfoHint.vue'
+import InstrumentActions from './InstrumentActions.vue'
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
 import { acceptsIsin, isinOf, symbolOf } from '../types'
@@ -81,7 +82,7 @@ function price(value: number | null): string {
         {{ price(item.latest_price) }}
         <span class="icard__ccy">{{ item.latest_currency ?? '' }}</span>
       </span>
-      <span class="icard__name">{{ item.name ?? t('common.noValue') }}</span>
+      <span class="icard__name">{{ item.name }}</span>
     </div>
 
     <div class="icard__foot">
@@ -98,62 +99,14 @@ function price(value: number | null): string {
       </NButton>
 
       <div class="icard__actions" @click.stop>
-        <NButton
-          class="icard__action icard__action--json"
-          size="tiny"
-          quaternary
-          :title="t('table.showJson')"
-          @click="emit('json', item)"
-        >
-          {{ t('table.jsonShort') }}
-        </NButton>
-        <NButton
-          v-if="extraetfUrl"
-          class="icard__action icard__action--extraetf"
-          tag="a"
-          size="tiny"
-          quaternary
-          :href="extraetfUrl"
-          target="_blank"
-          rel="noopener"
-          :title="t('table.extraetfProfile')"
-        >
-          {{ t('table.extraetfShort') }}
-        </NButton>
-        <NButton
-          v-if="yahooUrl"
-          class="icard__action icard__action--yahoo"
-          tag="a"
-          size="tiny"
-          quaternary
-          :href="yahooUrl"
-          target="_blank"
-          rel="noopener"
-          :title="t('table.yahooFinance')"
-        >
-          {{ t('table.yahooShort') }}
-        </NButton>
-        <NButton
-          class="icard__action icard__action--refresh"
-          size="tiny"
-          quaternary
-          :loading="refreshing"
-          :disabled="refreshing"
-          :title="t('table.refresh')"
-          @click="emit('refresh', item)"
-        >
-          ↻
-        </NButton>
-        <NButton
-          class="icard__action icard__action--remove"
-          size="tiny"
-          quaternary
-          type="error"
-          :title="t('table.remove')"
-          @click="emit('remove', item)"
-        >
-          ✕
-        </NButton>
+        <InstrumentActions
+          :extraetf-url="extraetfUrl"
+          :yahoo-url="yahooUrl"
+          :refreshing="refreshing"
+          @json="emit('json', item)"
+          @refresh="emit('refresh', item)"
+          @remove="emit('remove', item)"
+        />
       </div>
     </div>
 

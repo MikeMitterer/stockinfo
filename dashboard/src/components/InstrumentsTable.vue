@@ -4,8 +4,9 @@ import { useI18n } from 'vue-i18n'
 import { NButton, NSelect } from 'naive-ui'
 
 import { UxCaret, useIsCompact } from '@mmit/ux-foundation'
-import { useTableSort, type SortKey } from '../composables/useTableSort'
+import { SORT_KEYS, useTableSort, type SortKey } from '../composables/useTableSort'
 import InfoHint from './InfoHint.vue'
+import InstrumentActions from './InstrumentActions.vue'
 import InstrumentCard from './InstrumentCard.vue'
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
@@ -47,17 +48,19 @@ const compact = useIsCompact()
 const { sortKey, direction, toggle, setSortKey, setDirection, sort, init: initSort } = useTableSort()
 initSort()
 
-// Sortierbare Spaltenköpfe (Label-Key aus dem Katalog + optionale Zellklasse).
-const columns: { key: SortKey; label: string; align?: string }[] = [
-  { key: 'symbol', label: 'table.colSymbol' },
-  { key: 'isin', label: 'table.colIsin' },
-  { key: 'name', label: 'table.colName' },
-  { key: 'type', label: 'table.colType' },
-  { key: 'latest_price', label: 'table.colPrice', align: 'num' },
-  { key: 'ter', label: 'table.colTer', align: 'num' },
-  { key: 'volatility', label: 'table.colVola', align: 'num' },
-  { key: 'accumulating', label: 'table.colAccumulating', align: 'center' },
-]
+// Sortierbare Spaltenköpfe: Label-Key aus dem Katalog + optionale Zellklasse.
+// Spalten und Reihenfolge kommen aus `SORT_KEYS`; der `Record` lässt keine aus.
+const COLUMN_LAYOUT: Record<SortKey, { label: string; align?: string }> = {
+  symbol: { label: 'table.colSymbol' },
+  isin: { label: 'table.colIsin' },
+  name: { label: 'table.colName' },
+  type: { label: 'table.colType' },
+  latest_price: { label: 'table.colPrice', align: 'num' },
+  ter: { label: 'table.colTer', align: 'num' },
+  volatility: { label: 'table.colVola', align: 'num' },
+  accumulating: { label: 'table.colAccumulating', align: 'center' },
+}
+const columns = SORT_KEYS.map((key) => ({ key, ...COLUMN_LAYOUT[key] }))
 
 const sortedInstruments = computed(() => sort(props.instruments))
 
@@ -371,7 +374,7 @@ function price(value: number | null): string {
                   class="row-toggle"
                   @click.stop="emit('select', item)"
                 >
-                  {{ item.name ?? t('common.noValue') }}
+                  {{ item.name }}
                 </button>
               </td>
               <td>
@@ -391,62 +394,14 @@ function price(value: number | null): string {
               <td class="num mono dim"><MetricValue :item="item" field="volatility" /></td>
               <td class="center"><MetricValue :item="item" field="accumulating" /></td>
               <td class="actions" @click.stop>
-                <NButton
-                  class="ext"
-                  size="tiny"
-                  quaternary
-                  :title="t('table.showJson')"
-                  @click="emit('json', item)"
-                >
-                  {{ t('table.jsonShort') }}
-                </NButton>
-                <NButton
-                  v-if="extraetfLink(item)"
-                  class="ext"
-                  tag="a"
-                  size="tiny"
-                  quaternary
-                  :href="extraetfLink(item)"
-                  target="_blank"
-                  rel="noopener"
-                  :title="t('table.extraetfProfile')"
-                >
-                  {{ t('table.extraetfShort') }}
-                </NButton>
-                <NButton
-                  v-if="yahooLink(item)"
-                  class="ext"
-                  tag="a"
-                  size="tiny"
-                  quaternary
-                  :href="yahooLink(item)"
-                  target="_blank"
-                  rel="noopener"
-                  :title="t('table.yahooFinance')"
-                >
-                  {{ t('table.yahooShort') }}
-                </NButton>
-                <NButton
-                  class="icon"
-                  size="tiny"
-                  quaternary
-                  :loading="item.symbol === refreshingSymbol"
-                  :disabled="item.symbol === refreshingSymbol"
-                  :title="t('table.refresh')"
-                  @click="emit('refresh', item)"
-                >
-                  ↻
-                </NButton>
-                <NButton
-                  class="icon"
-                  size="tiny"
-                  quaternary
-                  type="error"
-                  :title="t('table.remove')"
-                  @click="emit('remove', item)"
-                >
-                  ✕
-                </NButton>
+                <InstrumentActions
+                  :extraetf-url="extraetfLink(item)"
+                  :yahoo-url="yahooLink(item)"
+                  :refreshing="item.symbol === refreshingSymbol"
+                  @json="emit('json', item)"
+                  @refresh="emit('refresh', item)"
+                  @remove="emit('remove', item)"
+                />
               </td>
             </tr>
             <tr v-if="isOpen(item)" :id="`details-${item.symbol}`" class="details-row">

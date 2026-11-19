@@ -83,7 +83,7 @@ function humanSize(bytes: number): string {
 <template>
   <section class="backups card">
     <h2>{{ t('backups.title') }}</h2>
-    <p class="hint">{{ t('backups.hint', { keep: 10 }) }}</p>
+    <p v-if="data" class="hint">{{ t('backups.hint', { keep: data.keep }) }}</p>
 
     <p v-if="data?.restore_error" class="backups__state backups__state--error">
       {{ t('backups.failed', { reason: data.restore_error }) }}

@@ -5,7 +5,7 @@ import { NButton, NInput, NSelect } from 'naive-ui'
 
 import { isIsin } from '../api/paths'
 import { useAnalysis } from '../composables/useAnalysis'
-import { isinOf, refOf } from '../types'
+import { refOf } from '../types'
 import type { AnalyzeStage, InstrumentRef, InstrumentSummary } from '../types'
 import { TWO_DECIMALS } from '../utils/numberFormat'
 
@@ -60,7 +60,7 @@ function note(stage: AnalyzeStage): string | null {
 const instrumentOptions = computed(() =>
   props.instruments.map((instrument) => ({
     value: instrument.symbol,
-    label: `${instrument.symbol} — ${instrument.name ?? isinOf(instrument.identity)}`,
+    label: `${instrument.symbol} — ${instrument.name}`,
   })),
 )
 </script>

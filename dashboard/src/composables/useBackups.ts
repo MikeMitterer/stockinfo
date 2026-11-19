@@ -2,6 +2,7 @@ import { consola } from 'consola'
 import { ref, type Ref } from 'vue'
 
 import { apiClient } from '../api/client'
+import { backupRestorePath } from '../api/paths'
 import { describeFailure } from '../api/reason'
 import { translate } from '../i18n'
 import type { BackupList } from '../types'
@@ -69,9 +70,7 @@ export function useBackups(): {
     loading.value = true
     error.value = null
     try {
-      await apiClient.post<unknown>(
-        `/backups/${encodeURIComponent(name)}/restore${force ? '?force=true' : ''}`,
-      )
+      await apiClient.post<unknown>(backupRestorePath(name, force))
     } catch (err) {
       error.value = describeFailure(translate('errors.backupRestore'), err)
       consola.error('useBackups.restore', err)

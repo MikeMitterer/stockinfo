@@ -3,7 +3,7 @@ import { ref, type Ref } from 'vue'
 
 import { apiClient } from '../api/client'
 import { describeFailure } from '../api/reason'
-import { instrumentPath, isIsin } from '../api/paths'
+import { instrumentPath, isIsin, symbolPath } from '../api/paths'
 import { i18n, translate } from '../i18n'
 import type { InstrumentRef, InstrumentSummary, IntakeConfirmation, PendingIntake } from '../types'
 
@@ -86,8 +86,7 @@ export function useInstrumentActions(): {
   }
 
   async function setIsin(symbol: string, isin: string): Promise<void> {
-    const path = `/instruments/by-symbol/${encodeURIComponent(symbol)}/isin`
-    await run(() => apiClient.put(path, { isin }), translate('errors.setIsin'))
+    await run(() => apiClient.put(symbolPath('/instruments', symbol, '/isin'), { isin }), translate('errors.setIsin'))
   }
 
   return { busy, error, pendingIntake, add, confirmAdd, cancelAdd, refreshOne, remove, setIsin }

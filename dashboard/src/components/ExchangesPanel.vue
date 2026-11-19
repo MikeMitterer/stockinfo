@@ -5,7 +5,8 @@ import { useIsCompact } from '@mmit/ux-foundation'
 import { NAlert, NButton, NDataTable, NEmpty, NInput, NList, NListItem, NSwitch, NTag, NText } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import ExchangeSupport from './ExchangeSupport.vue'
-import { availableQuoteSources } from '../utils/exchangeCoverage'
+import { isPenceQuoted } from '../utils/currencies'
+import { availableQuoteSources, YAML_FILE_SOURCE } from '../utils/exchangeCoverage'
 import { quoteSourceFromHash } from '../composables/useHashTab'
 import InfoHint from './InfoHint.vue'
 import { PLUGIN_AUTHORS_URL } from '../config'
@@ -61,12 +62,22 @@ function rowProps(entry: ExchangeEntry) {
   return { class: availableQuoteSources(entry.support).length ? '' : 'exchanges__uncovered' }
 }
 
+/** Ist das die bevorzugte Börse? Tabelle und Kompaktliste markieren sie gleich. */
+function isDefault(entry: ExchangeEntry): boolean {
+  return entry.mic === props.data?.default_exchange
+}
+
+/** Farbe der Markierung: hervorgehoben nur, wenn eine Kursquelle sie bedient. */
+function defaultTagType(entry: ExchangeEntry): 'info' | 'default' {
+  return availableQuoteSources(entry.support).length ? 'info' : 'default'
+}
+
 function venue(entry: ExchangeEntry) {
   return h('div', [
     h('strong', entry.name),
-    entry.mic === props.data?.default_exchange ? h(NTag, { size: 'small', type: availableQuoteSources(entry.support).length ? 'info' : 'default', class: 'exchanges__default' }, () => t('exchanges.default')) : null,
+    isDefault(entry) ? h(NTag, { size: 'small', type: defaultTagType(entry), class: 'exchanges__default' }, () => t('exchanges.default')) : null,
     h('div', entry.currency),
-    entry.currency === 'GBp' ? h('div', t('exchanges.penceNote')) : null,
+    isPenceQuoted(entry.currency) ? h('div', t('exchanges.penceNote')) : null,
   ])
 }
 
@@ -106,13 +117,13 @@ const columns = computed<DataTableColumns<ExchangeEntry>>(() => [
       <NList v-if="compact" class="exchanges__venues">
         <NListItem v-for="entry in exchanges" :key="entry.mic" v-bind="rowProps(entry)">
           <strong><span class="exchanges__code">{{ entry.mic }}</span> · {{ entry.name }}</strong>
-          <NTag v-if="entry.mic === data.default_exchange" size="small" :type="availableQuoteSources(entry.support).length ? 'info' : 'default'" class="exchanges__default">{{ t('exchanges.default') }}</NTag>
+          <NTag v-if="isDefault(entry)" size="small" :type="defaultTagType(entry)" class="exchanges__default">{{ t('exchanges.default') }}</NTag>
           <p>{{ t(`exchanges.regions.${entry.region}`) }} · {{ entry.currency }}</p>
           <p class="exchanges__suffix">
             {{ t('exchanges.colSuffix') }}:
             <strong class="exchanges__code">.{{ entry.alias ?? entry.mic }}</strong>
           </p>
-          <p v-if="entry.currency === 'GBp'">{{ t('exchanges.penceNote') }}</p>
+          <p v-if="isPenceQuoted(entry.currency)">{{ t('exchanges.penceNote') }}</p>
           <p>{{ t('exchanges.support') }}: <ExchangeSupport :entries="entry.support ?? []" @show-source="showSource" /></p>
         </NListItem>
       </NList>
@@ -131,7 +142,7 @@ const columns = computed<DataTableColumns<ExchangeEntry>>(() => [
           <h4 :id="`exchange-source-${source.name}`" tabindex="-1">{{ source.name }}</h4>
           <p v-if="source.market">{{ t('exchanges.marketInfo') }}</p>
           <p v-if="source.inventory">{{ t('exchanges.inventoryInfo') }}</p>
-          <p v-if="source.name === 'yaml-file'">{{ t('exchanges.yamlRefreshInfo') }}</p>
+          <p v-if="source.name === YAML_FILE_SOURCE">{{ t('exchanges.yamlRefreshInfo') }}</p>
         </section>
       </section>
     </template>

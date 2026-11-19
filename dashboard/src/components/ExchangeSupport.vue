@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { NText } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
-import { availableQuoteSources } from '../utils/exchangeCoverage'
+import { availableQuoteSources, YAML_FILE_SOURCE } from '../utils/exchangeCoverage'
 import { quoteSourceHref } from '../composables/useHashTab'
 import type { ExchangeSupport } from '../types'
 
@@ -22,7 +22,7 @@ function openSource(event: MouseEvent, source: string) {
   <span v-if="sources.length">
     <template v-for="(source, index) in sources" :key="source">
       <span v-if="index"> · </span>
-      <a :href="quoteSourceHref(source)" @click="openSource($event, source)">{{ source === 'yaml-file' ? t('exchanges.yamlFile') : source }}</a>
+      <a :href="quoteSourceHref(source)" @click="openSource($event, source)">{{ source === YAML_FILE_SOURCE ? t('exchanges.yamlFile') : source }}</a>
     </template>
   </span>
   <NText v-else depth="3">{{ t('exchanges.noSupport') }}</NText>

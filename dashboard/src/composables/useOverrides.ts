@@ -2,6 +2,8 @@ import { consola } from 'consola'
 import { ref, type Ref } from 'vue'
 
 import { apiClient } from '../api/client'
+import { listingPath, symbolPath } from '../api/paths'
+import { describeFailure } from '../api/reason'
 import { translate } from '../i18n'
 import type { InstrumentOverrides, OverridePatch, InstrumentSummary, OverrideField } from '../types'
 
@@ -58,14 +60,13 @@ export function useOverrides(): {
     saving.value = item.symbol
     error.value = null
     try {
-      const path = `/instruments/by-symbol/${encodeURIComponent(item.symbol)}/overrides`
       if (details) {
-        await apiClient.patch(`/instruments/by-id/${encodeURIComponent(item.listing_id)}/details`, details)
+        await apiClient.patch(listingPath('/instruments', item.listing_id, '/details'), details)
       } else {
-        await apiClient.put(path, payload)
+        await apiClient.put(symbolPath('/instruments', item.symbol, '/overrides'), payload)
       }
     } catch (err) {
-      error.value = translate('errors.overrides')
+      error.value = describeFailure(translate('errors.overrides'), err)
       consola.error('useOverrides.save', item.symbol, err)
     } finally {
       saving.value = null
@@ -108,11 +109,8 @@ export function manualValue(
 /**
  * Liefert die Quelle einen Wert für dieses Feld — nicht nur die Eingabe?
  *
- * Die Vorrang-Regel in einer Funktion statt dreimal (Nacharbeit Sichtprüfung,
- * I4): `MetricValue.vue`, `MetricEditor.vue` und `InstrumentDrilldown.vue`
- * formulierten bislang unabhängig voneinander dieselbe Prüfung — heute
- * gleichbedeutend, aus drei verschiedenen Tasks entstanden und beim nächsten
- * Feinschliff ein Kandidat zum Auseinanderlaufen.
+ * Die Vorrang-Regel in einer Funktion statt an jeder Anzeige (Nacharbeit
+ * Sichtprüfung, I4); heute nutzt sie `MetricValue.vue`.
  *
  * `item[field]` ist bereits der **wirksame** Wert (das Backend löst die
  * Vorrang-Regel auf); „nicht null" allein reicht deshalb nicht — im Zustand

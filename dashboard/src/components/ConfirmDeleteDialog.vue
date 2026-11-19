@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton, NModal } from 'naive-ui'
 
+import { focusComponent, useLastShown } from '../composables/useDialog'
 import type { InstrumentSummary } from '../types'
 
 /**
@@ -23,35 +24,17 @@ const { t } = useI18n()
 
 const cancelBtn = ref<InstanceType<typeof NButton> | null>(null)
 
-/*
- * Der Inhalt hängt an einer eigenen Kopie, nicht direkt an `item`.
- *
- * Sonst leert sich der Kasten in dem Moment, in dem der Aufrufer die Auswahl
- * zurücksetzt — und was ausgeblendet wird, ist ein leerer Rahmen mit zwei
- * Knöpfen. Erst wenn die Animation durch ist, wird auch die Kopie verworfen.
- */
-const shown = ref<InstrumentSummary | null>(null)
-
-watch(
-  () => props.item,
-  (item) => {
-    if (item) shown.value = item
-  },
-  { immediate: true },
-)
+// Inhalt bis zum Ende der Ausblendung behalten; danach wird die Kopie verworfen.
+const shown = useLastShown(() => props.item)
 
 /** Escape, Klick auf die Fläche und das ✕ laufen alle hier zusammen. */
 function onUpdateShow(show: boolean): void {
   if (!show && props.item) emit('cancel')
 }
 
-/**
- * Fokus auf „Abbrechen" — erst nach der Einblendung, vorher steht das Element
- * noch nicht im Dokument.
- */
+/** Fokus auf „Abbrechen" — erst nach der Einblendung. */
 function focusCancel(): void {
-  const el = cancelBtn.value?.$el as HTMLElement | undefined
-  el?.focus()
+  focusComponent(cancelBtn)
 }
 </script>
 
@@ -70,7 +53,7 @@ function focusCancel(): void {
   >
     <div v-if="shown" class="confirm-delete">
       <p class="confirm-delete__item">
-        <span class="confirm-delete__name">{{ shown.name ?? shown.symbol }}</span>
+        <span class="confirm-delete__name">{{ shown.name }}</span>
         <span class="confirm-delete__symbol mono">{{ shown.symbol }}</span>
       </p>
       <p class="confirm-delete__history">{{ t('confirmDelete.history', shown.history_count) }}</p>

@@ -498,27 +498,13 @@ export const de = {
     openSetting: 'Zur Einstellung →',
   },
   overrides: {
-    edit: 'Bearbeiten',
     clear: 'Leeren',
-    notSet: 'nicht gesetzt',
-    cycleTo: 'Umschalten auf: {value}',
     fromSource: 'Kommt aus der Quelle — von Hand nachgetragen wird nur, was dort fehlt.',
     markManual: 'Von Hand eingetragen — die Quelle liefert für dieses Papier nichts.',
     markShadowed:
       'Von Hand eingetragen: {value}. Angezeigt wird der Wert der Quelle — sie hat Vorrang. ' +
       'Die Eingabe bleibt gespeichert und greift wieder, sobald die Quelle nichts liefert.',
     removeOwn: 'Eigenen Wert entfernen',
-    /*
-     * Beschriftungen der fünf ETF-Extras, die T-15 nachträgt (T-09 deckte
-     * TER, Volatilität und Thesaurierung bereits über die Tabellenköpfe ab).
-     */
-    fields: {
-      provider: 'Anbieter',
-      replication: 'Replikationsart',
-      fundSize: 'Fondsvolumen',
-      fundDomicile: 'Fondsdomizil',
-      fundCurrency: 'Fondswährung',
-    },
   },
   drilldown: {
     fetchedAt: 'Stand der Quelle',
@@ -533,41 +519,13 @@ export const de = {
      * derselbe Aufklappbereich behauptete daneben justETF. Gesehen im
      * zweiten Browserlauf zu T-37.
      *
-     * Bei drei der vier Texte war **nur der Name** falsch: Dass Kennzahlen
-     * ausschließlich für ETFs und nur mit ISIN geholt werden, entscheidet die
-     * **App** (`app/services/quote_service.py`: `if instrument_type ==
-     * "etf":`), nicht der Anbieter. Ohne den Namen sind sie deshalb nicht
-     * vager, sondern richtiger.
+     * Seit T-141 bleibt davon nur die allgemeine Erklärung; die drei
+     * Sonderfälle (keine ETF, keine ISIN, nichts geliefert) zeigte nur der
+     * entfernte `MetricEditor`-Weg.
      */
     explain:
       'Die Kennzahlen holt die eingerichtete Quelle, wo sie welche hat. Von Hand ' +
       'lässt sich nur ergänzen, was sie nicht liefert — sie hat immer Vorrang.',
-    // Die konkrete Gattung steht bereits als Kennzeichen in derselben Zeile;
-    // hier zählt nur, dass die ETF-Anreicherung nicht zuständig ist.
-    notEtf:
-      'Kennzahlen werden nur für ETFs geholt — dieses Papier ist keiner. Die ' +
-      'Quelle wird deshalb gar nicht erst abgefragt, alle Felder lassen sich von Hand nachtragen.',
-    noIsin:
-      'Ohne ISIN wird keine Kennzahlen-Quelle abgefragt. Sobald eine ISIN eingetragen ' +
-      'ist (Kennung in der Zeile), greift die Quelle wieder; bis dahin lassen sich alle ' +
-      'Felder von Hand nachtragen.',
-    /*
-     * **Ein Text für zwei Fälle, und das ist die ehrliche Fassung.**
-     *
-     * Vorher gab es hier zwei: „justETF deckt nur europäische UCITS-ETFs ab"
-     * und „Die Quelle wurde abgefragt, hat aber nichts geliefert". Der erste
-     * war justETFs Zuständigkeitsregel, im Frontend nachgebaut — eine zweite
-     * Wahrheit über die Interna eines fremden Plugins. Der zweite behauptete
-     * „wurde abgefragt", obwohl die Oberfläche genau das nicht weiß.
-     *
-     * Ob eine Quelle nicht gefragt wurde oder gefragt wurde und nichts hatte,
-     * weiß nur das Backend — es ruft `is_responsible()`. Bis diese Auskunft
-     * im Vertrag steht (Fähigkeitsdeklaration, T-31/T-38), sagt die
-     * Oberfläche das, was in beiden Fällen stimmt.
-     */
-    nothingProvided:
-      'Die eingerichtete Kennzahlen-Quelle hat für dieses Papier nichts geliefert — ' +
-      'alle Felder lassen sich von Hand nachtragen.',
   },
   confirmDelete: {
     title: 'Asset löschen?',

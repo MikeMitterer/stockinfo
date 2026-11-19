@@ -412,23 +412,13 @@ export const en = {
     openSetting: 'To the setting →',
   },
   overrides: {
-    edit: 'Edit',
     clear: 'Clear',
-    notSet: 'not set',
-    cycleTo: 'Switch to: {value}',
     fromSource: 'Comes from the data source — only missing values can be filled in by hand.',
     markManual: 'Entered by hand — the source has nothing for this instrument.',
     markShadowed:
       'Entered by hand: {value}. Shown is the value from the source — it takes precedence. ' +
       'Your entry stays stored and applies again as soon as the source has nothing.',
     removeOwn: 'Remove your entry',
-    fields: {
-      provider: 'Provider',
-      replication: 'Replication method',
-      fundSize: 'Fund size',
-      fundDomicile: 'Fund domicile',
-      fundCurrency: 'Fund currency',
-    },
   },
   drilldown: {
     fetchedAt: 'Source as of',
@@ -438,16 +428,6 @@ export const en = {
     explain:
       'The configured source provides the figures where it has them. You can only ' +
       'fill in by hand what it does not provide — it always takes precedence.',
-    notEtf:
-      'Figures are only fetched for ETFs — this instrument is not one. The source is ' +
-      'never queried for it, so every field can be entered by hand.',
-    noIsin:
-      'Without an ISIN, no metrics source is queried. Once an ISIN is entered (the ' +
-      'symbol in the row), the source takes over again; until then, every field can be entered by hand.',
-    /* One text for two cases — only the backend knows which one applies. */
-    nothingProvided:
-      'The configured metrics source provided nothing for this instrument — every ' +
-      'field can be entered by hand.',
   },
   confirmDelete: {
     title: 'Delete asset?',

@@ -9,8 +9,6 @@ function item(overrides: Partial<InstrumentSummary>): InstrumentSummary {
     isin: null,
     symbol: 'SYM',
     exchange: null,
-    name: null,
-    type: null,
     currency: null,
     volatility: null,
     latest_price: null,

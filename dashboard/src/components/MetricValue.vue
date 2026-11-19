@@ -15,15 +15,9 @@ import type { InstrumentSummary, OverrideField } from '../types'
  * sondern in der aufklappbaren Zeile (Task 8) — deshalb ohne Umschalter, ohne
  * Eingabefeld, ohne `commit`-Event.
  *
- * Anzeige und Merkmal stammen ursprünglich aus `ManualMetric.vue` — die Datei
- * ist seit Task 8 gelöscht, ersetzt durch diese Komponente und `MetricEditor.vue`
- * (Nacharbeit Sichtprüfung: Kommentar berichtigt, der die gelöschte Datei noch
- * als bestehend beschrieb).
- *
- * Seit der T-15-Nacharbeit (Befund 1) deckt die Komponente alle acht Felder
- * ab, nicht mehr nur die drei Tabellenspalten: Sie steht jetzt auch im
- * gesperrten Zweig von `MetricEditor.vue`, sonst zeigte ein gesperrtes Feld
- * ohne eigenen Wert dort **nichts** — weder Wert noch Erklärung.
+ * Gepflegt wird über `OpenDetails`/`DetailEditor`; der ältere `MetricEditor`
+ * ist seit T-141 entfernt (Entscheidung q-9). Ein Feld, das nicht in `details`
+ * steht, gilt für diese Gattung nicht und zeigt den Platzhalter.
  */
 const props = defineProps<{
   item: InstrumentSummary
@@ -32,7 +26,7 @@ const props = defineProps<{
 
 const { t, n } = useI18n()
 
-const applicable = computed(() => props.item.details === undefined || Object.hasOwn(props.item.details, props.field))
+const applicable = computed(() => Object.hasOwn(props.item.details, props.field))
 const state = computed(() => applicable.value ? overrideState(props.item, props.field) : null)
 
 /** Der wirksame Wert — das, was die Zelle zeigt. */
@@ -47,9 +41,7 @@ const isPercentField = computed(() => props.field === 'ter' || props.field === '
  * Kommt der gezeigte Wert wirklich aus der Quelle — nicht aus der Eingabe?
  *
  * Über `sourceProvides()` statt einer eigenen Fassung der Vorrang-Regel
- * (Nacharbeit Sichtprüfung, I4) — dieselbe Prüfung stand vorher hier,
- * in `MetricEditor.vue` und in `InstrumentDrilldown.vue`, je einmal anders
- * formuliert.
+ * (Nacharbeit Sichtprüfung, I4).
  */
 const fromSource = computed(() => applicable.value && sourceProvides(props.item, props.field))
 
