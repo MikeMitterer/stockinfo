@@ -28,13 +28,14 @@ Was `make check` aufruft, steht im `Makefile` (Target `check`) und in der
 | Prüfung | Quelle | Wirkung |
 |---|---|---|
 | ruff mit den Standardregeln (Fehler, Importe, Namen) | `pyproject.toml`, `[tool.ruff]` | bricht `make check` (über `make quality`) für `app`, `tests`, `scripts`, `plugin_api` |
-| ruff: Komplexität (`C901`, max. 10), Rückgaben, Zweige, Argumente, Anweisungen (`PLR09`), Vereinfachungen (`SIM`, `RET`) | `pyproject.toml`, `[tool.ruff.lint]` | bricht `make check` (über `make quality`) für `app`, `scripts`, `plugin_api`; `tests/` ausgenommen |
-| pylint: Modulgröße (max. 1000 Zeilen) und doppelter Code (ab 8 Zeilen) | `pyproject.toml`, `[tool.pylint.*]` | bricht `make check` (über `make quality`) für `app`, `scripts`, `plugin_api`; doppelter Code in Tests nur Bericht |
+| ruff: Komplexität (`C901`), Rückgaben, Zweige, Argumente, Anweisungen (`PLR09`), Vereinfachungen (`SIM`, `RET`) | `pyproject.toml`, `[tool.ruff.lint]` | bricht `make check` (über `make quality`) für `app`, `scripts`, `plugin_api`; `tests/` ausgenommen |
+| pylint: Modulgröße und doppelter Code | `pyproject.toml`, `[tool.pylint.*]` | bricht `make check` (über `make quality`) für `app`, `scripts`, `plugin_api`; doppelter Code in Tests nur Bericht |
 | Typen des Dashboards (`vue-tsc`), Schlüssel des englischen Katalogs gegen den deutschen (`satisfies typeof de` in `dashboard/src/i18n/en.ts`) | `dashboard/tsconfig*.json` | bricht `make check` |
 | ESLint samt Speicherregeln der UX-Foundation | `dashboard/eslint.config.js` | bricht `make check` (über `test-dashboard`) |
 | Nutzerdoku gegen das Projekt | `.docs-check.conf.sh` | bricht `make check` und den Pre-Commit-Hook |
 
-Eine begründete Ausnahme steht an der Stelle selbst: `# noqa: <Regel> - Grund`
+Die Grenzwerte stehen nur in `pyproject.toml`. Eine begründete Ausnahme steht
+an der Stelle selbst: `# noqa: <Regel> - Grund`
 für ruff, `# pylint: disable=too-many-lines` mit Grund am Dateianfang.
 
 Bekannte Lücken in Abhängigkeiten zeigt `make audit` (`pip-audit` für
