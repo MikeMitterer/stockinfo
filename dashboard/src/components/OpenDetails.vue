@@ -1,31 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { apiClient } from '../api/client'
-import { describeFailure } from '../api/reason'
 import DetailEditor from './DetailEditor.vue'
+import { useFieldCatalog } from '../composables/useFieldCatalog'
 import { localizedLabel } from '../i18n/locales'
-import type { DetailDefinition, InstrumentSummary, OverridePatch } from '../types'
+import type { InstrumentSummary, OverridePatch } from '../types'
 
 const props = defineProps<{ item: InstrumentSummary; busy?: boolean; fieldOptions?: Partial<Record<string, string[]>> }>()
 const emit = defineEmits<{ (event: 'commit', patch: OverridePatch): void }>()
 const { t, locale } = useI18n()
-const definitions = ref<DetailDefinition[]>([])
-const error = ref<string | null>(null)
-const loading = ref(true)
+const { definitions, loading, error, load } = useFieldCatalog()
 const fields = computed(() => definitions.value.filter((definition) =>
   Object.hasOwn(props.item.details ?? {}, definition.name),
 ))
-onMounted(async () => {
-  try {
-    const catalog = await apiClient.get<{ details: DetailDefinition[] }>('/fields')
-    definitions.value = catalog.details
-  } catch (failure) {
-    error.value = describeFailure(t('details.loadFailed'), failure)
-  } finally {
-    loading.value = false
-  }
-})
+// Schon beim Aufbau, nicht erst nach dem Einhängen: `loading` steht dann beim
+// ersten Rendern, und „keine Felder" blitzt nicht kurz auf.
+void load()
 </script>
 
 <template>

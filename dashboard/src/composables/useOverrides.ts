@@ -2,6 +2,7 @@ import { consola } from 'consola'
 import { ref, type Ref } from 'vue'
 
 import { apiClient } from '../api/client'
+import { listingPath, symbolPath } from '../api/paths'
 import { translate } from '../i18n'
 import type { InstrumentOverrides, OverridePatch, InstrumentSummary, OverrideField } from '../types'
 
@@ -58,11 +59,10 @@ export function useOverrides(): {
     saving.value = item.symbol
     error.value = null
     try {
-      const path = `/instruments/by-symbol/${encodeURIComponent(item.symbol)}/overrides`
       if (details) {
-        await apiClient.patch(`/instruments/by-id/${encodeURIComponent(item.listing_id)}/details`, details)
+        await apiClient.patch(listingPath('/instruments', item.listing_id, '/details'), details)
       } else {
-        await apiClient.put(path, payload)
+        await apiClient.put(symbolPath('/instruments', item.symbol, '/overrides'), payload)
       }
     } catch (err) {
       error.value = translate('errors.overrides')

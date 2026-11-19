@@ -31,4 +31,17 @@ export default tseslint.config(
       ...noDirectGlobalsInTemplates(storageRestrictions),
     },
   },
+  {
+    // Komponenten zeigen an; Aufrufe der API, Lade- und Fehlerzustand gehören
+    // in ein Composable (T-141).
+    files: ['src/components/**/*.vue', 'src/App.vue'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          group: ['**/api/client'],
+          message: 'Components talk to the API through a composable in src/composables.',
+        }],
+      }],
+    },
+  },
 )
