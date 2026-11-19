@@ -93,7 +93,7 @@ ISO_4217 = frozenset(
     VED VES VND VUV WST
     XAD XAF XAG XAU XBA XBB XBC XBD XCD XCG XDR XOF XPD XPF XPT XSU XUA
     YER ZAR ZMW ZWG
-    """.split()
+    """.split()  # noqa: SIM905 - als Block bleiben die Codes zeilenweise gegen die Norm vergleichbar
 )
 """Die vergebenen alphabetischen Codes nach ISO 4217.
 
@@ -360,7 +360,7 @@ def days_are_ordered(days: tuple[date, ...] | list[date]) -> bool:
     return all(earlier < later for earlier, later in zip(days, days[1:]))
 
 
-def identity_problem(
+def identity_problem(  # noqa: PLR0911 - eine Rückgabe je verletzter Identitätsregel
     identity: object, collectors: frozenset[str] = frozenset()
 ) -> str:
     """Was mit dieser Identität nicht stimmt — leer, wenn sie taugt.

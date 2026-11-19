@@ -620,9 +620,12 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings: Settings) ->
     # Ein geladenes Plugin meldet seine Felder **vor** dem Bau an: Die Zusagen
     # gelten auch dann, wenn der Konstruktor gleich scheitert. Eine eingebaute
     # Quelle (ohne Deklaration) meldet sie nach dem Bau über das Objekt an.
-    if role == DETAIL_SCHEMA_ROLE and spec.declaration is not None:
-        if not _register_detail_schema(spec.name, spec.declaration):
-            return None
+    if (
+        role == DETAIL_SCHEMA_ROLE
+        and spec.declaration is not None
+        and not _register_detail_schema(spec.name, spec.declaration)
+    ):
+        return None
     try:
         source = spec.build(role, config, settings)
     except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
@@ -635,9 +638,12 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings: Settings) ->
         )
         return None
 
-    if role == DETAIL_SCHEMA_ROLE and spec.declaration is None:
-        if not _register_detail_schema(spec.name, source):
-            return None
+    if (
+        role == DETAIL_SCHEMA_ROLE
+        and spec.declaration is None
+        and not _register_detail_schema(spec.name, source)
+    ):
+        return None
     problem = configuration_problem_of(source)
     if problem:
         _LAST_REASON[spec.name] = problem

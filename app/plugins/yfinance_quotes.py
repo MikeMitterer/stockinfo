@@ -173,7 +173,7 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
 
     # ─── Tagesreihe ──────────────────────────────────────────────────────────
 
-    def fetch_daily(self, request: DailyRequest) -> DailyResult:
+    def fetch_daily(self, request: DailyRequest) -> DailyResult:  # noqa: PLR0911 - eine Rückgabe je Ergebnisart des Vertrags
         """Holt Tagesschlusskurse.
 
         **`adjusted=True`, und das ist keine Formalie.** Die Anbindung ruft

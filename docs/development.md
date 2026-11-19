@@ -391,8 +391,17 @@ make test                       # documentation, backend, plugin API, example pl
 make test-backend               # backend only (pytest)
 make test-dashboard             # dashboard only (ESLint and Vitest)
 make docs-check                 # documentation only: links, commands, variables, dependent files
-make check                      # everything that works offline, plus Ruff and type checks
+make check                      # everything that works offline, plus make quality and type checks
+make quality                    # limits: Ruff (complexity, simplifications), module size, duplicate code
+make audit                      # known vulnerabilities in dependencies (needs network, report only)
 ```
+
+The limits used by `make quality` are in `pyproject.toml`: `[tool.ruff.lint]`
+for complexity and simplifications, `[tool.pylint.*]` for module size and
+duplicate code. A justified exception goes on the line itself
+(`# noqa: C901 - reason`) or, for module size, at the top of the file.
+`make audit` runs `pip-audit` and `npm audit`; findings are reported but do not
+fail the run.
 
 `make docs-check` checks the documentation against the project; its rules
 are in `.docs-check.conf.sh`. It needs ProjectTools (`make install-tools`)
@@ -411,7 +420,7 @@ hook and cannot be acknowledged; change both versions in the same commit.
 
 The normal backend run includes tests marked `integration` that call real
 external APIs or the package index. `make check` leaves them out and adds
-`ruff` and the dashboard type check (`vue-tsc`). To exclude only the online
+`make quality` and the dashboard type check (`vue-tsc`). To exclude only the online
 tests:
 
 ```bash

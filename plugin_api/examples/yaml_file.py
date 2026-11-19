@@ -1,3 +1,6 @@
+# pylint: disable=too-many-lines
+# Ausnahme (T-144): Das Beispiel ist bewusst eine Datei, die ein Plugin-Autor
+# als Ganzes kopiert.
 """Beispiel-Plugin: alle fünf Rollen aus **einer** vom Benutzer gepflegten Datei.
 
 Wo keine automatische Quelle etwas weiß, trägt der Betreiber es von Hand ein.

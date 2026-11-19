@@ -66,11 +66,10 @@ class DailyCloseSync:
         fetched_from = meta["fetched_from"]
         fetched_to = meta["fetched_to"]
 
-        if fetched_to is None or fetched_to < today:  # neue Tage seither
-            if self._fetch_and_store(
-                instrument_id, symbol, fetched_to, identity, instrument_type
-            ).is_hit:
-                fetched_to = today
+        if (fetched_to is None or fetched_to < today) and self._fetch_and_store(  # neue Tage seither
+            instrument_id, symbol, fetched_to, identity, instrument_type
+        ).is_hit:
+            fetched_to = today
 
         if fetched_from is not None:  # gesamte Historie noch nicht geholt
             if desired_start is None:  # 'max' verlangt → alles holen
@@ -78,11 +77,10 @@ class DailyCloseSync:
                     instrument_id, symbol, None, identity, instrument_type
                 ).is_hit:
                     fetched_from = None
-            elif desired_start < fetched_from:  # weiter zurück verlangt
-                if self._fetch_and_store(
-                    instrument_id, symbol, desired_start, identity, instrument_type
-                ).is_hit:
-                    fetched_from = desired_start
+            elif desired_start < fetched_from and self._fetch_and_store(  # weiter zurück verlangt
+                instrument_id, symbol, desired_start, identity, instrument_type
+            ).is_hit:
+                fetched_from = desired_start
 
         self._repository.set_daily_meta(instrument_id, fetched_from, fetched_to)
         # **Ein Wasserzeichen liegt vor.** Was danach fehlschlägt, kostet

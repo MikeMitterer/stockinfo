@@ -33,6 +33,21 @@ def prepare_catalog(specs: dict, config) -> dict[str, str]:
     if _CONFIG is config:
         return _PROBLEMS
     reset_catalog()
+    _load_declarations(specs, config)
+
+    definitions = defaultdict(list)
+    for name, declaration in _DECLARATIONS.items():
+        for exchange in getattr(declaration, "EXCHANGES", ()):
+            definitions[exchange.mic].append((name, exchange))
+    _reject_conflicts(definitions)
+    _reject_dangling_references(definitions)
+    _publish(definitions)
+    _CONFIG = config
+    return _PROBLEMS
+
+
+def _load_declarations(specs: dict, config) -> None:
+    """Liest und validiert die Börsendeklarationen der konfigurierten Klassen."""
     candidates = {}
     for role in ROLES:
         for name in config.chain(role):
@@ -48,11 +63,9 @@ def prepare_catalog(specs: dict, config) -> dict[str, str]:
         except Exception as error:  # noqa: BLE001 — fremde Klassenmetadaten
             _PROBLEMS[name] = f"Invalid exchange declaration: {error}"
 
-    # Jeder Konflikt entfernt alle beteiligten Quellen, nie einen Ladegewinner.
-    definitions = defaultdict(list)
-    for name, declaration in _DECLARATIONS.items():
-        for exchange in getattr(declaration, "EXCHANGES", ()):
-            definitions[exchange.mic].append((name, exchange))
+
+def _reject_conflicts(definitions: dict) -> None:
+    """Jeder Konflikt entfernt alle beteiligten Quellen, nie einen Ladegewinner."""
     aliases = {value.alias: mic for mic, value in _CORE.items() if value.alias}
     for mic, entries in definitions.items():
         core = _CORE.get(mic)
@@ -68,7 +81,9 @@ def prepare_catalog(specs: dict, config) -> dict[str, str]:
             for name, _ in entries:
                 _PROBLEMS[name] = f"Conflicting exchange declaration: {mic}"
 
-    # Wenn eine Quelle entfällt, können Referenzen auf ihre MICs ungültig werden.
+
+def _reject_dangling_references(definitions: dict) -> None:
+    """Wenn eine Quelle entfällt, können Referenzen auf ihre MICs ungültig werden."""
     while True:
         remaining = {
             mic
@@ -90,6 +105,9 @@ def prepare_catalog(specs: dict, config) -> dict[str, str]:
         for name in rejected:
             _PROBLEMS[name] = "MIC_SUPPORT references an unknown exchange"
 
+
+def _publish(definitions: dict) -> None:
+    """Übernimmt die Börsen der verbliebenen Quellen in den Katalog."""
     for mic, entries in definitions.items():
         accepted = [(name, value) for name, value in entries if name not in _PROBLEMS]
         if not accepted:
@@ -98,8 +116,6 @@ def prepare_catalog(specs: dict, config) -> dict[str, str]:
         if mic not in _CORE:
             value = accepted[0][1]
             EXCHANGES[mic] = ExchangeDef(mic, value.name, value.region, value.currency)
-    _CONFIG = config
-    return _PROBLEMS
 
 
 def catalog_annotations(chains: list) -> tuple[dict, list]:

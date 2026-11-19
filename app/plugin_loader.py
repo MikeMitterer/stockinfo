@@ -112,7 +112,7 @@ def spec_from_class(source_class: type) -> SourceSpec:
     )
 
 
-def _check(source_class: Any, origin: str) -> LoadProblem | None:
+def _check(source_class: Any, origin: str) -> LoadProblem | None:  # noqa: PLR0911 - eine Rückgabe je Ladeproblem
     """Taugt das, was da geladen wurde, als Quelle?
 
     Vier Fragen, und jede hat schon einmal jemandem den Start gekostet: Ist es
