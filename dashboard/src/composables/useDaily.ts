@@ -1,11 +1,9 @@
-import { consola } from 'consola'
-import { ref, type Ref } from 'vue'
+import type { Ref } from 'vue'
 
 import { apiClient } from '../api/client'
 import { instrumentPath } from '../api/paths'
-import { describeFailure } from '../api/reason'
 import type { DailyPoint, InstrumentRef } from '../types'
-import { translate } from '../i18n'
+import { useRequest } from './useRequest'
 
 /** Zeitraum-Kürzel für die EOD-Historie. */
 export type DailyPeriod = '1w' | '1m' | '3m' | '1y' | 'max'
@@ -18,41 +16,17 @@ export function useDaily(): {
   load: (item: InstrumentRef, period: DailyPeriod) => Promise<void>
   clear: () => void
 } {
-  const daily = ref<DailyPoint[]>([])
-  const loading = ref<boolean>(false)
-  const error = ref<string | null>(null)
-
-  // Zähler gegen Races: nur die jüngste Anfrage darf die Refs beschreiben.
-  let requestId = 0
-
-  async function load(item: InstrumentRef, period: DailyPeriod): Promise<void> {
-    const currentRequest = ++requestId
-    loading.value = true
-    error.value = null
-    try {
-      const path = instrumentPath('/quote', item, `/daily?period=${period}`)
-      const result = await apiClient.get<DailyPoint[]>(path)
-      if (currentRequest !== requestId) return // veraltete Antwort verwerfen
-      daily.value = result
-    } catch (err) {
-      if (currentRequest !== requestId) return
-      // **Kategorie und Grund**, nicht nur die Kategorie: Das Backend nennt
-      // hier eine Kennung, und „konnte nicht geladen werden" allein
-      // verschweigt, ob es die Reihe nicht gibt oder eine Quelle gestört war.
-      error.value = describeFailure(translate('errors.daily'), err)
-      consola.error('useDaily.load', err)
-    } finally {
-      if (currentRequest === requestId) loading.value = false
-    }
-  }
-
-  /** Setzt Tageshistorie und Fehlerzustand zurück (z.B. nach Abwahl des Instruments). */
-  function clear(): void {
-    requestId++ // laufende Antworten verwerfen
-    daily.value = []
-    error.value = null
-    loading.value = false
-  }
-
-  return { daily, loading, error, load, clear }
+  // Die Meldung nennt **Kategorie und Grund**: Das Backend nennt hier eine
+  // Kennung, und „konnte nicht geladen werden" allein verschwiege, ob es die
+  // Reihe nicht gibt oder eine Quelle gestört war.
+  const { data, loading, error, run, reset } = useRequest<DailyPoint[], [InstrumentRef, DailyPeriod]>({
+    initial: [],
+    request: (item, period) =>
+      apiClient.get<DailyPoint[]>(instrumentPath('/quote', item, `/daily?period=${period}`)),
+    failure: 'errors.daily',
+    logTag: 'useDaily.load',
+    latestOnly: true,
+  })
+  // `clear` setzt Tageshistorie und Fehlerzustand zurück (z.B. nach Abwahl des Instruments).
+  return { daily: data, loading, error, load: run, clear: reset }
 }

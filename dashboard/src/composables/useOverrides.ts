@@ -3,6 +3,7 @@ import { ref, type Ref } from 'vue'
 
 import { apiClient } from '../api/client'
 import { listingPath, symbolPath } from '../api/paths'
+import { describeFailure } from '../api/reason'
 import { translate } from '../i18n'
 import type { InstrumentOverrides, OverridePatch, InstrumentSummary, OverrideField } from '../types'
 
@@ -65,7 +66,7 @@ export function useOverrides(): {
         await apiClient.put(symbolPath('/instruments', item.symbol, '/overrides'), payload)
       }
     } catch (err) {
-      error.value = translate('errors.overrides')
+      error.value = describeFailure(translate('errors.overrides'), err)
       consola.error('useOverrides.save', item.symbol, err)
     } finally {
       saving.value = null

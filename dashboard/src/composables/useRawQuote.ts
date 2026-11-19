@@ -1,11 +1,10 @@
-import { consola } from 'consola'
 import { ref, type Ref } from 'vue'
 
 import { apiClient } from '../api/client'
 import { quotePath } from '../api/paths'
 import { API_BASE_URL } from '../config'
-import { translate } from '../i18n'
 import type { InstrumentRef } from '../types'
+import { useRequest } from './useRequest'
 
 /** Lädt die rohe /quote-Antwort eines Instruments als formatiertes JSON (für die Anzeige). */
 export function useRawQuote(): {
@@ -16,34 +15,22 @@ export function useRawQuote(): {
   load: (item: InstrumentRef) => Promise<void>
 } {
   const url = ref<string>('')
-  const json = ref<string>('')
-  const loading = ref<boolean>(false)
-  const error = ref<string | null>(null)
-
-  // Zähler gegen Races: nur die jüngste Anfrage darf die Refs beschreiben.
-  let requestId = 0
+  const { data, loading, error, run, reset } = useRequest<string, [string]>({
+    initial: '',
+    request: async (path) => JSON.stringify(await apiClient.get<unknown>(path), null, 2),
+    failure: 'errors.rawQuote',
+    logTag: 'useRawQuote.load',
+    latestOnly: true,
+  })
 
   async function load(item: InstrumentRef): Promise<void> {
-    const currentRequest = ++requestId
     const path = quotePath(item)
     // Absolute URL zum Kopieren/Teilen — bei leerem API_BASE_URL (same-origin)
     // gegen den Seiten-Origin auflösen statt nur den Pfad anzuzeigen.
     url.value = new URL(`${API_BASE_URL}${path}`, window.location.origin).toString()
-    json.value = ''
-    loading.value = true
-    error.value = null
-    try {
-      const data = await apiClient.get<unknown>(path)
-      if (currentRequest !== requestId) return // veraltete Antwort verwerfen
-      json.value = JSON.stringify(data, null, 2)
-    } catch (err) {
-      if (currentRequest !== requestId) return
-      error.value = translate('errors.rawQuote')
-      consola.error('useRawQuote.load', err)
-    } finally {
-      if (currentRequest === requestId) loading.value = false
-    }
+    reset()
+    await run(path)
   }
 
-  return { url, json, loading, error, load }
+  return { url, json: data, loading, error, load }
 }

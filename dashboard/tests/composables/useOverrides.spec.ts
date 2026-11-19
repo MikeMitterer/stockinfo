@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 // consola stummschalten — Fehlerpfad-Tests würden sonst rote Zeilen ausgeben.
 import { sourceProvides, useOverrides } from '../../src/composables/useOverrides'
+import { i18n } from '../../src/i18n'
 import { OVERRIDE_FIELDS } from '../../src/types'
 import { makeInstrument } from '../fixtures/instrument'
 
@@ -52,6 +53,22 @@ describe('useOverrides.save', () => {
       body: () => JSON.parse(fetchMock.mock.calls[0][1].body as string),
     }
   }
+
+  it('nennt bei einer Ablehnung den übersetzten Grund des Backends, nicht nur „fehlgeschlagen“', async () => {
+    // Vor T-141 blieb nur die Kategorie stehen; der Grund ging verloren.
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ code: 'quote_unavailable', params: { identifier: 'EUNL.DE' } }),
+      { status: 422 },
+    )))
+    const overrides = useOverrides()
+
+    await overrides.save(makeInstrument(), { ter: 0.19 })
+
+    expect(overrides.error.value).toContain(i18n.global.t('errors.overrides'))
+    expect(overrides.error.value).toContain(
+      i18n.global.t('errors.reason.quote_unavailable', { identifier: 'EUNL.DE' }),
+    )
+  })
 
   it('schickt alle acht Kennzahlen, nicht nur die geänderte', async () => {
     const captured = captureBody()
