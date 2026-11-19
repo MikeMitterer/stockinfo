@@ -43,6 +43,7 @@ from app.models import (
     identity_columns,
     identity_from_columns,
 )
+from app.details import needs_currency
 from app.persistence import detail_store
 from app.persistence.meta_store import get_meta
 from app.persistence.quote_store import (
@@ -613,7 +614,7 @@ class QuoteRepository:
         """Der alte Vollsatz schreibt denselben Speicher wie generische Overrides."""
         with self._session(write=True) as session:
             for field in OVERRIDE_FIELDS:
-                detail_store.put_manual(session, instrument_id, field, values.get(field), currency if field == 'fund_size' else None, updated_at)
+                detail_store.put_manual(session, instrument_id, field, values.get(field), currency if needs_currency(field) else None, updated_at)
 
     def set_detail_overrides(self, instrument_id: int, values: dict, updated_at: str) -> None:
         """Schreibt einen bereits validierten Patch atomar."""
@@ -771,7 +772,7 @@ class QuoteRepository:
                     ))
                     detail_store.put_provider(session, saved.instrument_id, field,
                         {'value': getattr(response, field), 'source': response.source or 'legacy',
-                         'currency': response.fund_currency if field == 'fund_size' else None,
+                         'currency': response.fund_currency if needs_currency(field) else None,
                          'as_of': response.fetched_at})
             return saved
 

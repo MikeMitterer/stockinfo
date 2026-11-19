@@ -16,7 +16,8 @@ from stockinfo_plugin import Identity
 
 from app.calculated_metrics import CALCULATED_SOURCE
 from app.detail_models import DetailInput, DetailValue
-from app.details import CANONICAL, merge_value, validate_input
+from app.details import CANONICAL, is_boolean_field, merge_value, validate_input
+from app.exchanges import field_reader
 from app.models import (
     OVERRIDE_FIELDS,
     ListedIdentityOut,
@@ -71,6 +72,18 @@ def _as_bool(value: object) -> bool | None:
     return None if value is None else bool(value)
 
 
+def _detail_values(row: object) -> dict[str, object]:
+    """Die Kennzahlen einer Zeile (Mapping oder ``sqlite3.Row``), Wahrheitswerte als ``bool | None``.
+
+    SQLite speichert sie als Integer; welches Feld einer ist, sagt der Katalog.
+    """
+    read = field_reader(row)
+    return {
+        field: _as_bool(read(field)) if is_boolean_field(field) else read(field)
+        for field in OVERRIDE_FIELDS
+    }
+
+
 def apply_overrides(row: dict) -> dict:
     """Legt die manuellen Kennzahlen über die der Quelle — **nur in Lücken**.
 
@@ -105,7 +118,7 @@ def apply_overrides(row: dict) -> dict:
     for field in OVERRIDE_FIELDS:
         manual = result.get(f"manual_{field}")
         provider = result.get(field)
-        if field == "accumulating":
+        if is_boolean_field(field):
             manual = _as_bool(manual)
             provider = _as_bool(provider)
         merged = merge_value({"value": provider}, {"value": manual}, CANONICAL[field][1])
@@ -562,7 +575,7 @@ class CachedQuoteService:
             value = stored.get(field)
             if value is None:
                 continue
-            if field == "accumulating":
+            if is_boolean_field(field):
                 value = _as_bool(value)
             if field == "source" or getattr(fresh, field) is None:
                 setattr(fresh, field, value)
@@ -696,9 +709,7 @@ class CachedQuoteService:
         """
         instrument = self._require_instrument(symbol)
         stored = self._repository.get_overrides(instrument["id"]) or {}
-        result = {field: stored.get(field) for field in OVERRIDE_FIELDS}
-        result["accumulating"] = _as_bool(result["accumulating"])
-        return result
+        return _detail_values(stored)
 
     def set_overrides(self, symbol: str, values: dict[str, object]) -> dict:
         """Schreibt die manuellen Kennzahlen eines Instruments und liest sie zurück.
@@ -954,14 +965,7 @@ class CachedQuoteService:
             price=quote["price"],
             quote_time=quote["quote_time"],
             volume=quote["volume"],
-            ter=instrument["ter"],
-            provider=instrument["provider"],
-            replication=instrument["replication"],
-            fund_size=instrument["fund_size"],
-            fund_domicile=instrument["fund_domicile"],
-            fund_currency=instrument["fund_currency"],
-            volatility=instrument["volatility"],
-            accumulating=_as_bool(instrument["accumulating"]),
+            **_detail_values(instrument),
             source="cache",
             cached=True,
             stale=stale,

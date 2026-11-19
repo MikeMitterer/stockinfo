@@ -6,6 +6,7 @@ from typing import Annotated, Any, Literal, Union
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.detail_models import DetailDefinition, DetailValue
+from app.details import CANONICAL
 
 
 def always_present(*fields: str) -> Callable[[dict[str, Any]], None]:
@@ -450,21 +451,14 @@ class QuoteResponse(BaseModel):
     """
 
 
-OVERRIDE_FIELDS = (
-    "ter",
-    "volatility",
-    "accumulating",
-    "provider",
-    "replication",
-    "fund_size",
-    "fund_domicile",
-    "fund_currency",
-)
+OVERRIDE_FIELDS = tuple(CANONICAL)
 """Kennzahlen, die von Hand nachgetragen werden können.
 
 Eine Quelle für Modell, Repository, Endpoint und Tests — sonst kennt jede
 Stelle eine andere Teilmenge. Die Menge ist genau das, was justETFs
 `get_etf_overview` beisteuert: Wo die Quelle nichts hat, springt der Mensch ein.
+Sie steht als Schlüssel von `details.CANONICAL`, zusammen mit Art, Einheit und
+Grenzen jedes Felds.
 """
 
 
