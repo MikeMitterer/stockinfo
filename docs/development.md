@@ -124,6 +124,8 @@ from `.env.example`:
 | `DATABASE_PATH` | path of the SQLite file | `data/stockinfo.db` |
 | `CACHE_TTL_HOURS` | age at which a quote is re-fetched on request | `6` |
 | `REFRESH_INTERVAL_HOURS` | interval of the background refresh | `6` |
+| `REFRESH_INTERVAL_MINUTES` | interval in minutes; takes precedence over `REFRESH_INTERVAL_HOURS` | empty |
+| `REFRESH_ON_START` | first background refresh right after startup | `true` |
 | `METADATA_TTL_DAYS` | refresh cadence for ETF metadata | `7` |
 | `DEFAULT_EXCHANGE` | preferred exchange for ISIN queries (MIC) | `XETR` (Xetra) |
 | `STRICT_EXCHANGE` | require the preferred exchange when resolving an ISIN | `false` |

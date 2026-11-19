@@ -83,7 +83,7 @@ def environment(settings: SettingsDep) -> EnvInfo:
         version=__version__,
         database_path=settings.database_path,
         cache_ttl_hours=settings.cache_ttl_hours,
-        refresh_interval_hours=settings.refresh_interval_hours,
+        refresh_interval_minutes=settings.refresh_minutes,
         metadata_ttl_days=settings.metadata_ttl_days,
         default_exchange=settings.default_exchange,
         strict_exchange=settings.strict_exchange,

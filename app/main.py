@@ -147,7 +147,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 return
             try:
                 scheduler = RefreshScheduler(
-                    get_cached_quote_service(), settings.refresh_interval_hours
+                    get_cached_quote_service(),
+                    settings.refresh_minutes,
+                    run_on_start=settings.refresh_on_start,
                 )
             except Exception as error:  # noqa: BLE001 — eine Rolle kann leer sein
                 # **Ohne Kursquelle gibt es nichts zu aktualisieren — aber der

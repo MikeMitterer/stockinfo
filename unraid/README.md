@@ -101,6 +101,12 @@ Remove the test container and test template when finished.
 Some optional fields appear in Unraid's advanced view. The template uses
 bridge networking. Dashboard and API share the same port.
 
+The background refresh also runs once right after the container starts. For
+an interval shorter than one hour, add the container variable
+`REFRESH_INTERVAL_MINUTES` (**Add another Path, Port, Variable, Label or
+Device**); it takes precedence over the hours field. All variables are listed
+in the [Docker guide](../docker/README.md#configuration).
+
 [↑ Contents](#contents)
 
 ## Data and source profiles

@@ -15,12 +15,12 @@ const ENV_EXAMPLE_URL = 'https://github.com/MikeMitterer/stockinfo/blob/master/.
 <template>
   <section v-if="env" class="env card">
     <h2>{{ t('env.title') }}</h2>
-    <p class="hint">{{ t('env.refreshNote', { hours: env.refresh_interval_hours }) }}</p>
+    <p class="hint">{{ t('env.refreshNote', { minutes: env.refresh_interval_minutes }) }}</p>
     <dl>
       <div><dt>{{ t('env.version') }}</dt><dd>{{ env.version }}</dd></div>
       <div><dt>{{ t('env.dbPath') }}</dt><dd>{{ env.database_path }}</dd></div>
       <div><dt>{{ t('env.cacheTtl') }}</dt><dd>{{ env.cache_ttl_hours }}</dd></div>
-      <div><dt>{{ t('env.refreshInterval') }}</dt><dd>{{ env.refresh_interval_hours }}</dd></div>
+      <div><dt>{{ t('env.refreshInterval') }}</dt><dd>{{ env.refresh_interval_minutes }}</dd></div>
       <div><dt>{{ t('env.metadataTtl') }}</dt><dd>{{ env.metadata_ttl_days }}</dd></div>
       <div><dt>{{ t('env.defaultExchange') }}</dt><dd>{{ env.default_exchange }}</dd></div>
       <div>

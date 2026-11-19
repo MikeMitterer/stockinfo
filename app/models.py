@@ -676,7 +676,7 @@ class EnvInfo(BaseModel):
     version: str
     database_path: str
     cache_ttl_hours: int
-    refresh_interval_hours: int
+    refresh_interval_minutes: int
     metadata_ttl_days: int
     default_exchange: str
     strict_exchange: bool

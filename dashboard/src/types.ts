@@ -208,7 +208,7 @@ export interface EnvInfo {
   version: string
   database_path: string
   cache_ttl_hours: number
-  refresh_interval_hours: number
+  refresh_interval_minutes: number
   metadata_ttl_days: number
   default_exchange: string
   strict_exchange: boolean

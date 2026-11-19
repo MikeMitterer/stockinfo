@@ -8,7 +8,7 @@ const env = {
   version: '0.5.0',
   database_path: 'data/stockinfo.db',
   cache_ttl_hours: 6,
-  refresh_interval_hours: 6,
+  refresh_interval_minutes: 15,
   metadata_ttl_days: 7,
   default_exchange: 'XETR',
   strict_exchange: false,
@@ -46,6 +46,13 @@ describe('EnvironmentPanel', () => {
 
     expect(hint.exists()).toBe(true)
     expect(hint.attributes('aria-label')).toContain('404')
+  })
+
+  it('nennt das wirksame Refresh-Intervall in Minuten', () => {
+    // Seit T-136 auch kürzer als eine Stunde; die API liefert das wirksame Intervall.
+    const wrapper = mount(EnvironmentPanel, { props: { env }, global: { plugins: [i18n] } })
+
+    expect(wrapper.find('.hint').text()).toContain('alle 15 Minuten')
   })
 
   it('führt vom Begriff auf die Börsentabelle', () => {

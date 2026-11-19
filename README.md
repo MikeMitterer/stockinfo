@@ -183,7 +183,7 @@ For Unraid, see the [Unraid guide](unraid/README.md).
 | Port `8000/tcp` | `8000` | Dashboard and REST API; map it to any host port |
 | `/data` volume | – | Database, source configuration and backups; keep it when updating |
 | `DEFAULT_EXCHANGE` | `XETR` | Preferred exchange for ISIN queries (MIC code) |
-| `REFRESH_INTERVAL_HOURS` | `6` | Interval of the background refresh |
+| `REFRESH_INTERVAL_HOURS` | `6` | Interval of the background refresh, which also runs at startup; `REFRESH_INTERVAL_MINUTES` takes precedence |
 | `OPENFIGI_API_KEY` | empty | Optional key for a higher OpenFIGI rate limit |
 
 All settings are described in the [Docker guide](docker/README.md#configuration).
