@@ -457,9 +457,10 @@ app/                    # FastAPI backend
   resolver.py           #   ISIN → symbol/exchange (OpenFIGI + Yahoo)
   providers/            #   data sources: yfinance, justETF, OpenFIGI
   plugins/              #   bundled sources implementing the plugin API
-  services/             #   quote fetching + cache/TTL logic
+  services/             #   business logic: quotes + cache/TTL, diagnostics, migration, backups
+  migration_guard.py    #   migration lock and the state behind /ready and /operational
   scheduler.py          #   periodic background refresh
-  routers/              #   HTTP endpoints (quotes, instruments, fx, backups, …)
+  routers/              #   HTTP endpoints only (quotes, instruments, fx, backups, …)
   docs.py               #   dark-themed Swagger UI (/docs)
 dashboard/              # Vue dashboard (standalone app)
 plugin_api/             # independent plugin contract, examples and role tests

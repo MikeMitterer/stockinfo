@@ -114,6 +114,6 @@ def test_ohne_vertragsartefakt_antworten_beide_wege_mit_503(
     def unreadable() -> dict:
         raise ContractUnavailableError("Artefakt fehlt")
 
-    monkeypatch.setattr("app.routers.fields.core_contract", unreadable)
+    monkeypatch.setattr("app.services.field_catalog.core_contract", unreadable)
 
     assert client.get(path).status_code == 503

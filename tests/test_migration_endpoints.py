@@ -25,8 +25,14 @@ from fastapi.testclient import TestClient
 from app.config import get_settings
 from app.container import get_cached_quote_service
 from app.main import app, mount_dashboard
-from app.migration_guard import ALLOWED_ROUTES, HEALTHCHECK_PATH
-from app.routers.migration import get_gate
+from app import main as main_module, migration_guard
+from app.migration_guard import (
+    ALLOWED_ROUTES,
+    HEALTHCHECK_PATH,
+    GateState,
+    MigrationGate,
+    get_gate,
+)
 from app.scheduler import RefreshScheduler
 from tests.legacy_schema import create_legacy_tables
 
@@ -331,6 +337,67 @@ def test_im_normalbetrieb_sagen_beide_ja(serving: TestClient) -> None:
     assert serving.get("/ready").json()["status"] == "ok"
     assert serving.get(HEALTHCHECK_PATH).json()["mode"] == "serving"
     assert serving.get("/exchanges").status_code == 200
+
+
+# Was jede Lage des Riegels auf beiden Wegen und im Guard sagt (T-142).
+#
+# Ausgeschrieben, nicht aus `CONDITIONS` abgeleitet: Die Tabelle dort ist die
+# Abbildung, diese hier die Zusage, gegen die sie geprüft wird.
+# (`/ready`-Code, `status`, `/operational`-Code, `mode`, Guard-Kennung)
+EXPECTED_CONDITIONS = {
+    GateState.SERVING: (200, "ok", 200, "serving", None),
+    GateState.PENDING: (503, "migration_pending", 200, "migration_pending", "migration_pending"),
+    GateState.MIGRATING: (503, "migration_pending", 200, "migration_pending", "migration_pending"),
+    GateState.STARTING: (503, "starting", 200, "starting", "startup_running"),
+    GateState.STARTUP_FAILED: (503, "degraded", 503, "degraded", "startup_failed"),
+}
+
+
+def test_die_erwartung_nennt_jede_lage_des_riegels() -> None:
+    """Eine neue Lage ohne Zusage fiele sonst erst im Betrieb auf."""
+    assert set(EXPECTED_CONDITIONS) == set(GateState)
+
+
+@pytest.mark.parametrize("state", list(EXPECTED_CONDITIONS), ids=lambda state: state.value)
+def test_jede_lage_erscheint_auf_ready_operational_und_im_guard_wie_zugesagt(
+    serving: TestClient, monkeypatch, state: GateState
+) -> None:
+    gate = MigrationGate()
+    gate._state = state
+    monkeypatch.setattr(migration_guard, "_gate", gate)
+    ready_code, ready_status, operational_code, operational_mode, reason = (
+        EXPECTED_CONDITIONS[state]
+    )
+
+    ready = serving.get("/ready")
+    operational = serving.get(HEALTHCHECK_PATH)
+
+    assert (ready.status_code, ready.json()["status"]) == (ready_code, ready_status)
+    assert ready.json()["database"] == "ok"
+    assert (operational.status_code, operational.json()["mode"]) == (
+        operational_code,
+        operational_mode,
+    )
+    assert gate.blocking_reason == reason
+
+
+def test_eine_unerreichbare_datenbank_ist_auf_beiden_wegen_degraded(
+    serving: TestClient, monkeypatch
+) -> None:
+    class BrokenService:
+        def count_instruments(self) -> int:
+            raise sqlite3.OperationalError("unable to open database file")
+
+    monkeypatch.setattr(main_module, "get_cached_quote_service", BrokenService)
+
+    ready = serving.get("/ready")
+    operational = serving.get(HEALTHCHECK_PATH)
+
+    assert (ready.status_code, ready.json()) == (
+        503,
+        {"status": "degraded", "version": ready.json()["version"], "database": "error"},
+    )
+    assert (operational.status_code, operational.json()["mode"]) == (503, "degraded")
 
 
 def test_die_bestaetigung_fuehrt_aus_und_gibt_frei(pending: TestClient) -> None:
