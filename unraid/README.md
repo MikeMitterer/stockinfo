@@ -90,6 +90,7 @@ Remove the test container and test template when finished.
 | WebUI Port | `8000` | Host port; the container port remains `8000` |
 | Data (Cache DB) | `/mnt/user/appdata/stockinfo` | Persistent host directory, mounted at `/data` |
 | Refresh interval (hours) | `6` | Background refresh interval |
+| Refresh interval (minutes) | Empty | Optional interval in minutes; takes precedence over the hours field |
 | Cache TTL (hours) | `6` | Quote age that triggers a refresh on request |
 | Metadata TTL (days) | `7` | ETF metadata refresh interval |
 | Default exchange (MIC) | `XETR` | Preferred exchange for ISIN queries |
@@ -102,10 +103,9 @@ Some optional fields appear in Unraid's advanced view. The template uses
 bridge networking. Dashboard and API share the same port.
 
 The background refresh also runs once right after the container starts. For
-an interval shorter than one hour, add the container variable
-`REFRESH_INTERVAL_MINUTES` (**Add another Path, Port, Variable, Label or
-Device**); it takes precedence over the hours field. All variables are listed
-in the [Docker guide](../docker/README.md#configuration).
+an interval shorter than one hour, set **Refresh interval (minutes)** in the
+advanced view; it takes precedence over the hours field. All variables are
+listed in the [Docker guide](../docker/README.md#configuration).
 
 [↑ Contents](#contents)
 
