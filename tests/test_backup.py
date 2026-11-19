@@ -723,6 +723,8 @@ def test_ein_profilwechsel_bleibt_kompatibel_und_herkunft_sichtbar(
 
     assert backups["pending_restore"] is None, "die Absicht blieb liegen"
     assert backups["restore_error"] == "", backups["restore_error"]
+    # Die Zahl, die das Dashboard nennt, kommt von hier (T-141).
+    assert backups["keep"] == KEEP_BACKUPS
     assert provenance in sources["provenance_warning"], sources["provenance_warning"]
     assert backups["fingerprint"] in sources["provenance_warning"]
     assert backups["fingerprint"] != provenance

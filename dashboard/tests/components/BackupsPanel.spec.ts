@@ -43,6 +43,8 @@ function listing(extra: Partial<BackupList> = {}): BackupList {
     fingerprint: 'abcdef123456',
     pending_restore: null,
     restore_error: '',
+    // Absichtlich nicht 10: Die Zahl soll aus der Antwort kommen.
+    keep: 7,
     backups: [FITTING, FOREIGN],
     ...extra,
   }
@@ -77,6 +79,15 @@ beforeEach(() => {
 })
 
 describe('BackupsPanel', () => {
+  it('nennt die Zahl der aufbewahrten Sicherungen aus der Antwort des Backends', async () => {
+    // Vor T-141 stand hier fest 10, parallel zu KEEP_BACKUPS im Backend.
+    vi.spyOn(apiClient, 'get').mockResolvedValue(listing())
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Es bleiben 7 Backups liegen')
+  })
+
   it('zeigt auch die unpassende Sicherung — mit ihrem Grund', async () => {
     // **`#11`.** Eine auszublenden hieße, jemanden nach einer Datei suchen zu
     // lassen, die er im Verzeichnis liegen sieht.

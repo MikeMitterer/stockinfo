@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Query, status
 
 from app.container import get_backup_service
 from app.models import BackupEntry, BackupErrorDetail, BackupList, RestoreAccepted
-from app.services.backup import BackupInfo, BackupService, restore_state
+from app.services.backup import KEEP_BACKUPS, BackupInfo, BackupService, restore_state
 
 router = APIRouter(tags=["backups"])
 
@@ -65,6 +65,7 @@ def list_backups(service: BackupService = Depends(get_backup_service)) -> Backup
         fingerprint=service.fingerprint,
         pending_restore=pending,
         restore_error=error,
+        keep=KEEP_BACKUPS,
         backups=[_entry(info) for info in service.list()],
     )
 

@@ -427,6 +427,8 @@ export interface BackupList {
   pending_restore: string | null
   /** Warum der letzte Tausch scheiterte; dann steht kein Neustart mehr aus. */
   restore_error: string
+  /** Wie viele Sicherungen bleiben (`KEEP_BACKUPS` im Backend). */
+  keep: number
   backups: BackupEntry[]
 }
 
