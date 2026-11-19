@@ -30,13 +30,11 @@ const FOREIGN: BackupEntry = {
   size: 81920,
   fingerprint: '999999999999',
   compatible: false,
+  // Unterschiede liefert das Backend nur zu diesem Code (`app/services/backup.py`).
   reason: {
-    code: 'backup_sources_differ',
+    code: 'backup_data_version_differ',
     params: {},
-    differences: [
-      { field: 'quotes', theirs: ['yaml-file'], ours: ['yfinance'] },
-      { field: 'packages', theirs: [], ours: ['stockinfo-source-x==0.1.0'] },
-    ],
+    differences: [{ field: 'example-source', theirs: ['1'], ours: ['2'] }],
   },
 }
 
@@ -89,9 +87,8 @@ describe('BackupsPanel', () => {
 
     // **Der Satz entsteht hier**, aus Kennung und Feldern — nicht im Server.
     const text = wrapper.text()
-    expect(text).toContain('Andere Quellenlage')
-    expect(text).toContain('Kurs: dort yaml-file, hier yfinance')
-    expect(text).toContain('Pakete: dort —, hier stockinfo-source-x==0.1.0')
+    expect(text).toContain('Inkompatible Plugin-Datenversion')
+    expect(text).toContain('example-source: dort 1, hier 2')
     expect(text).toContain('passt zur laufenden Quellenlage')
     expect(wrapper.findAll('tbody tr')).toHaveLength(2)
     // **Die Zeitspalte muss etwas enthalten** — eine leere Zelle fällt nur
@@ -263,18 +260,19 @@ describe('BackupsPanel', () => {
     // Satz, läse die englische Oberfläche ihn deutsch.
     vi.spyOn(apiClient, 'get').mockResolvedValue(listing())
 
-    for (const [locale, expected] of [
-      ['de', 'Kurs: dort yaml-file, hier yfinance'],
-      ['en', 'Quote: there yaml-file, here yfinance'],
+    for (const [locale, head, line] of [
+      ['de', 'Inkompatible Plugin-Datenversion', 'example-source: dort 1, hier 2'],
+      ['en', 'Incompatible plugin data version', 'example-source: there 1, here 2'],
     ] as const) {
       i18n.global.locale.value = locale
       const wrapper = mountPanel()
       await flushPromises()
 
-      expect(wrapper.text()).toContain(expected)
+      expect(wrapper.text()).toContain(head)
+      expect(wrapper.text()).toContain(line)
       expect(wrapper.text()).not.toContain('backups.reason.')
-      expect(wrapper.text()).not.toContain('roles.')
       if (locale === 'en') expect(wrapper.text()).not.toContain('dort')
+      wrapper.unmount()
     }
   })
 
@@ -294,20 +292,4 @@ describe('BackupsPanel', () => {
       expect(wrapper.text()).not.toContain('backups.')
     }
   })
-})
-
-it.each(['de', 'en'] as const)('zeigt Datenversion und Plugin-Namen in %s', async (locale) => {
-  i18n.global.locale.value = locale
-  vi.spyOn(apiClient, 'get').mockResolvedValue(listing({ backups: [{
-    ...FOREIGN,
-    reason: { code: 'backup_data_version_differ', params: {}, differences: [
-      { field: 'example-source', theirs: ['1'], ours: ['2'] },
-    ] },
-  }] }))
-  const wrapper = mountPanel()
-  await flushPromises()
-  expect(wrapper.text()).toContain(locale === 'de' ? 'Inkompatible Plugin-Datenversion' : 'Incompatible plugin data version')
-  expect(wrapper.text()).toContain(locale === 'de' ? 'example-source: dort 1, hier 2' : 'example-source: there 1, here 2')
-  expect(wrapper.text()).not.toContain('roles.example-source')
-  wrapper.unmount()
 })

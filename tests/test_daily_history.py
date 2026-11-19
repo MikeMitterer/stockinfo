@@ -102,8 +102,8 @@ def test_daily_repository_roundtrip(repo: QuoteRepository) -> None:
             {"date": "2026-07-11", "close": 161.0, "currency": "EUR"},
         ],
     )
-    assert repo.daily_closes_range(instrument["id"]) == ("2026-07-10", "2026-07-11")
-    assert len(repo.get_daily_closes(instrument["id"])) == 2
+    closes = repo.get_daily_closes(instrument["id"])
+    assert [close["date"] for close in closes] == ["2026-07-10", "2026-07-11"]
 
     # gleiches Datum → Update (Schlusskurs firmt sich)
     repo.upsert_daily_closes(

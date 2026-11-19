@@ -5,6 +5,7 @@ import { NButton, NInputNumber, NSelect } from 'naive-ui'
 
 import { useFx } from '../composables/useFx'
 import { formatDateTime } from '../utils/datetime'
+import { formatTwoDecimals } from '../utils/numberFormat'
 
 const props = defineProps<{ currencies: string[] }>()
 
@@ -28,7 +29,7 @@ const amountNum = computed<number>(() => {
 
 /** Geldbetrag lokalisiert mit 2 Nachkommastellen. */
 function formatMoney(value: number): string {
-  return value.toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return formatTwoDecimals(value, locale.value)
 }
 
 const amountText = computed(() =>

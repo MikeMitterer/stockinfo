@@ -49,19 +49,23 @@ class SavedQuote:
 # darüber, was in der Antwort aus dem gespeicherten Stand **stehen bleibt**.
 # Zwei Listen liefen auseinander, und die Antwort widerspräche der Zeile
 # daneben.
-PROTECTED_META_FIELDS = frozenset(
-    {
-        "provider",
-        "ter",
-        "replication",
-        "fund_size",
-        "fund_domicile",
-        "fund_currency",
-        "volatility",
-        "accumulating",
-        "source",
-    }
+#
+# Als Tupel, weil das Repository dieselben Felder in fester Reihenfolge an
+# seine Metadatenspalten hängt; die Menge darunter ist dieselbe Liste.
+PROTECTED_META_FIELD_ORDER = (
+    "provider",
+    "ter",
+    "replication",
+    "fund_size",
+    "fund_domicile",
+    "fund_currency",
+    "volatility",
+    "accumulating",
+    # Wandert mit den Metadaten mit, nicht mit dem Kurspunkt: Er sagt, woher
+    # der jüngste Metadaten-Stand kommt.
+    "source",
 )
+PROTECTED_META_FIELDS = frozenset(PROTECTED_META_FIELD_ORDER)
 
 
 class QuoteStore(Protocol):

@@ -64,9 +64,8 @@ function describeReason(reason: BackupReason): string {
   if (reason.differences.length === 0) return head
   const lines = reason.differences.map((item) =>
     t('backups.reason.line', {
-      field: reason.code === 'backup_data_version_differ'
-        ? item.field
-        : item.field === 'packages' ? t('backups.reason.packages') : t(`roles.${item.field}`),
+      // Unterschiede liefert nur `backup_data_version_differ`; `field` ist dort der Plugin-Name.
+      field: item.field,
       theirs: item.theirs.join(', ') || t('backups.reason.none'),
       ours: item.ours.join(', ') || t('backups.reason.none'),
     }),

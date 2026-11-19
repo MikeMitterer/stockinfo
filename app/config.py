@@ -5,6 +5,8 @@ from functools import lru_cache
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.exchanges import DEFAULT_EXCHANGE
+
 
 class Settings(BaseSettings):
     """Zentrale Einstellungen der StockInfo-App.
@@ -22,7 +24,6 @@ class Settings(BaseSettings):
     # GET /env. Lokal ist 127.0.0.1 die Vorgabe, das Image setzt HOST=0.0.0.0.
     host: str = "127.0.0.1"
     port: int = 8000
-    log_level: str = "info"
 
     # Cache / Refresh
     database_path: str = "data/stockinfo.db"
@@ -37,7 +38,7 @@ class Settings(BaseSettings):
     fx_ttl_hours: int = 1  # maximales Alter eines Devisenkurses, bevor neu geholt wird
 
     # ISIN-Auflösung
-    default_exchange: str = "XETR"  # bevorzugte Börse für ISIN-Abfragen (MIC)
+    default_exchange: str = DEFAULT_EXCHANGE  # bevorzugte Börse für ISIN-Abfragen (MIC)
     strict_exchange: bool = False  # True = nur Default-Börse, sonst 404 (kein Fallback)
     openfigi_api_key: str = ""  # optional — höheres Rate-Limit bei OpenFIGI
 

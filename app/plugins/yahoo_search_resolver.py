@@ -101,7 +101,7 @@ class YahooSearchResolverPlugin(Resolver):
         return YFinanceResolver(request.preferred_mic or self._default_exchange)
 
     def handles(self, request: ResolveRequest) -> bool:
-        """Diese Quelle braucht eine ISIN — mehr nicht.
+        """Diese Quelle braucht eine ISIN oder ein Symbol — mehr nicht.
 
         Sie ist der **Fallback** hinter OpenFIGI und hält sich deshalb nicht
         selbst für unzuständig. Die Kaskade fragt sie ohnehin erst, wenn die

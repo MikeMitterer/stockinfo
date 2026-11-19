@@ -244,7 +244,7 @@ def identity_form(columns: object) -> str | None:
         Form vollständig belegt ist. ``None`` heißt „noch keine Identität" und
         ist etwas anderes als eine erfundene.
     """
-    read = _reader(columns)
+    read = field_reader(columns)
     kind = read("kind") or "listed"
 
     if kind == "pair":
@@ -256,12 +256,12 @@ def identity_form(columns: object) -> str | None:
     return None
 
 
-def _reader(columns: object):
+def field_reader(columns: object):
     """Ein einheitlicher Feldzugriff für Mapping, `sqlite3.Row` und Objekt.
 
     Die drei Verwender reichen dasselbe in drei Verpackungen herein. Die
     Unterscheidung hier zu treffen ist billiger, als sie an jeder
-    Aufrufstelle zu wiederholen.
+    Aufrufstelle zu wiederholen; REST-Modell und Core-Typ nutzen sie mit.
     """
     if hasattr(columns, "get"):
         return columns.get

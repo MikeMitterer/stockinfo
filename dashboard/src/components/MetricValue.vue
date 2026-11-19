@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 
 import { manualValue, overrideState, sourceProvides } from '../composables/useOverrides'
 import { fundSizeCurrency, fundSizeText, type FundSizeValue } from '../utils/fundSize'
+import { TWO_DECIMALS } from '../utils/numberFormat'
 import type { InstrumentSummary, OverrideField } from '../types'
 
 /**
@@ -52,22 +53,18 @@ const isPercentField = computed(() => props.field === 'ter' || props.field === '
  */
 const fromSource = computed(() => applicable.value && sourceProvides(props.item, props.field))
 
-/*
- * Immer zwei Nachkommastellen, und über `n()` statt `toFixed`.
- *
- * Zwei Gründe: Die Spalte trägt `tabular-nums` und richtet sich nur aus, wenn
- * jede Zahl gleich viele Stellen hat. Und `toFixed` schreibt einen Punkt, auch
- * wenn die Oberfläche deutsch ist — vorher stand dort „25.80 %" neben
- * deutschen Beschriftungen.
- */
-const twoDecimals = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-
 /**
  * Formatiert eine Zahl passend zum Feld: Prozent bei ter/volatility,
  * Millionen mit Währung bei fund_size.
+ *
+ * Immer zwei Nachkommastellen, und über `n()` statt `toFixed`. Zwei Gründe:
+ * Die Spalte trägt `tabular-nums` und richtet sich nur aus, wenn jede Zahl
+ * gleich viele Stellen hat. Und `toFixed` schreibt einen Punkt, auch wenn die
+ * Oberfläche deutsch ist — vorher stand dort „25.80 %" neben deutschen
+ * Beschriftungen.
  */
 function formatNumber(raw: number, which: FundSizeValue): string {
-  const formatted = n(raw, twoDecimals)
+  const formatted = n(raw, TWO_DECIMALS)
   if (props.field === 'fund_size') return fundSizeText(t, formatted, fundSizeCurrency(props.item, which))
   return isPercentField.value ? `${formatted} %` : formatted
 }

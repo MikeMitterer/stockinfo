@@ -23,9 +23,19 @@ StoreDep = Annotated[QuoteStore, Depends(get_quote_store)]
 
 @router.get("/instrument-types", response_model=InstrumentTypesResponse)
 def instrument_types(response: Response, store: StoreDep) -> InstrumentTypesResponse:
-    """Liefert den aktuellen Typkatalog der konfigurierten Plugin-Rollen."""
+    """Liefert den aktuellen Typkatalog der konfigurierten Plugin-Rollen.
+
+    Raises:
+        HTTPException: 503, wenn das Vertragsartefakt fehlt, wie bei `/fields`.
+    """
+    try:
+        contract = core_contract()
+    except ContractUnavailableError as exc:
+        raise HTTPException(
+            status_code=503, detail="Vertragsartefakt nicht lesbar"
+        ) from exc
     response.headers["Cache-Control"] = "no-store"
-    response.headers[core_contract()["generation"]["header"]] = store.detail_generation()
+    response.headers[contract["generation"]["header"]] = store.detail_generation()
     return instrument_type_catalog(get_sources_config())
 
 

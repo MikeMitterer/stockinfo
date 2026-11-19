@@ -293,17 +293,9 @@ def identity_from_columns(row: object) -> IdentityOut | None:
     """
     # Lokal, weil `app.exchanges` seinerseits nichts aus den Modellen braucht
     # und ein Modulimport in beide Richtungen den Kreis schlösse.
-    from app.exchanges import identity_form
+    from app.exchanges import field_reader, identity_form
 
-    read = (
-        row.get
-        if hasattr(row, "get")
-        else (
-            (lambda key: row[key])
-            if hasattr(row, "keys")
-            else (lambda key: getattr(row, key, None))
-        )
-    )
+    read = field_reader(row)
     form = identity_form(row)
     if form == "pair":
         return PairIdentityOut(base=read("base"), quote_currency=read("quote_currency"))

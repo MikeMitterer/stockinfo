@@ -55,7 +55,7 @@ describe('ExchangesPanel', () => {
     ])
     expect(cells[3]!.text()).toBe('regional')
     expect(wrapper.text()).not.toContain('archive')
-    expect(wrapper.text()).not.toContain(i18n.global.t('roles.daily'))
+    expect(wrapper.text()).not.toContain(i18n.global.t('analysis.role.daily'))
     expect(wrapper.find('.n-data-table-tbody tr').classes()).not.toContain('exchanges__uncovered')
     expect(wrapper.findAll('.n-data-table-tbody tr')[1]!.classes()).toContain('exchanges__uncovered')
     const nasdaq = wrapper.findAll('.n-data-table-tbody tr')[1]!.findAll('td')
@@ -113,7 +113,7 @@ it.each(['de', 'en'] as const)('trennt Online und reines Dateiprofil in %s', asy
       { source: 'online', role: 'quotes', scope: 'market', usable: true },
     ] }] } })
   expect(wrapper.find('.exchanges__venues').text()).toContain(`${i18n.global.t('exchanges.yamlFile')} · online`)
-  expect(wrapper.find('.exchanges__venues').text()).not.toContain(i18n.global.t('roles.daily'))
+  expect(wrapper.find('.exchanges__venues').text()).not.toContain(i18n.global.t('analysis.role.daily'))
   await wrapper.setProps({ data: { ...wrapper.props('data')!, catalog: [{ ...row, support: [
     { source: 'yaml-file', role: 'quotes', scope: 'inventory', usable: true },
   ] }] } })
