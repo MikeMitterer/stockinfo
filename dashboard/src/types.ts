@@ -137,7 +137,8 @@ export function refOf(instrument: { identity: Identity; symbol: string }): Instr
 
 export interface InstrumentSummary {
   listing_id: string
-  details?: Record<string, DetailValue>
+  /** Immer gesetzt, notfalls leer (`InstrumentSummary.details` im Backend). */
+  details: Record<string, DetailValue>
   identity: Identity
   symbol: string
   exchange: string | null

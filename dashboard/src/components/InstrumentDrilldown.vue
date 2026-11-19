@@ -3,42 +3,30 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import InfoHint from './InfoHint.vue'
-import MetricEditor from './MetricEditor.vue'
 import OpenDetails from './OpenDetails.vue'
-import { sourceProvides } from '../composables/useOverrides'
-import { OVERRIDE_FIELDS, isinOf } from '../types'
-import type { OverridePatch, InstrumentSummary, OverrideField } from '../types'
+import type { OverridePatch, InstrumentSummary } from '../types'
 import { formatDateTime } from '../utils/datetime'
-import { FIELD_LABEL_KEY } from '../utils/fieldLabels'
 
 /**
- * Die aufklappbare Zeile (Task 8) — Pflege aller acht ETF-Kennzahlen an einer
- * Stelle, egal ob aus der Tabelle oder der Kartenliste geöffnet.
+ * Die aufklappbare Zeile (Task 8) — Pflege der Kennzahlen an einer Stelle,
+ * egal ob aus der Tabelle oder der Kartenliste geöffnet.
  *
- * Die acht Felder stehen oben, mehrspaltig auf breitem Schirm; die Herkunft
- * (Zeitpunkt der letzten Metadaten-Abfrage, Erklärung) folgt darunter als
- * schmale Fußzeile, durch eine feine Linie abgesetzt (Nacharbeit Sichtprüfung,
- * Befund 3 — vorher zweispaltig, mit einer rechten Spalte, die meist fast leer
- * blieb).
+ * Die Felder kommen aus `details` und dem Feldkatalog (`OpenDetails`). Bis
+ * T-141 gab es daneben einen zweiten, älteren Weg über `MetricEditor` für ein
+ * Backend ohne `details`; Dashboard und Backend kommen im selben Image, und das
+ * Backend schickt `details` immer (Entscheidung q-9).
  *
- * Die allgemeine Erklärung — woher die Daten kommen, dass sich nur ergänzen
- * lässt, was die Quelle nicht liefert — bleibt immer erreichbar, steht aber
- * nicht mehr dauerhaft im Text: Sie beantwortet eine Frage, die man einmal hat
- * und danach nicht mehr, und nahm als Dauertext mehr Raum ein als die
- * Kennzahlen darüber. Sie sitzt im Fragezeichen hinter dem Zeitstempel.
- *
- * Die Sonderfälle dagegen **stehen** da, denn sie sind keine Erklärung, sondern
- * ein Befund über genau dieses Papier — sie kommen dazu, wenn sie zutreffen.
+ * Die Herkunft (Quelle, Zeitpunkt, Erklärung) folgt darunter als schmale
+ * Fußzeile, durch eine feine Linie abgesetzt. Die allgemeine Erklärung — woher
+ * die Daten kommen, dass sich nur ergänzen lässt, was die Quelle nicht liefert
+ * — sitzt im Hinweis hinter dem Zeitstempel statt als Dauertext.
  */
 const props = defineProps<{
   item: InstrumentSummary
   /** Solange gespeichert wird, nichts anfassen. */
   busy?: boolean
-  /**
-   * Vorschläge je Textfeld — einmal weiter oben (in `AppDashboard.vue`)
-   * gebildet, hier nur an den passenden `MetricEditor` gereicht.
-   */
-  fieldOptions?: Partial<Record<OverrideField, string[]>>
+  /** Vorschläge je Textfeld — einmal weiter oben (in `AppDashboard.vue`) gebildet. */
+  fieldOptions?: Partial<Record<string, string[]>>
 }>()
 
 const emit = defineEmits<{
@@ -47,56 +35,15 @@ const emit = defineEmits<{
 
 const { t, locale } = useI18n()
 
-/** Vorschläge des jeweiligen Felds — `undefined` für die vier Nicht-Textfelder. */
-function optionsFor(field: OverrideField): string[] | undefined {
-  return props.fieldOptions?.[field]
-}
-
 function onCommit(patch: OverridePatch): void {
   emit('commit', patch)
 }
-
-/**
- * Hat die Quelle für irgendeines der acht Felder etwas beigesteuert?
- *
- * Geprüft wird der **Quellenwert**, nicht der wirksame: Ein von Hand
- * eingetragener Wert (`overrideState === 'manual'`) füllt eine Lücke, die die
- * Quelle gelassen hat — er zählt hier nicht als ihr Beitrag.
- */
-const sourceEmpty = computed(() => OVERRIDE_FIELDS.every((field) => !sourceProvides(props.item, field)))
-
-/**
- * Warum die Kennzahlen-Quelle nichts beigesteuert hat — drei sich gegenseitig
- * ausschließende Gründe.
- *
- * Die Reihenfolge ist **kein** Stilmittel: Sie spiegelt die Prüfung des
- * Backends (`app/services/quote_service.py`, `if instrument_type == "etf":`
- * und die ISIN daneben). Vertauscht man sie, behauptet die Erklärung einen
- * Grund, der nicht der tatsächliche ist — eine Aktie bekäme „hat nichts
- * geliefert", obwohl nie gefragt wurde.
- *
- * **Es waren vier Gründe, bis T-37.** Der vierte prüfte über `isEuropeanIsin`,
- * ob die ISIN in justETFs Abdeckung liegt — die Zuständigkeitsregel eines
- * *Plugins*, hier im Frontend nachgebaut. Im CSV-Profil ist sie schlicht
- * falsch: `metadata-file` kennt keine solche Grenze und **hätte** geantwortet.
- *
- * Der Fall ist deshalb mit „hat nichts geliefert" verschmolzen. Ob eine Quelle
- * gar nicht gefragt wurde oder gefragt wurde und nichts hatte, weiß allein das
- * Backend — es ruft `is_responsible()`. Bis diese Auskunft im Vertrag steht
- * (Fähigkeitsdeklaration, T-31/T-38), sagt die Oberfläche das, was in beiden
- * Fällen stimmt, statt den wahrscheinlicheren Grund zu raten.
- */
-const skipReason = computed<'notEtf' | 'noIsin' | 'nothing' | null>(() => {
-  if (props.item.type !== 'etf') return 'notEtf'
-  if (!isinOf(props.item.identity)) return 'noIsin'
-  return sourceEmpty.value ? 'nothing' : null
-})
 
 /** StockInfos eigene Berechnung (`app/calculated_metrics.py`), kein Plugin aus `sources.yaml`. */
 const calculatedSource = 'calculated'
 
 /** Die sichtbaren Quellenwerte, aus denen die Fußzeile Herkunft und Stand bildet. */
-const providerValues = computed(() => Object.values(props.item.details ?? {})
+const providerValues = computed(() => Object.values(props.item.details)
   .filter((value) => value.origin === 'provider' && value.source))
 
 /**
@@ -114,40 +61,14 @@ const fetchedAt = computed(() => {
 })
 
 /** Die Fußzeile fasst die Herkunft der sichtbaren Quellenwerte zusammen. */
-const detailSources = computed(() => props.item.details === undefined
-  ? props.item.source
-  : [...new Set(providerValues.value.map((value) => value.source === calculatedSource
-    ? t('drilldown.sourceCalculated')
-    : value.source))].sort().join(' + '))
+const detailSources = computed(() => [...new Set(providerValues.value.map((value) =>
+  value.source === calculatedSource ? t('drilldown.sourceCalculated') : value.source,
+))].sort().join(' + '))
 </script>
 
 <template>
   <div class="drilldown">
-    <OpenDetails v-if="item.details !== undefined" :item="item" :busy="busy" :field-options="fieldOptions" @commit="onCommit" />
-    <dl v-else class="drilldown__fields">
-      <!--
-        Die Fläche markiert, wo etwas zu tun ist — nicht jedes Feld. Wo die
-        Quelle liefert, ist das Feld gesperrt (Vorrang-Regel), und eine
-        Hervorhebung behauptete dort eine Möglichkeit, die es nicht gibt.
-      -->
-      <div
-        v-for="field in OVERRIDE_FIELDS"
-        :key="field"
-        class="drilldown__field"
-        :class="{ 'drilldown__field--editable': !sourceProvides(item, field) }"
-      >
-        <dt class="drilldown__label">{{ t(FIELD_LABEL_KEY[field]) }}</dt>
-        <dd class="drilldown__value">
-          <MetricEditor
-            :item="item"
-            :field="field"
-            :busy="busy"
-            :options="optionsFor(field)"
-            @commit="onCommit"
-          />
-        </dd>
-      </div>
-    </dl>
+    <OpenDetails :item="item" :busy="busy" :field-options="fieldOptions" @commit="onCommit" />
 
     <div class="drilldown__source">
       <!--
@@ -174,9 +95,6 @@ const detailSources = computed(() => props.item.details === undefined
         </template>
         <InfoHint :text="t('drilldown.explain')" icon="info" />
       </p>
-      <p v-if="item.details === undefined && skipReason === 'notEtf'" class="drilldown__explain">{{ t('drilldown.notEtf') }}</p>
-      <p v-else-if="item.details === undefined && skipReason === 'noIsin'" class="drilldown__explain">{{ t('drilldown.noIsin') }}</p>
-      <p v-else-if="item.details === undefined && skipReason === 'nothing'" class="drilldown__explain">{{ t('drilldown.nothingProvided') }}</p>
     </div>
   </div>
 </template>
@@ -185,15 +103,10 @@ const detailSources = computed(() => props.item.details === undefined
 @use '../styles/variables' as *;
 
 /*
- * Nacharbeit Sichtprüfung, Befund 3: vorher zweispaltig — links bearbeiten,
- * rechts nachlesen. Bei acht Feldern links und kaum mehr als einem Zeitstempel
- * rechts blieb die rechte Spalte fast leer, der Schnitt wirkte kaputt.
- *
- * Jetzt einspaltig gestapelt: Die acht Felder oben bekommen die ganze Breite
- * (mehrspaltig ab `md`, siehe `.drilldown__fields`), die Herkunft folgt darunter
- * als schmale Fußzeile, durch `.drilldown__source` von den Feldern abgesetzt.
- * Unter `md` ist das ohnehin die einzig sinnvolle Aufteilung — dort ist die
- * Detailbereich der aufgeklappte Teil einer Karte, mit entsprechend wenig Breite.
+ * Einspaltig gestapelt: Die Felder oben bekommen die ganze Breite, die
+ * Herkunft folgt darunter als schmale Fußzeile, durch `.drilldown__source`
+ * abgesetzt (Nacharbeit Sichtprüfung, Befund 3 — vorher zweispaltig, mit einer
+ * fast leeren rechten Spalte).
  */
 .drilldown {
   display: flex;
@@ -201,51 +114,6 @@ const detailSources = computed(() => props.item.details === undefined
   gap: var(--space-4);
   padding: var(--space-3) var(--space-1);
 }
-
-// Einspaltig unter `md` — mehrspaltig erst, wo tatsächlich Breite dafür da
-// ist. Zwei Spalten ab `md`, drei ab `lg`: Die Breite gehört dem, wovon es
-// viel gibt (acht Felder), nicht einer fast leeren zweiten Spalte.
-.drilldown__fields {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-2) var(--space-6);
-  margin: 0;
-
-  @include up(md) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  @include up(lg) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-.drilldown__field {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2);
-  border-radius: var(--radius-sm);
-}
-
-/*
- * Nur die pflegbaren Felder bekommen eine Fläche — sie sagt „hier lässt sich
- * etwas eintragen". Läge sie unter jedem Feld, sagte sie nichts: Wo die Quelle
- * liefert, hat sie Vorrang und das Feld ist gesperrt.
- *
- * Bewusst schwach: eine getönte Fläche ohne Rand und ohne abgesetzten Schatten.
- * Ein Kasten mit Kante zog die Aufmerksamkeit auf den Rahmen statt auf den
- * Inhalt. Der Ton kommt vom Akzent und nicht aus Grau — auf den dunklen Themes
- * verschwindet eine graue Aufhellung, eine getönte trägt in beide Richtungen.
- * Deckkraft über `token()`, weil die Farben im Fundament als RGB-Tripel liegen;
- * mit Hex-Werten bliebe die Fläche unsichtbar.
- */
-.drilldown__field--editable {
-  background: token(--accent, 0.06);
-}
-
-.drilldown__label { color: $color-muted; font-size: var(--font-sm); }
-.drilldown__value { display: flex; justify-content: flex-start; }
 
 // Schmale Fußzeile, per feiner Linie von den Feldern abgesetzt.
 .drilldown__source {
@@ -304,6 +172,4 @@ const detailSources = computed(() => props.item.details === undefined
   position: relative;
   top: -2px;
 }
-
-.drilldown__explain { margin: 0; }
 </style>

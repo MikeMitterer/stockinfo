@@ -9,11 +9,9 @@ import { makeInstrument } from '../fixtures/instrument'
 afterEach(() => vi.unstubAllGlobals())
 
 /*
- * Nacharbeit Sichtprüfung, I4: Die Vorrang-Regel stand bislang dreimal im
- * Frontend — je einmal anders formuliert in `MetricValue.vue`,
- * `MetricEditor.vue` und `InstrumentDrilldown.vue`. `sourceProvides()` ist die
- * eine Stelle, die alle drei jetzt verwenden; dieser Test deckt die Regel
- * selbst ab, unabhängig von den Komponenten, die sie aufrufen.
+ * Nacharbeit Sichtprüfung, I4: Die Vorrang-Regel steht an einer Stelle,
+ * `sourceProvides()`; dieser Test deckt die Regel selbst ab, unabhängig von
+ * den Komponenten, die sie aufrufen.
  */
 describe('sourceProvides', () => {
   it('ist wahr, wenn die Quelle einen Wert liefert', () => {

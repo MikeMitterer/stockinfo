@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { NSelect } from 'naive-ui'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
@@ -8,7 +8,7 @@ import InstrumentsTable from '../../src/components/InstrumentsTable.vue'
 import { useTableSort } from '../../src/composables/useTableSort'
 import { i18n } from '../../src/i18n'
 import { makeInstrument } from '../fixtures/instrument'
-import type { InstrumentSummary } from '../../src/types'
+import type { DetailDefinition, InstrumentSummary } from '../../src/types'
 
 const base = makeInstrument()
 const instruments = [base, makeInstrument({ symbol: 'VGWL.DE', name: 'Vanguard FTSE All-World' })]
@@ -19,6 +19,29 @@ function stubMatchMedia(compact: boolean) {
     matches: compact, media: '',
     addEventListener: () => {}, removeEventListener: () => {},
   }))
+}
+
+/** Ein Feldkatalog mit einem Textfeld — damit der Detailbereich ein Auswahlfeld zeigt. */
+function stubFieldCatalog() {
+  const provider: DetailDefinition = {
+    name: 'provider', kind: 'text', unit: null, label_en: 'Provider', label_de: 'Anbieter',
+    overridable: true, minimum: null, maximum: null, currency_required: false,
+  }
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(
+    new Response(JSON.stringify({ details: [provider] }), {
+      status: 200, headers: { 'Content-Type': 'application/json' },
+    }),
+  )))
+}
+
+/** Öffnet den Detailbereich der ersten Zeile und wartet auf den Feldkatalog. */
+async function openWithSelection() {
+  stubMatchMedia(false)
+  stubFieldCatalog()
+  const wrapper = mountTable()
+  await wrapper.get('.row-toggle').trigger('click')
+  await flushPromises()
+  return wrapper
 }
 
 function mountTable(rows: InstrumentSummary[] = instruments) {
@@ -283,9 +306,7 @@ describe('InstrumentsTable — Detailbereich', () => {
    * (gemessen: geschlossen trägt es die Klasse nicht).
    */
   it('lässt den Detailbereich offen, wenn Escape die offene Auswahlliste schließt', async () => {
-    stubMatchMedia(false)
-    const wrapper = mountTable()
-    await wrapper.get('.row-toggle').trigger('click')
+    const wrapper = await openWithSelection()
 
     const selection = wrapper.get('.drilldown .n-base-selection')
     selection.element.classList.add('n-base-selection--active')
@@ -314,9 +335,7 @@ describe('InstrumentsTable — Detailbereich', () => {
    * nicht mehr per Tastatur heraus — zweimal Escape, und nichts passiert.
    */
   it('schließt den Detailbereich, wenn Escape aus einer geschlossenen Auswahlliste kommt', async () => {
-    stubMatchMedia(false)
-    const wrapper = mountTable()
-    await wrapper.get('.row-toggle').trigger('click')
+    const wrapper = await openWithSelection()
 
     await wrapper.get('.drilldown .n-base-selection').trigger('keydown.esc')
 

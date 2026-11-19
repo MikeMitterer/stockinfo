@@ -109,11 +109,8 @@ export function manualValue(
 /**
  * Liefert die Quelle einen Wert für dieses Feld — nicht nur die Eingabe?
  *
- * Die Vorrang-Regel in einer Funktion statt dreimal (Nacharbeit Sichtprüfung,
- * I4): `MetricValue.vue`, `MetricEditor.vue` und `InstrumentDrilldown.vue`
- * formulierten bislang unabhängig voneinander dieselbe Prüfung — heute
- * gleichbedeutend, aus drei verschiedenen Tasks entstanden und beim nächsten
- * Feinschliff ein Kandidat zum Auseinanderlaufen.
+ * Die Vorrang-Regel in einer Funktion statt an jeder Anzeige (Nacharbeit
+ * Sichtprüfung, I4); heute nutzt sie `MetricValue.vue`.
  *
  * `item[field]` ist bereits der **wirksame** Wert (das Backend löst die
  * Vorrang-Regel auf); „nicht null" allein reicht deshalb nicht — im Zustand

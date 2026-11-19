@@ -6,7 +6,7 @@ export type SuggestibleField = 'provider' | 'replication' | 'fund_domicile'
 /**
  * Eindeutige, sortierte Werte eines Textfelds über alle geladenen Instrumente.
  *
- * Speist die Auswahl-mit-freier-Eingabe im `MetricEditor` (T-15): Anbieter,
+ * Speist die Auswahl-mit-freier-Eingabe im `DetailEditor` (T-15): Anbieter,
  * Replikationsart und Fondsdomizil haben keine feste Liste — anders als die
  * Fondswährung, für die es bereits `currenciesFromExchanges()` gibt. Statt
  * eine zweite, redaktionell gepflegte Liste zu erfinden, wächst diese Auswahl

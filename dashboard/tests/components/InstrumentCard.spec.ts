@@ -52,11 +52,14 @@ describe('InstrumentCard', () => {
     expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(true)
   })
 
-  it('bietet mobil dieselben acht Felder wie am Schreibtisch (Task 8)', async () => {
-    const wrapper = mountCard()
+  it('bietet mobil dieselben Felder wie am Schreibtisch (Task 8)', async () => {
+    const wrapper = mountCard({ symbol: 'VGWL.DE' })
     await wrapper.find('.icard__toggle').trigger('click')
 
-    expect(wrapper.findAllComponents({ name: 'MetricEditor' })).toHaveLength(8)
+    // Derselbe Detailweg wie in der Tabelle, für dasselbe Papier.
+    const details = wrapper.findComponent({ name: 'OpenDetails' })
+    expect(details.exists()).toBe(true)
+    expect(details.props('item').symbol).toBe('VGWL.DE')
   })
 
   it('zeigt keine Anzahl gespeicherter Kurspunkte', async () => {

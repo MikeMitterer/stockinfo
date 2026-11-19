@@ -1,4 +1,6 @@
-import type { InstrumentSummary } from '../../src/types'
+import { manualValue, sourceProvides } from '../../src/composables/useOverrides'
+import { OVERRIDE_FIELDS } from '../../src/types'
+import type { DetailValue, InstrumentSummary } from '../../src/types'
 
 /**
  * Ein Instrument für Tests — an **einer** Stelle.
@@ -24,7 +26,7 @@ export function makeInstrument(
   // angegeben" gelesen und den Vorgabewert eingesetzt — der Test wäre grün
   // geworden, ohne den Fall je zu erzeugen.
   const identityIsin = 'isin' in overrides ? (isin ?? null) : 'US0378331005'
-  return {
+  const instrument: InstrumentSummary = {
     identity: { kind: 'listed', ticker: 'APC', mic: 'XETR', isin: identityIsin },
     symbol: 'APC.DE',
     listing_id: '00000000-0000-4000-8000-000000000001',
@@ -57,6 +59,31 @@ export function makeInstrument(
     manual_fund_currency: null,
     manual_fields: [],
     shadowed_fields: [],
+    details: {},
     ...rest,
   }
+  // Das Backend liefert `details` immer, mit einem Eintrag je Kennzahl, die für
+  // das Papier gilt. Wer keine eigenen übergibt, bekommt sie aus den flachen
+  // Feldern gespiegelt — so sehen Tabelle und Karte dieselben Werte wie vorher.
+  if (!('details' in overrides)) instrument.details = mirroredDetails(instrument)
+  return instrument
+}
+
+function mirroredDetails(item: InstrumentSummary): Record<string, DetailValue> {
+  return Object.fromEntries(OVERRIDE_FIELDS.map((field) => {
+    const manual = manualValue(item, field)
+    const fromSource = sourceProvides(item, field)
+    const value = item[field]
+    return [field, {
+      value,
+      unit: null,
+      currency: null,
+      origin: fromSource ? 'provider' : value === null ? null : 'manual',
+      source: fromSource ? item.source : null,
+      as_of: null,
+      shadowed: item.shadowed_fields.includes(field),
+      manual_value: manual,
+      manual_currency: null,
+    } satisfies DetailValue]
+  }))
 }
