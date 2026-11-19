@@ -3,12 +3,13 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { THEMES } from '@mmit/ux-foundation'
 
-import { FINANCIAL_CONTENT_URL, LICENSE_URLS, LICENSING_URL, MANGOLILA_URL } from '../config'
+import { FINANCIAL_CONTENT_URL, LICENSING_URL, MANGOLILA_URL } from '../config'
+import { localeSettings } from '../i18n/locales'
 import { useTheme } from '../composables/useTheme'
 
 const { t, locale } = useI18n()
 const { current: currentTheme } = useTheme()
-const licenseUrl = computed(() => locale.value === 'de' ? LICENSE_URLS.de : LICENSE_URLS.en)
+const licenseUrl = computed(() => localeSettings(locale.value).licenseUrl)
 const logoUrl = computed(() => `${import.meta.env.BASE_URL}mangolila-logo-${THEMES[currentTheme.value].isDark ? 'dark' : 'light'}.png`)
 </script>
 

@@ -803,6 +803,13 @@ try {
         check(!found, `${locale} ${view}: roher Katalogschlüssel „${found?.[0]}“ sichtbar`)
         const navigation = await page.locator('header').first().innerText()
         check(navigation.includes(locale === 'de-DE' ? 'Einstellungen' : 'Settings'), `${locale} ${view}: Navigation nicht in ${locale}`)
+        if (view === '/#/assets') {
+          // Gattungen übersetzt (T-138), nicht als Rohwert `bond`/`fund`. Die Aktie
+          // hat W8 gelöscht; die Pille steht per CSS in Großbuchstaben.
+          const types = (await page.locator('.badge.type').allInnerTexts()).map((text) => text.toLowerCase())
+          const expected = locale === 'de-DE' ? ['anleihe', 'fonds', 'krypto'] : ['bond', 'fund', 'crypto']
+          for (const label of expected) check(types.includes(label), `${locale}: Gattung „${label}“ fehlt (${types.join(', ')})`)
+        }
         await ctx.shot(page, `${locale}-${view.replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '')}`)
         await page.context().close()
       }

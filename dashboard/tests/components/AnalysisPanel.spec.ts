@@ -50,6 +50,18 @@ describe('AnalysisPanel', () => {
     expect(wrapper.text()).toContain('1.20')
   })
 
+  it.each([
+    ['de', '0,50 s', '1,20 s'],
+    ['en', '0.50 s', '1.20 s'],
+  ] as const)('schreibt die Dauer in der Sprache der Oberfläche (%s)', (locale, stage, total) => {
+    // Vor T-138 `toFixed(2)` + „s“: ein Dezimalpunkt auch in der deutschen Oberfläche.
+    i18n.global.locale.value = locale
+    const text = rendered()
+
+    expect(text).toContain(stage)
+    expect(text).toContain(total)
+  })
+
   /*
    * Die Rolle wird übersetzt, der Quellenname nicht. Er soll in `sources.yaml`
    * wiederzufinden sein — ein übersetztes „Datei" führte beim Suchen ins Leere.

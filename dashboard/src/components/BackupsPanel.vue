@@ -75,7 +75,7 @@ function describeReason(reason: BackupReason): string {
 
 /** Bytes in etwas Lesbares — die Größe ist ein Anhaltspunkt, keine Messgröße. */
 function humanSize(bytes: number): string {
-  return `${n(Math.max(1, Math.round(bytes / 1024)))} kB`
+  return t('backups.sizeKb', { value: n(Math.max(1, Math.round(bytes / 1024))) })
 }
 
 </script>

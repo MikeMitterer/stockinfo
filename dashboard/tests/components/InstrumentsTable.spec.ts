@@ -520,4 +520,22 @@ describe('InstrumentsTable · Identitätsformen', () => {
     expect(badge.classes()).toContain('crypto')
   })
 
+  it.each([
+    ['de', 'stock', 'Aktie'],
+    ['en', 'stock', 'Stock'],
+    ['de', 'warrant', 'warrant'],
+  ] as const)('zeigt die Gattung %s/%s als „%s“', (locale, type, expected) => {
+    // Bekannte Gattungen übersetzt; eine nur von einem Plugin gemeldete bleibt
+    // lesbar als Kennung statt als Katalogschlüssel `instrumentTypes.warrant`.
+    stubMatchMedia(false)
+    const before = i18n.global.locale.value
+    i18n.global.locale.value = locale
+    try {
+      const wrapper = mountTable([makeInstrument({ type })])
+      expect(wrapper.find('.badge.type').text()).toBe(expected)
+    } finally {
+      i18n.global.locale.value = before
+    }
+  })
+
 })

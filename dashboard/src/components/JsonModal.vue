@@ -60,7 +60,7 @@ function onUpdateShow(show: boolean): void {
   <NModal
     :show="item !== null"
     preset="card"
-    :title="`JSON — ${shown?.symbol ?? ''}`"
+    :title="t('json.title', { symbol: shown?.symbol ?? '' })"
     :style="{ width: 'min(720px, calc(100vw - 3rem))' }"
     :content-style="{ padding: 0 }"
     @update:show="onUpdateShow"

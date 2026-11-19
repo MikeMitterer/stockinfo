@@ -66,7 +66,7 @@ const fromSource = computed(() => applicable.value && sourceProvides(props.item,
 function formatNumber(raw: number, which: FundSizeValue): string {
   const formatted = n(raw, TWO_DECIMALS)
   if (props.field === 'fund_size') return fundSizeText(t, formatted, fundSizeCurrency(props.item, which))
-  return isPercentField.value ? `${formatted} %` : formatted
+  return isPercentField.value ? t('common.percent', { value: formatted }) : formatted
 }
 
 const display = computed(() => {

@@ -13,13 +13,14 @@ import {
   type ChartOptions,
 } from 'chart.js'
 import 'chartjs-adapter-date-fns'
-import { de as dateFnsDe, enUS as dateFnsEn } from 'date-fns/locale'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton } from 'naive-ui'
 import { Line } from 'vue-chartjs'
 
 import { useTheme } from '../composables/useTheme'
+import { localeSettings } from '../i18n/locales'
+import { TWO_DECIMALS } from '../utils/numberFormat'
 import type { RangeKey } from '../types'
 import { accentColors } from '../utils/chartColors'
 import { pctAxisBounds, periodChangePct, relChangePct } from '../utils/changePct'
@@ -45,22 +46,18 @@ const emit = defineEmits<{
 const { current } = useTheme()
 const { t, locale } = useI18n()
 
-// Sprachabhängige Datumsformate für Achse und Tooltip.
-const dateFormats = computed(() =>
-  locale.value === 'de'
-    ? {
-        fnsLocale: dateFnsDe,
-        tooltipIntraday: 'dd.MM. HH:mm',
-        tooltipDay: 'dd.MM.yyyy',
-        display: { hour: 'HH:mm', day: 'dd.MM', month: 'MM.yy' },
-      }
-    : {
-        fnsLocale: dateFnsEn,
-        tooltipIntraday: 'MMM d, HH:mm',
-        tooltipDay: 'MM/dd/yyyy',
-        display: { hour: 'HH:mm', day: 'MM/dd', month: 'MM/yy' },
-      },
-)
+// Sprachabhängige Datumsformate für Achse und Tooltip: Muster aus dem Katalog,
+// Monats- und Tagesnamen aus der date-fns-Locale der Sprache.
+const dateFormats = computed(() => ({
+  fnsLocale: localeSettings(locale.value).dateFns,
+  tooltipIntraday: t('chart.format.tooltipIntraday'),
+  tooltipDay: t('chart.format.tooltipDay'),
+  display: {
+    hour: t('chart.format.hour'),
+    day: t('chart.format.day'),
+    month: t('chart.format.month'),
+  },
+}))
 
 /** Liest eine CSS-Custom-Property vom <html> (mit Fallback). */
 function cssVar(name: string, fallback: string): string {
@@ -75,13 +72,9 @@ const changePct = computed(() => periodChangePct(props.series))
 
 /** Formatiert einen Prozentwert lokalisiert mit Vorzeichen (z.B. „+2,34 %"). */
 function fmtPct(value: number): string {
-  return (
-    value.toLocaleString(locale.value, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-      signDisplay: 'exceptZero',
-    }) + ' %'
-  )
+  return t('common.percent', {
+    value: value.toLocaleString(locale.value, { ...TWO_DECIMALS, signDisplay: 'exceptZero' }),
+  })
 }
 
 // Pfeil zusätzlich zur Farbe — Farbe ist nie alleiniger Info-Träger.
@@ -168,10 +161,12 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
         ticks: {
           color: muted,
           callback: (value) =>
-            Number(value).toLocaleString(locale.value, {
-              maximumFractionDigits: 1,
-              signDisplay: 'exceptZero',
-            }) + ' %',
+            t('common.percent', {
+              value: Number(value).toLocaleString(locale.value, {
+                maximumFractionDigits: 1,
+                signDisplay: 'exceptZero',
+              }),
+            }),
         },
         grid: { drawOnChartArea: false }, // keine doppelten Gitterlinien
       },

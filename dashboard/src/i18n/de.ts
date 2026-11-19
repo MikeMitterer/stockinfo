@@ -39,7 +39,17 @@ export const de = {
    * Ein Bindestrich, kein Geviertstrich: Der Geviertstrich ist ein
    * Satzzeichen für Gedankenstriche, keine Marke für einen fehlenden Wert.
    */
-  common: { noValue: '-' },
+  common: { noValue: '-', percent: '{value} %' },
+  // Gattungen des Core (`app/providers/base.py`, INSTRUMENT_TYPES); eine
+  // Gattung, die nur ein Plugin kennt, erscheint unverändert.
+  instrumentTypes: {
+    stock: 'Aktie',
+    etf: 'ETF',
+    etc: 'ETC',
+    fund: 'Fonds',
+    crypto: 'Krypto',
+    bond: 'Anleihe',
+  },
 
   nav: {
     assets: 'Assets',
@@ -81,6 +91,10 @@ export const de = {
     yes: 'Ja',
     no: 'Nein',
     addIsin: 'ISIN nachtragen',
+    addIsinShort: '+ ISIN',
+    jsonShort: 'JSON',
+    extraetfShort: 'eETF',
+    yahooShort: 'Y!',
     isinPlaceholder: 'ISIN eintragen',
     isinInvalid: 'ungültige ISIN',
     save: 'Speichern',
@@ -106,6 +120,14 @@ export const de = {
     close: 'Schließen',
     periodChange: 'Veränderung über den Zeitraum',
     vsStart: 'ggü. Start',
+    // Datumsmuster der Achse und des Tooltips (date-fns).
+    format: {
+      tooltipIntraday: 'dd.MM. HH:mm',
+      tooltipDay: 'dd.MM.yyyy',
+      hour: 'HH:mm',
+      day: 'dd.MM',
+      month: 'MM.yy',
+    },
     ranges: {
       intraday: '1T',
       oneWeek: '1W',
@@ -213,6 +235,7 @@ export const de = {
     colSeconds: 'Dauer',
     colStatus: 'Status',
     total: 'Gesamt',
+    seconds: '{value} s',
     empty: 'Noch keine Messung — Instrument wählen und „Analysieren" klicken.',
   },
   fx: {
@@ -267,6 +290,7 @@ export const de = {
   },
   backups: {
     title: 'Backups der Datenbank',
+    sizeKb: '{value} kB',
     hint:
       'Es bleiben {keep} Backups liegen; das älteste weicht beim Anlegen ' +
       'des nächsten. Backups werden auf Knopfdruck erstellt, nicht nach Zeitplan.',
@@ -348,6 +372,7 @@ export const de = {
     financialContentLink: 'MangoLila: Hinweise zu Finanzinhalten',
   },
   json: {
+    title: 'JSON — {symbol}',
     copyUrl: 'URL kopieren',
     copyJson: 'JSON kopieren',
     copied: 'kopiert ✓',
@@ -579,6 +604,7 @@ export const de = {
     lossSummary:
       'Dabei entfallen {quotes} Intraday-Kurspunkte und {daily} Tagesschlusskurse.',
     rowLoss: '{quotes} Kurspunkte, {daily} Tagesschlusskurse',
+    unknownReason: 'Grund, den diese Oberfläche nicht kennt: {code}',
 
     backupTitle: 'Vorher Backup erstellen',
     backupBody:
