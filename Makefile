@@ -163,14 +163,15 @@ hints: require-tools ## Links, URLs und Tipps für die tägliche Arbeit
 
 # ─── Precheck ─────────────────────────────────────────────────────────────────
 
-# Ohne `##`: läuft vor version, tags, build, push, require-tools und require-setup. Verlangt
-# BashLib, aus .tools/ in der Mindestversion aus .dev-tools.conf.sh; ein von außen gesetztes
-# BASH_LIBS prüft es nur auf Lesbarkeit. Bewusst ohne BashLib-Ausgabe: precheck meldet gerade,
-# dass sie fehlt.
+# Ohne `##`: läuft vor dev-up, dev-down, up, down, version, tags, build, push, require-tools
+# und require-setup. Verlangt BashLib, aus .tools/ in der Mindestversion aus
+# .dev-tools.conf.sh; ein von außen gesetztes BASH_LIBS prüft es nur auf die Bibliotheken, die
+# das Makefile lädt (version.lib.sh für Releases, make.lib.sh für Statuszeilen und Ausgabe).
+# Bewusst ohne BashLib-Ausgabe: precheck meldet gerade, dass sie fehlt.
 .PHONY: precheck
 precheck:
-	@if [[ ! -r "$${BASH_LIBS:-}/version.lib.sh" ]]; then \
-		echo "  ✗ BashLib fehlt (BASH_LIBS oder .tools/): make setup" >&2; \
+	@if [[ ! -r "$${BASH_LIBS:-}/version.lib.sh" || ! -r "$${BASH_LIBS:-}/make.lib.sh" ]]; then \
+		echo "  ✗ BashLib fehlt oder ist unvollständig (BASH_LIBS oder .tools/): make setup" >&2; \
 		exit 1; \
 	elif [[ -n '$(BASHLIB_FROM_TOOLS)' ]]; then $(REQUIRE_STARTER); $(DEV_TOOLS) check bashlib; fi
 
