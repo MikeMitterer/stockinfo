@@ -28,10 +28,21 @@ if [[ -n "${GIT_INDEX_FILE:-}" && "${GIT_INDEX_FILE}" != /* ]]; then
     export GIT_INDEX_FILE="${ROOT}/${GIT_INDEX_FILE}"
 fi
 
-# Ohne ProjectTools in Mindestversion nur warnen: make check bleibt die harte Grenze,
-# ein Commit auf einem Rechner ohne die Werkzeuge soll nicht daran scheitern.
-if ! make --no-print-directory -s require-tools >/dev/null 2>&1; then
-    echo "⚠ ProjectTools fehlt oder ist zu alt — Doku nicht geprüft; einrichten mit: make install-tools" >&2
+# Werkzeuge (make, devtools, pipx, pip) laufen ohne die Git-Variablen des Hooks: git setzt
+# für ihn GIT_INDEX_FILE, und ein git-Aufruf, mit dem devtools ein Werkzeug holt, schriebe
+# sonst in den Index dieses Repositorys.
+without_git() {
+    env -u GIT_INDEX_FILE -u GIT_DIR -u GIT_WORK_TREE -u GIT_OBJECT_DIRECTORY \
+        -u GIT_COMMON_DIR "$@"
+}
+
+# Ohne ProjectTools in .tools/ nur warnen, mit dem Grund von devtools und dem nächsten
+# Schritt: make check bleibt die harte Grenze, ein Commit soll nicht daran scheitern.
+if ! REASON="$(without_git make --no-print-directory -s require-tools 2>&1)"; then
+    echo "  ⚠ Doku nicht geprüft: ProjectTools fehlt oder ist zu alt" >&2
+    # Die Meldung von devtools ohne die Abschlusszeile von make („make: *** …“).
+    printf '%s\n' "${REASON}" | grep -v '^make: \*\*\*' >&2 || true
+    echo "    make setup" >&2
     exit 0
 fi
 
@@ -42,6 +53,10 @@ readonly OUTPUT
 trap 'command rm -rf -- "${SNAPSHOT}" "${OUTPUT}"' EXIT
 
 git checkout-index --all --prefix="${SNAPSHOT}/"
+
+# Die Werkzeuge aus make setup liegen unversioniert in .tools/ des Checkouts; make docs-check
+# verlangt und findet sie im Snapshot nur über diesen Link.
+[[ -d "${ROOT}/.tools" ]] && ln -s "${ROOT}/.tools" "${SNAPSHOT}/.tools"
 
 GIT_DIR="$(git rev-parse --absolute-git-dir)"
 export GIT_DIR

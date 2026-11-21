@@ -1,6 +1,6 @@
 -r requirements.txt
 # Werkzeuge für Tests und Prüfungen. ProjectTools und BashLib kommen nicht in
-# die .venv, sondern über pipx (.dev-tools.conf.sh, make install-tools).
+# die .venv, sondern über pipx nach .tools/ (.dev-tools.conf.sh, make setup).
 ruff==0.15.21
 # make quality (Modulgröße, doppelter Code) und make audit (bekannte Lücken)
 pylint==4.1.3
