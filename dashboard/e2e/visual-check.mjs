@@ -500,7 +500,10 @@ try {
     await ctx.shot(page, 'bond-max')
   })
 
-  await way('W6', 'Manuelle Eingabe', {}, async (ctx) => {
+  await way('W6', 'Manuelle Eingabe', {
+    http: [{ status: 422, url: '/instruments/' }],
+    console: [/useOverrides\.save/],
+  }, async (ctx) => {
     const fund = 'DE0009848119'
     const open = async () => {
       const page = await ctx.page('/')
@@ -543,6 +546,21 @@ try {
     await field(page, 'Total expense ratio').getByTitle('Remove your entry').click()
     await settle(page)
     check((await paper(fund))?.details?.ter?.manual_value === null, 'manuelle TER lässt sich nicht entfernen')
+
+    // Eine abgelehnte Eingabe nennt ihren Grund übersetzt (T-139): Einen
+    // Fondssitz über 1000 Zeichen lehnt die API mit `detail_text_required` ab.
+    // Bis T-139 kam ein deutscher Satz, und die Oberfläche zeigte nur
+    // „… failed“ ohne Grund. Zahlen begrenzt schon der Editor selbst.
+    await field(page, 'Fund domicile').locator('.detail-editor__text').click()
+    await page.keyboard.insertText('x'.repeat(1001))
+    await page.keyboard.press('Enter')
+    await settle(page)
+    const rejected = await page.locator('body').innerText()
+    check(rejected.includes('Fund domicile: a non-empty text is required here'),
+      'abgelehnter Fondssitz nennt keinen übersetzten Grund mit Beschriftung')
+    check(!rejected.includes('fund_domicile'), 'Meldung nennt den internen Feldnamen')
+    check((await paper(fund))?.details?.fund_domicile?.manual_value == null, 'zu langer Fondssitz wurde gespeichert')
+    await ctx.shot(page, 'rejected')
     // Ein Ja/Nein-Feld gibt es im Offline-Profil nicht: Welche Felder es gibt,
     // deklariert die Quelle, und das YAML-Plugin kennt keines.
   })

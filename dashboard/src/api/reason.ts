@@ -47,16 +47,21 @@ export function reasonText(
  * Proxy-Fehlerseite statt eines fachlichen Grundes sein.
  *
  * @param error - Was der Aufruf geworfen hat.
+ * @param fieldLabels - Angezeigte Beschriftung je Feldname. Nennt die Kennung
+ *   ein Feld (`params.field`, etwa `fund_domicile`), steht im Satz die
+ *   Beschriftung statt des Namens.
  * @returns Der Grund, oder `null` wenn sich keiner benennen lässt.
  */
-export function reasonOf(error: unknown): string | null {
+export function reasonOf(error: unknown, fieldLabels?: Record<string, string>): string | null {
   if (!(error instanceof ApiError)) return null
 
   const body = parse(error.detail)
   if (body === null) return null
 
   if (typeof body.code === 'string') {
-    const params = isRecord(body.params) ? body.params : {}
+    const params: Record<string, unknown> = isRecord(body.params) ? { ...body.params } : {}
+    const label = typeof params.field === 'string' ? fieldLabels?.[params.field] : undefined
+    if (label) params.field = label
     return reasonText(body.code, params, ERROR_REASON_CATALOGS, 'errors.reason.unknown')
   }
 
@@ -82,8 +87,13 @@ function isRecord(value: unknown): value is Record<string, string> {
  *
  * @param message - Was schiefging („Hinzufügen fehlgeschlagen").
  * @param error - Der geworfene Fehler.
+ * @param fieldLabels - Wie bei `reasonOf`.
  */
-export function describeFailure(message: string, error: unknown): string {
-  const reason = reasonOf(error)
+export function describeFailure(
+  message: string,
+  error: unknown,
+  fieldLabels?: Record<string, string>,
+): string {
+  const reason = reasonOf(error, fieldLabels)
   return reason ? `${message} — ${reason}` : message
 }
