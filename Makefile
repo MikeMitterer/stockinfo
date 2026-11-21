@@ -256,8 +256,8 @@ status: require-tools ## Git-Status aller Workspace-Repos anzeigen
 # weil overmind .env lädt; das Makefile exportiert HOST nicht.
 .PHONY: dev-up
 dev-up: ## Backend und Dashboard laufen im Hintergrund, mit Auto-Reload
-	@command -v overmind >/dev/null || { echo "  ✗ overmind fehlt; overmind und tmux installieren." >&2; exit 1; }
-	@command -v tmux >/dev/null || { echo "  ✗ tmux fehlt; tmux installieren." >&2; exit 1; }
+	@command -v overmind >/dev/null || { echo "  ✗ overmind fehlt: brew install overmind tmux" >&2; exit 1; }
+	@command -v tmux >/dev/null || { echo "  ✗ tmux fehlt: brew install tmux" >&2; exit 1; }
 	@if command -v dev-ports >/dev/null; then dev-ports --check; \
 	else echo "  ⚠ dev-ports fehlt (make install-tools) — Ports vor dem Start nicht geprüft"; fi
 	@# overmind bricht auch ab, wenn der Stack schon läuft oder eine verwaiste

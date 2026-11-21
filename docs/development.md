@@ -96,9 +96,9 @@ project, removes a stale `.overmind.sock` and frees the ports from
 `.dev-ports.conf.sh`. It only ends your own processes inside this project and
 can be run as often as you like. `dev-ports --status` shows who holds a port.
 
-If `make dev-up` refuses to start, the stack is either still running
-(`make dev-logs`) or a crash left a stale `.overmind.sock`; `make dev-down`
-removes it.
+If `make dev-up` reports that Overmind is already running, a
+`.overmind.sock` exists: either the stack is still running (`make dev-logs`)
+or a crash left the file behind, and `make dev-down` removes it.
 
 The server then runs at `http://localhost:8000`. Interactive API docs (Swagger UI,
 dark theme) live at `http://localhost:8000/docs` (use `http://` in the browser, not
