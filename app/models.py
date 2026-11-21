@@ -1027,40 +1027,23 @@ IDENTITY_CONFLICT_RESPONSE: dict[int | str, dict[str, object]] = {
 
 _INVALID_ISIN_SCHEMA = {"$ref": "#/components/schemas/ErrorDetail"}
 _VALIDATION_SCHEMA = {"$ref": "#/components/schemas/HTTPValidationError"}
-_DETAIL_TEXT_SCHEMA = {
-    "title": "DetailText",
-    "type": "object",
-    # **Pflicht, nicht nur beschrieben.** Ohne `required` erlaubt der Vertrag
-    # `{}` — und sagt damit gerade nicht zu, was diese Variante ausmacht.
-    "required": ["detail"],
-    "properties": {"detail": {"type": "string"}},
-}
 
 
-def invalid_isin_response(
-    *, validation: bool = False, detail_text: bool = False
-) -> dict[int | str, dict[str, object]]:
+def invalid_isin_response(*, validation: bool = False) -> dict[int | str, dict[str, object]]:
     """Die `422`-Zusage eines Weges, der eine ISIN entgegennimmt.
 
     **Ein `422` hat an mehreren Routen mehr als eine gültige Form**, und die
-    Zusage muss alle nennen, die dort wirklich vorkommen. Eine einzelne
-    `ErrorDetail`-Zusage verschwiege die beiden anderen und wäre damit
-    genauso falsch wie die frühere Lage, in der `ErrorDetail` fehlte.
+    Zusage muss alle nennen, die dort wirklich vorkommen:
 
-    Die drei Formen und woher sie kommen:
-
-    * `ErrorDetail` — die ungültige ISIN, aus der gemeinsamen Prüfung. **An
-      jedem dieser Wege möglich**, denn sie ist der Grund, warum diese Zusage
-      überhaupt hier steht.
+    * `ErrorDetail` — die ungültige ISIN aus der gemeinsamen Prüfung, an
+      jedem dieser Wege möglich; dazu jede andere Ablehnung der Route
+      (Zeitfenster, Symbolformat, fehlende Kennung), die seit T-139 dieselbe
+      Form hat.
     * `HTTPValidationError` — FastAPIs eigene Prüfung, wo die Route weitere
       Parameter oder einen Rumpf validiert.
-    * `{"detail": "…"}` — die verbliebenen Fließtext-Ablehnungen der Route
-      (Zeitfenster, Symbolformat, fehlende Kennung). Sie werden hier **nicht**
-      umgebaut, aber auch nicht verschwiegen.
 
     Args:
         validation: Ob die Route zusätzlich FastAPI-Validierung auslösen kann.
-        detail_text: Ob sie eine eigene Fließtext-Ablehnung kennt.
 
     Returns:
         Ein `responses`-Eintrag für genau diese Route.
@@ -1068,15 +1051,14 @@ def invalid_isin_response(
     schemas: list[dict[str, object]] = [_INVALID_ISIN_SCHEMA]
     if validation:
         schemas.append(_VALIDATION_SCHEMA)
-    if detail_text:
-        schemas.append(_DETAIL_TEXT_SCHEMA)
     return {
         422: {
             "description": (
                 "Die Eingabe hat nicht das Format einer ISIN "
                 "(`code: invalid_isin_format`, `params.isin` nennt sie) — der "
-                "Rumpf steht **nicht** unter `detail`. Wo weitere Formen "
-                "möglich sind, nennt `anyOf` sie mit."
+                "Rumpf steht **nicht** unter `detail`. Andere Ablehnungen der "
+                "Route haben dieselbe Form mit eigener Kennung. Wo FastAPI "
+                "zusätzlich prüft, nennt `anyOf` dessen Form mit."
             ),
             "content": {
                 "application/json": {

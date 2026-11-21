@@ -13,6 +13,11 @@ from app.models import DailyPoint, ListedIdentityOut, QuotePoint, QuoteResponse
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
 
 
+# Der Text ist der, den `CompositeResolver` zusammensetzt: Er nennt die
+# ausgefallenen Quellen, und genau das muss beim Client ankommen.
+_UNAVAILABLE = "{identifier}: keine Quelle konnte nachsehen — openfigi: HTTP 503; yahoo: timeout"
+
+
 class FakeDaily:
     """Ersetzt den DailyHistoryService."""
 
@@ -48,12 +53,7 @@ class FakeService:
         if isin.startswith("XX"):
             raise InstrumentNotFoundError(isin)
         if isin.startswith("ZZ"):
-            # Der Text ist der, den `CompositeResolver` zusammensetzt: Er nennt
-            # die ausgefallenen Quellen, und genau das muss beim Client ankommen.
-            raise QuoteUnavailableError(
-                f"{isin}: keine Quelle konnte nachsehen — "
-                "openfigi: HTTP 503; yahoo: timeout"
-            )
+            raise QuoteUnavailableError(_UNAVAILABLE.format(identifier=isin))
         return QuoteResponse(
             symbol="VGWL.DE",
             name="VGWL.DE Testpapier",
@@ -71,6 +71,8 @@ class FakeService:
     def get_by_symbol(self, symbol: str) -> QuoteResponse:
         if symbol == "NOPE":
             raise QuoteUnavailableError(symbol)
+        if symbol.startswith("ZZ"):
+            raise QuoteUnavailableError(_UNAVAILABLE.format(identifier=symbol))
         return QuoteResponse(
             symbol=symbol,
             name="Testpapier",
@@ -91,10 +93,18 @@ class FakeService:
     ) -> list[QuotePoint]:
         if isin.startswith("XX"):
             raise InstrumentNotFoundError(isin)
+        if isin.startswith("ZZ"):
+            raise QuoteUnavailableError(_UNAVAILABLE.format(identifier=isin))
         return [
             QuotePoint(price=160.0, quote_time="t1", fetched_at="t1", currency="EUR"),
             QuotePoint(price=161.0, quote_time="t2", fetched_at="t2", currency="EUR"),
         ]
+
+    def refresh_one(self, isin: str) -> QuoteResponse:
+        return self.get_by_isin(isin)
+
+    def refresh_one_by_symbol(self, symbol: str) -> QuoteResponse:
+        return self.get_by_symbol(symbol)
 
     def get_history_by_symbol(
         self,
@@ -103,6 +113,8 @@ class FakeService:
         date_to: str | None = None,
         limit: int = 100,
     ) -> list[QuotePoint]:
+        if symbol.startswith("ZZ"):
+            raise QuoteUnavailableError(_UNAVAILABLE.format(identifier=symbol))
         return [
             QuotePoint(price=430.0, quote_time="t1", fetched_at="t1", currency="EUR")
         ]
@@ -384,3 +396,44 @@ def test_ausgefallene_quellen_nennen_sich_im_antwortkoerper(
     detail = body["params"]["detail"]
     assert "ZZ0000000000" in detail
     assert "openfigi" in detail and "yahoo" in detail
+
+
+@pytest.mark.parametrize(
+    ("identifier", "requests"),
+    [
+        (
+            "ZZ0000000000",
+            [
+                ("get", "/quote/ZZ0000000000"),
+                ("get", "/quote/ZZ0000000000/history"),
+                ("post", "/refresh/ZZ0000000000"),
+            ],
+        ),
+        (
+            "ZZTEST.DE",
+            [
+                ("get", "/quote?symbol=ZZTEST.DE"),
+                ("get", "/quote/by-symbol/ZZTEST.DE/history"),
+                ("post", "/refresh/by-symbol/ZZTEST.DE"),
+            ],
+        ),
+    ],
+    ids=["isin", "symbol"],
+)
+def test_kein_kurs_hat_auf_kurs_historie_und_refresh_dieselbe_form(
+    client: TestClient, identifier: str, requests: list[tuple[str, str]]
+) -> None:
+    """T-139: Derselbe `QuoteUnavailableError`, dieselbe Antwort — gleich über welche Tür.
+
+    Bis T-139 antworteten die Historien- und Refresh-Wege mit dem deutschen
+    Satz „Kein Kurs für …", der Kursweg mit `quote_unavailable`.
+    """
+    expected = {
+        "code": "quote_unavailable",
+        "params": {"identifier": identifier, "detail": _UNAVAILABLE.format(identifier=identifier)},
+    }
+
+    for method, url in requests:
+        response = client.request(method, url)
+        assert response.status_code == 502, f"{method.upper()} {url}: {response.text}"
+        assert response.json() == expected, f"{method.upper()} {url}"

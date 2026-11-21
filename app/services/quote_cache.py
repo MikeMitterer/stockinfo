@@ -16,7 +16,15 @@ from stockinfo_plugin import Identity
 
 from app.calculated_metrics import CALCULATED_SOURCE
 from app.detail_models import DetailInput, DetailValue
-from app.details import CANONICAL, is_boolean_field, merge_value, validate_input
+from app.details import (
+    CANONICAL,
+    REASON_DETAIL_NOT_DECLARED,
+    REASON_DETAIL_NOT_EDITABLE,
+    DetailValueError,
+    is_boolean_field,
+    merge_value,
+    validate_input,
+)
 from app.exchanges import field_reader
 from app.models import (
     OVERRIDE_FIELDS,
@@ -742,7 +750,7 @@ class CachedQuoteService:
                     continue
                 definition = by_name.get(field)
                 if definition is None or not definition.applies(instrument["type"], instrument["kind"]) or not definition.overridable:
-                    raise ValueError(f"Feld nicht bearbeitbar: {field}")
+                    raise DetailValueError(REASON_DETAIL_NOT_EDITABLE, field)
                 validate_input(definition, DetailInput(value=value,
                     currency=currency if definition.currency_required else None))
         self._repository.set_overrides(
@@ -763,9 +771,9 @@ class CachedQuoteService:
         for field, entry in values.items():
             definition = by_name.get(field)
             if definition is None or not definition.applies(instrument["type"], instrument["kind"]):
-                raise ValueError(f"Feld für dieses Instrument nicht deklariert: {field}")
+                raise DetailValueError(REASON_DETAIL_NOT_DECLARED, field)
             if not definition.overridable:
-                raise ValueError(f"Feld nicht bearbeitbar: {field}")
+                raise DetailValueError(REASON_DETAIL_NOT_EDITABLE, field)
             validate_input(definition, entry)
         self._repository.set_detail_overrides(instrument["id"], values, datetime.now(timezone.utc).isoformat())
         return self.get_instrument_summary(instrument["id"])["details"]

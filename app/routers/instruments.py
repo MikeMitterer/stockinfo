@@ -35,8 +35,8 @@ from app.services.intake_service import (
     IntakeService,
 )
 from app.routers.source_errors import (
-    REASON_QUOTE_UNAVAILABLE,
     currency_mismatch_response,
+    quote_unavailable_error,
     unsupported_type_response,
 )
 from app.services.quote_service import (
@@ -84,12 +84,9 @@ def intake(payload: IntakeRequest, service: IntakeDep, response: Response):
     except QuoteCurrencyMismatchError as exc:
         return currency_mismatch_response(exc)
     except QuoteUnavailableError as exc:
-        return JSONResponse(
-            status_code=502,
-            content=ErrorDetail(
-                code=REASON_QUOTE_UNAVAILABLE, params={"identifier": str(exc)}
-            ).model_dump(),
-        )
+        # `identifier` ist die Eingabe, wie auf allen anderen Wegen. Bis T-139
+        # stand hier der Ausnahmetext, oft ein ganzer Satz aus dem Dienst.
+        raise quote_unavailable_error(payload.identifier, exc) from exc
 
     response.status_code = 201 if result.created else 200
     return result.summary

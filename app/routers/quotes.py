@@ -18,7 +18,7 @@ zuzusagen wäre eine Zusage ins Blaue.
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
 
 from app.container import get_cached_quote_service, get_daily_history_service
@@ -34,13 +34,13 @@ from app.models import (
     invalid_isin_response,
 )
 from app.routers.source_errors import (
-    REASON_QUOTE_UNAVAILABLE,
     currency_mismatch_response,
+    instrument_not_found_error,
+    quote_unavailable_error,
     unsupported_type_response,
 )
 from app.routers.validation import IsinPath, SymbolPath, TimeRange, normalize_symbol
 from app.services.daily_history import DailyHistoryService, DailySeriesNotFoundError
-from app.services.intake_service import REASON_NOT_FOUND
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import (
     InstrumentNotFoundError,
@@ -60,32 +60,6 @@ REASON_NO_DAILY_SERIES = "daily_series_not_found"
 
 # Mindestens eine befragte Quelle war gestoert. Erst das ist ein `502`.
 REASON_DAILY_UNAVAILABLE = "daily_source_unavailable"
-
-
-def _not_found(isin: str) -> JSONResponse:
-    """„Dieses Papier gibt es nicht" — als **Kennung**, nicht als deutscher Satz.
-
-    Bis T-35 stand hier ``detail=f"Keine Auflösung für ISIN {isin}"``. Das
-    verletzte die eigene Zusage aus `ErrorDetail`: *„Der Text gehört ins UI und
-    muss in DE und EN vorliegen; ein deutscher Backendtext in der englischen
-    Oberfläche wäre auch bei sauberem Parsen falsch."*
-
-    Aufgefallen ist es im UI-Lauf, und zwar doppelt: Die Oberfläche zeigte nur
-    „Hinzufügen fehlgeschlagen", weil sie mit einem Fließtext nichts anfangen
-    kann — den eigentlichen Grund fand man erst in der Browserkonsole. Und der
-    Aufnahmeweg des Dashboards verwendet inzwischen `POST /instruments/intake`;
-    auch Kursabfragen liefern dieselbe strukturierte Kennung.
-
-    Die Kennung ist bewusst dieselbe wie beim Aufnahmeweg
-    (`REASON_NOT_FOUND`): Derselbe Sachverhalt bekommt denselben Namen, sonst
-    braucht die Oberfläche zwei Katalogeinträge für eine Lage.
-    """
-    return JSONResponse(
-        status_code=404,
-        content=ErrorDetail(
-            code=REASON_NOT_FOUND, params={"identifier": isin}
-        ).model_dump(),
-    )
 
 
 # Was die beiden Daily-Routen zusagen. **Beide dasselbe**: Der Unterschied
@@ -152,13 +126,7 @@ def quote_by_symbol(
         # Preis feststellen" ist derselbe Sachverhalt, gleich über welche Tür
         # gefragt wurde. Zwei Rumpfformen für eine Aussage waren schon einmal
         # der Grund, warum die Oberfläche nur "fehlgeschlagen" zeigen konnte.
-        return JSONResponse(
-            status_code=502,
-            content=ErrorDetail(
-                code=REASON_QUOTE_UNAVAILABLE,
-                params={"identifier": symbol, "detail": str(exc)},
-            ).model_dump(),
-        )
+        raise quote_unavailable_error(symbol, exc) from exc
 
 
 @router.get(
@@ -179,28 +147,12 @@ def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
         # erkannter Index hier in das 404 darunter — für den Benutzer nicht
         # zu unterscheiden von einer erfundenen ISIN.
         return unsupported_type_response(exc)
-    except InstrumentNotFoundError:
-        return _not_found(isin)
+    except InstrumentNotFoundError as exc:
+        raise instrument_not_found_error(isin) from exc
     except QuoteUnavailableError as exc:
-        # **Der strukturierte Zustand, den T-31 fuer die Anleihe braucht.**
-        # „Keine Quelle konnte einen Preis feststellen" ist eine eigene
-        # Aussage — nicht „gibt es nicht" (404) und nicht ein Quote mit
-        # Luecke. Fuer ein Papier ohne Kursquelle ist sie der Normalfall und
-        # keine Stoerung, und die Oberflaeche muss sie als solche zeigen
-        # koennen.
-        #
-        # Der Ausnahmetext nennt die ausgefallenen Quellen (T-20 `#3`) und
-        # reist als Parameter mit: Ohne ihn stuende im Koerper nur „ging
-        # nicht", und wer die App betreibt, wuesste nicht, wohin er schauen
-        # soll. Er ist Diagnose, nicht Anzeigetext — die Kennung traegt den
-        # Satz.
-        return JSONResponse(
-            status_code=502,
-            content=ErrorDetail(
-                code=REASON_QUOTE_UNAVAILABLE,
-                params={"identifier": isin, "detail": str(exc)},
-            ).model_dump(),
-        )
+        # **Der strukturierte Zustand, den T-31 fuer die Anleihe braucht**;
+        # warum er kein 404 ist, steht bei `quote_unavailable_error`.
+        raise quote_unavailable_error(isin, exc) from exc
 
 
 @router.get(
@@ -225,7 +177,7 @@ def daily_history(
         # Nicht 502: Ein unbekanntes Papier ist ein Eingabefehler, kein
         # Ausfall bei Yahoo. Beides auf denselben Code zu legen nimmt jedem
         # Client die Möglichkeit, sie auseinanderzuhalten.
-        return _not_found(isin)
+        raise instrument_not_found_error(isin) from None
     except DailySeriesNotFoundError:
         return _daily_error(404, REASON_NO_DAILY_SERIES, isin)
     except QuoteUnavailableError:
@@ -270,7 +222,7 @@ def quote_history_by_symbol(
     try:
         return service.get_history_by_symbol(symbol, date_from, date_to, limit)
     except QuoteUnavailableError as exc:
-        raise HTTPException(status_code=502, detail=f"Kein Kurs für {symbol}") from exc
+        raise quote_unavailable_error(symbol, exc) from exc
 
 
 @router.get(
@@ -279,7 +231,7 @@ def quote_history_by_symbol(
     responses={
         **IDENTITY_CONFLICT_RESPONSE,
         **INSTRUMENT_NOT_FOUND_RESPONSE,
-        **invalid_isin_response(validation=True, detail_text=True),
+        **invalid_isin_response(validation=True),
     },
 )
 def quote_history(
@@ -292,9 +244,7 @@ def quote_history(
     date_from, date_to = time_range
     try:
         return service.get_history(isin, date_from, date_to, limit)
-    except InstrumentNotFoundError:
-        return _not_found(isin)
+    except InstrumentNotFoundError as exc:
+        raise instrument_not_found_error(isin) from exc
     except QuoteUnavailableError as exc:
-        raise HTTPException(
-            status_code=502, detail=f"Kein Kurs für ISIN {isin}"
-        ) from exc
+        raise quote_unavailable_error(isin, exc) from exc

@@ -32,8 +32,8 @@ _CATALOGUES = (
 _MIN_SENTENCE_LENGTH = 25
 
 
-def _reason_entries(catalogue: Path) -> dict[str, str]:
-    """Die Einträge des `reason`-Blocks — Kennung **und** Satz.
+def reason_entries(catalogue: Path, scope: str = "  migration: {") -> dict[str, str]:
+    """Die Einträge eines `reason`-Blocks — Kennung **und** Satz.
 
     Gelesen wird nur der Block, nicht die ganze Datei: Ein `grep` über alles
     würde eine Kennung auch dann finden, wenn sie zufällig in einem Kommentar
@@ -51,6 +51,8 @@ def _reason_entries(catalogue: Path) -> dict[str, str]:
 
     Args:
         catalogue: Pfad zur `de.ts` oder `en.ts`.
+        scope: Der Oberblock, unter dem der `reason`-Block steht — mit seiner
+            Einrückung, damit kein gleichnamiger Unterblock trifft.
 
     Returns:
         Kennung → zusammengesetzter Satz.
@@ -66,10 +68,10 @@ def _reason_entries(catalogue: Path) -> dict[str, str]:
     # nicht meint.
     #
     # Dieser Test gilt `REJECTION_REASONS` aus `app/persistence/migration.py`, also dem
-    # Block unter `migration`. Die Kennungen aus `ErrorDetail` brauchen einen
-    # eigenen Wächter; das ist Wächter `#3` aus T-34.
-    scope = text.index("  migration: {")
-    start = text.index("reason: {", scope) + len("reason: {")
+    # Block unter `migration`. Die Kennungen aus `ErrorDetail` hält
+    # `tests/test_error_reason_catalogue.py` (T-139) mit demselben Parser und
+    # `scope="  errors: {"`.
+    start = text.index("reason: {", text.index(scope)) + len("reason: {")
 
     depth = 1
     end = start
@@ -106,7 +108,7 @@ def test_jede_kennung_ist_im_katalog(catalogue: Path) -> None:
     """
     assert catalogue.exists(), f"{catalogue} fehlt"
 
-    keys = set(_reason_entries(catalogue))
+    keys = set(reason_entries(catalogue))
 
     assert keys == set(REJECTION_REASONS), (
         f"{catalogue.name}: fehlend {set(REJECTION_REASONS) - keys}, "
@@ -126,7 +128,7 @@ def test_jede_kennung_hat_einen_brauchbaren_satz(catalogue: Path) -> None:
     noch einmal, und lang genug, um ein Satz zu sein. Der frühere
     Mengenvergleich der Schlüssel ließ ein `''` durch (Codex, Runde 35).
     """
-    for reason, sentence in sorted(_reason_entries(catalogue).items()):
+    for reason, sentence in sorted(reason_entries(catalogue).items()):
         assert sentence.strip(), f"{catalogue.name}: `{reason}` hat keinen Text"
         assert sentence.strip() != reason, (
             f"{catalogue.name}: `{reason}` wiederholt nur sich selbst"
@@ -145,7 +147,7 @@ def test_beide_sprachen_kennen_dieselben_kennungen() -> None:
     verlangt nur, dass die Schlüssel existieren — ein leerer String wäre
     typkonform. Dass sie auch gefüllt sind, prüft der Test darüber.
     """
-    de_keys, en_keys = (set(_reason_entries(catalogue)) for catalogue in _CATALOGUES)
+    de_keys, en_keys = (set(reason_entries(catalogue)) for catalogue in _CATALOGUES)
 
     assert de_keys == en_keys, f"nur in DE: {de_keys - en_keys}, nur in EN: {en_keys - de_keys}"
 
@@ -157,7 +159,7 @@ def test_die_beiden_sprachen_sagen_nicht_dasselbe() -> None:
     vergisst die zweite Sprache. Die Schlüssel stimmen dann, die Mengen
     stimmen, die Länge stimmt — und die englische Oberfläche ist deutsch.
     """
-    de_entries, en_entries = (_reason_entries(catalogue) for catalogue in _CATALOGUES)
+    de_entries, en_entries = (reason_entries(catalogue) for catalogue in _CATALOGUES)
 
     identical = [
         reason for reason, sentence in de_entries.items() if en_entries.get(reason) == sentence

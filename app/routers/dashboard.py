@@ -12,18 +12,16 @@ fest, abgebildet wird sie zentral in `app/main.py`. Das gilt gerade für
 bei zwei gleichnamigen Listings beide samt Historie, und genau er ist das
 Beispiel, mit dem T-24 die Regel begründet hat.
 
-`responses` beschreiben an diesen Endpunkten nur die ISIN-Prüfung von
-`PUT .../isin` (`invalid_isin_response`); weitere Fehlerzusagen fehlen bewusst.
-Die Wege liegen laut `docs/rest-core-contract.md` außerhalb des geschlossenen
-Core — und `PUT .../isin` trägt zusätzlich einen dritten,
-älteren `409` (`IsinConflictError`) in einer anderen Rumpfform. Diese drei
-Formen zu vereinheitlichen ist eine eigene Aufräumarbeit und keine
-Nebenwirkung dieses Tickets.
+`responses` beschreiben an diesen Endpunkten nur die ISIN-Prüfung
+(`invalid_isin_response`); weitere Fehlerzusagen fehlen bewusst. Die Wege
+liegen laut `docs/rest-core-contract.md` außerhalb des geschlossenen Core.
+Jede Ablehnung hat trotzdem dieselbe Form wie im Core: `{code, params}` über
+`ApiError` (T-139).
 """
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, Response
 
 from app import __version__
 from app.config import Settings, get_settings
@@ -45,6 +43,9 @@ from app.models import (
     SourcesResponse,
     invalid_isin_response,
 )
+from app.details import DetailValueError
+from app.routers.api_error import ApiError
+from app.routers.source_errors import instrument_not_found_error, quote_unavailable_error
 from app.routers.validation import (
     IsinPath,
     SymbolPath,
@@ -61,6 +62,33 @@ from app.services.quote_cache import (
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
 
 router = APIRouter(tags=["dashboard"])
+
+# Die Analyse braucht genau eine der beiden Kennungen.
+REASON_ISIN_OR_SYMBOL = "isin_or_symbol_required"
+
+# Ein Gesamt-Refresh läuft schon; ein zweiter würde dieselben Quellen doppelt fragen.
+REASON_REFRESH_RUNNING = "refresh_in_progress"
+
+# Der Bestand führt kein Instrument unter dieser Kennung (`params.identifier`).
+# **Nicht** `instrument_not_found`: Dort haben die Quellen geantwortet und
+# kennen das Papier nicht; hier wurde gar keine Quelle gefragt.
+REASON_NOT_STORED = "instrument_not_stored"
+
+# Keine Zeile trägt diese `listing_id` (`params.listing_id`).
+REASON_LISTING_NOT_FOUND = "listing_not_found"
+
+# Ein anderes Instrument trägt die ISIN schon (`params.isin`).
+REASON_ISIN_TAKEN = "isin_taken"
+
+
+def _not_stored(identifier: str) -> ApiError:
+    """`404 instrument_not_stored` für eine ISIN oder ein Symbol."""
+    return ApiError(404, REASON_NOT_STORED, {"identifier": identifier})
+
+
+def _invalid_detail(error: DetailValueError) -> ApiError:
+    """`422` mit der Kennung, die die Detailprüfung vergeben hat."""
+    return ApiError(422, error.code, error.params)
 
 ServiceDep = Annotated[CachedQuoteService, Depends(get_cached_quote_service)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
@@ -118,7 +146,7 @@ def sources(settings: SettingsDep) -> SourcesResponse:
 @router.get(
     "/analyze",
     response_model=AnalyzeResult,
-    responses=invalid_isin_response(detail_text=True),
+    responses=invalid_isin_response(),
 )
 def analyze(
     analyzer: AnalyzerDep,
@@ -131,9 +159,7 @@ def analyze(
     (kein Cache).
     """
     if bool(isin) == bool(symbol):
-        raise HTTPException(
-            status_code=422, detail="Genau eines von isin oder symbol angeben"
-        )
+        raise ApiError(422, REASON_ISIN_OR_SYMBOL)
     return analyzer.analyze(
         isin=normalize_isin(isin) if isin else None,
         symbol=normalize_symbol(symbol) if symbol else None,
@@ -147,7 +173,7 @@ def refresh_all(service: ServiceDep) -> RefreshResult:
     try:
         refreshed = service.refresh_all()
     except RefreshInProgressError as exc:
-        raise HTTPException(status_code=409, detail="Refresh läuft bereits") from exc
+        raise ApiError(409, REASON_REFRESH_RUNNING) from exc
     return RefreshResult(total=total, refreshed=refreshed)
 
 
@@ -161,9 +187,9 @@ def refresh_one(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
     try:
         return service.refresh_one(isin)
     except InstrumentNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=f"Keine Auflösung für {isin}") from exc
+        raise instrument_not_found_error(isin) from exc
     except QuoteUnavailableError as exc:
-        raise HTTPException(status_code=502, detail=f"Kein Kurs für {isin}") from exc
+        raise quote_unavailable_error(isin, exc) from exc
 
 
 @router.post("/refresh/by-symbol/{symbol}", response_model=QuoteResponse)
@@ -172,9 +198,7 @@ def refresh_one_by_symbol(symbol: SymbolPath, service: ServiceDep) -> QuoteRespo
     try:
         return service.refresh_one_by_symbol(symbol)
     except QuoteUnavailableError as exc:
-        raise HTTPException(
-            status_code=502, detail=f"Kein Kurs für {symbol}"
-        ) from exc
+        raise quote_unavailable_error(symbol, exc) from exc
 
 
 @router.delete(
@@ -183,14 +207,14 @@ def refresh_one_by_symbol(symbol: SymbolPath, service: ServiceDep) -> QuoteRespo
 def delete_instrument(isin: IsinPath, service: ServiceDep) -> Response:
     """Löscht ein Instrument samt Historie per ISIN."""
     if not service.delete_instrument(isin):
-        raise HTTPException(status_code=404, detail=f"Unbekannte ISIN {isin}")
+        raise _not_stored(isin)
     return Response(status_code=204)
 
 
 @router.put(
     "/instruments/by-symbol/{symbol}/isin",
     response_model=dict,
-    responses=invalid_isin_response(validation=True, detail_text=True),
+    responses=invalid_isin_response(validation=True),
 )
 def set_isin(symbol: SymbolPath, payload: IsinUpdate, service: ServiceDep) -> dict:
     """Trägt die ISIN eines Instruments (per Symbol) nachträglich ein."""
@@ -198,13 +222,9 @@ def set_isin(symbol: SymbolPath, payload: IsinUpdate, service: ServiceDep) -> di
     try:
         service.set_isin(symbol, isin)
     except InstrumentNotFoundError as exc:
-        raise HTTPException(
-            status_code=404, detail=f"Unbekanntes Symbol {symbol}"
-        ) from exc
+        raise _not_stored(symbol) from exc
     except IsinConflictError as exc:
-        raise HTTPException(
-            status_code=409, detail=f"ISIN {isin} ist bereits vergeben"
-        ) from exc
+        raise ApiError(409, REASON_ISIN_TAKEN, {"isin": isin}) from exc
     return {"symbol": symbol, "isin": isin}
 
 
@@ -216,9 +236,7 @@ def get_overrides(symbol: SymbolPath, service: ServiceDep) -> InstrumentOverride
     try:
         return InstrumentOverrides(**service.get_overrides(symbol))
     except InstrumentNotFoundError as exc:
-        raise HTTPException(
-            status_code=404, detail=f"Unbekanntes Symbol {symbol}"
-        ) from exc
+        raise _not_stored(symbol) from exc
 
 
 @router.put(
@@ -235,19 +253,17 @@ def set_overrides(
     """
     try:
         return InstrumentOverrides(**service.set_overrides(symbol, payload.model_dump()))
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    except DetailValueError as error:
+        raise _invalid_detail(error) from error
     except InstrumentNotFoundError as exc:
-        raise HTTPException(
-            status_code=404, detail=f"Unbekanntes Symbol {symbol}"
-        ) from exc
+        raise _not_stored(symbol) from exc
 
 
 @router.delete("/instruments/by-symbol/{symbol}", status_code=204)
 def delete_instrument_by_symbol(symbol: SymbolPath, service: ServiceDep) -> Response:
     """Löscht ein Instrument samt Historie per Symbol (für Papiere ohne ISIN)."""
     if not service.delete_by_symbol(symbol):
-        raise HTTPException(status_code=404, detail=f"Unbekanntes Symbol {symbol}")
+        raise _not_stored(symbol)
     return Response(status_code=204)
 
 
@@ -257,6 +273,6 @@ def patch_details(listing_id: str, payload: dict[str, DetailInput], service: Ser
     try:
         return service.set_detail_overrides(listing_id, payload)
     except InstrumentNotFoundError as error:
-        raise HTTPException(status_code=404, detail="Unbekanntes Listing") from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+        raise ApiError(404, REASON_LISTING_NOT_FOUND, {"listing_id": listing_id}) from error
+    except DetailValueError as error:
+        raise _invalid_detail(error) from error

@@ -1,5 +1,5 @@
 {
-  "core_version": "4.4.1",
+  "core_version": "4.5.0",
   "details_version": 0,
   "generation": {
     "header": "StockInfo-Generation",
@@ -528,7 +528,9 @@
     "409": "Ein Konflikt, den der Aufrufer nicht verschuldet hat. Welcher es ist, sagt allein die Kennung im Rumpf — der Status trägt zwei verschiedene Fälle, und die API rät in keinem von beiden.",
     "identity_conflict": "409 auf jedem speichernden Endpunkt: Zwei gewachsene Zeilen beanspruchen dieselbe kanonische Identität, etwa AAPL/XNAS ohne ISIN neben AAPL/XNYS mit ihr. Rumpf {code, params} mit ticker, mic und — sofern bekannt — isin. Sie zusammenzuführen ist eine Datenoperation mit eigener Entscheidung und passiert nicht nebenbei in einem Kursabruf.",
     "symbol_ambiguous": "409 auf jedem Endpunkt, der ein symbol entgegennimmt — lesend wie verändernd: Mehrere Listings tragen diesen Anzeigenamen. Rumpf {detail, code, params, candidates}; jeder Kandidat nennt listing_id, symbol, mic, exchange und isin. Der Aufrufer entscheidet über die listing_id, die API rät nicht und verändert nichts.",
-    "422": "Die Anfrage ist formal falsch, z.B. eine ISIN mit falscher Prüfziffer.",
+    "body": "Jede Ablehnung antwortet seit 4.5.0 mit {code, params} auf oberster Ebene, nie mit einem Satz: code ist eine stabile Kennung, params trägt die Werte für den übersetzten Satz als Zeichenketten. Den Satz bildet der Konsument. Ausnahmen: Das 503 während eines Umzugs oder Starts trägt die Kennung in detail (migration_pending, startup_running, startup_failed); symbol_ambiguous behält zusätzlich detail mit einem Satz.",
+    "422": "Die Anfrage ist formal falsch. Kennungen: invalid_isin_format (params.isin), invalid_symbol_format (params.symbol), invalid_timestamp (params.name, params.value), time_range_reversed (params.from, params.to). Wo FastAPI selbst prüft, kommt zusätzlich dessen HTTPValidationError vor.",
+    "quote_unavailable": "502 auf Kurs-, Historien-, Refresh- und Aufnahmeweg in derselben Form: Keine Quelle konnte einen Preis feststellen. Rumpf {code, params} mit params.identifier (die Eingabe) und params.detail (Diagnose für den Betrieb, kein Anzeigetext). Bis 4.4.1 antworteten die Historien- und Refresh-Wege mit einem deutschen Satz unter detail.",
     "502": "Mindestens ein zuständiger Anbieter war nicht erreichbar. Ein 404 wäre hier falsch: 'nicht gefunden' und 'nicht erreichbar' sind verschiedene Aussagen.",
     "incomplete_core": "Fehlt einem Preis die Währung oder ein anderes Pflichtfeld, antwortet die API mit 502 statt mit einem geratenen Wert.",
     "instrument_not_found": "404 auf den ISIN-Wegen (/quote/{isin}, .../daily, .../history): Die zustaendigen Quellen haben geantwortet und kennen dieses Papier nicht. Rumpf {code, params} mit params.identifier — die Eingabe, damit das UI einen Satz bilden kann, ohne sie sich zu merken. Bis 2.1.0 lieferten diese Wege einen deutschen Fliesstext unter 'detail'; er war nie Teil des Vertrags, weshalb die Praezisierung additiv ist. Nicht zu verwechseln mit 502: Dort hat niemand nachgesehen."

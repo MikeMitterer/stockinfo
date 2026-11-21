@@ -220,22 +220,20 @@ def test_eine_gestoerte_devisenquelle_neben_einem_nichttreffer_bleibt_502(
 #
 # Je Weg steht hier, **welche 422-Formen dort wirklich vorkommen** — gemessen,
 # nicht angenommen. `ErrorDetail` an jedem, weil die gemeinsame Prüfung überall
-# hängt; die beiden anderen nur, wo die Route sie erzeugen kann.
+# hängt; `HTTPValidationError` nur, wo FastAPI selbst prüft. Die frühere
+# Fließtext-Form `DetailText` gibt es seit T-139 nicht mehr: Zeitfenster,
+# Symbolformat und fehlende Kennung antworten ebenfalls als `ErrorDetail`.
 ISIN_ROUTES = [
     ("/quote/{isin}", "get", {"ErrorDetail"}),
     ("/quote/{isin}/daily", "get", {"ErrorDetail", "HTTPValidationError"}),
-    (
-        "/quote/{isin}/history",
-        "get",
-        {"ErrorDetail", "HTTPValidationError", "DetailText"},
-    ),
+    ("/quote/{isin}/history", "get", {"ErrorDetail", "HTTPValidationError"}),
     ("/refresh/{isin}", "post", {"ErrorDetail"}),
     ("/instruments/{isin}", "delete", {"ErrorDetail"}),
-    ("/analyze", "get", {"ErrorDetail", "DetailText"}),
+    ("/analyze", "get", {"ErrorDetail"}),
     (
         "/instruments/by-symbol/{symbol}/isin",
         "put",
-        {"ErrorDetail", "HTTPValidationError", "DetailText"},
+        {"ErrorDetail", "HTTPValidationError"},
     ),
 ]
 
@@ -273,18 +271,6 @@ def test_der_vertrag_nennt_je_route_alle_moeglichen_422_formen(
         assert _declared_422_forms(schema, path, method) == expected, (
             f"{method.upper()} {path}"
         )
-
-    # Die Fließtext-Variante sagt `detail` als **Pflicht** zu. Ohne diese Zeile
-    # erlaubte der Vertrag `{}` und beschriebe damit gerade nicht, was sie
-    # ausmacht.
-    detail_text = next(
-        variant
-        for variant in schema["paths"]["/analyze"]["get"]["responses"]["422"]["content"][
-            "application/json"
-        ]["schema"]["anyOf"]
-        if variant.get("title") == "DetailText"
-    )
-    assert detail_text["required"] == ["detail"]
 
 
 def test_jeder_isin_weg_liefert_zur_laufzeit_die_zugesagte_kennung(
