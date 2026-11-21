@@ -435,7 +435,7 @@ export const en = {
         '{symbol} is carried by several listings — choose one by its listing ID.',
       backup_not_found: 'There is no backup named {name}.',
       backup_incompatible:
-        '{name} was made under a different source setup and does not fit the running one.',
+        '{name} does not fit the running instance. The backup list names the exact reason.',
       backup_schema_too_new:
         '{name} comes from a newer StockInfo version and cannot be restored here.',
       restore_failed: '{name} could not be restored at startup. The server log names the reason.',

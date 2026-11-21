@@ -517,7 +517,7 @@ export const de = {
         '{symbol} tragen mehrere Listings — die Wahl geht nur über die Listing-Kennung.',
       backup_not_found: 'Eine Sicherung namens {name} gibt es nicht.',
       backup_incompatible:
-        '{name} entstand unter einer anderen Quellenlage und passt nicht zur laufenden.',
+        '{name} passt nicht zur laufenden Instanz. Den genauen Grund nennt die Liste der Sicherungen.',
       backup_schema_too_new:
         '{name} stammt aus einer neueren StockInfo-Version und lässt sich hier nicht einspielen.',
       restore_failed: '{name} ließ sich beim Start nicht einspielen. Das Serverprotokoll nennt den Grund.',
