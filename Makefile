@@ -15,7 +15,8 @@ export WORKSPACE WORKSPACE_SQ PROJECT_NAME
 # ohnehin selbst (pydantic-settings), Docker via --env-file.
 -include .env
 
-# Entwicklungs-Targets (setup, dev-*, up/down) laufen ohne die Entwicklungswerkzeuge.
+# Entwicklungs-Targets (setup, dev-up, dev-logs, up/down) laufen ohne die Entwicklungswerkzeuge;
+# dev-down stoppt overmind ohne sie, räumt Reste und Ports aber nur mit ProjectTools auf.
 # Prüf-Targets (test, check, docs-check, status, hints, changelog) brauchen ProjectTools,
 # Maintainer-Targets (build, push, tag-*, version) BashLib; alle kommen über pipx. help, info
 # und hints geben mit BashLib und CLITheme im Theme aus, ohne sie schlicht.
@@ -80,7 +81,7 @@ PYTEST  := $(VENV)/bin/pytest
 # Dashboard-Pakete. Eine geänderte Abhängigkeitsdatei macht den Stempel veraltet.
 SETUP_STAMPS := $(VENV)/.installed dashboard/node_modules/.installed
 
-# Ports des Dev-Stacks aus .dev-ports.conf.sh, dieselbe Quelle wie dev-ports.sh. Nur
+# Ports des Dev-Stacks aus .dev-ports.conf.sh, dieselbe Quelle wie dev-ports. Nur
 # Ziffern werden übernommen; die Werte stehen danach als Zahlen in den Rezepten.
 DEV_PORTS      := $(shell bash -c 'source ./.dev-ports.conf.sh && printf "%s %s" "$$DASHBOARD_PORT" "$$BACKEND_PORT"' 2>/dev/null | grep -xE '[0-9]+ [0-9]+')
 DASHBOARD_PORT := $(word 1,$(DEV_PORTS))
@@ -250,20 +251,22 @@ status: require-tools ## Git-Status aller Workspace-Repos anzeigen
 
 .PHONY: dev-up
 dev-up: ## Backend und Dashboard laufen im Hintergrund, mit Auto-Reload
-	overmind start -D -N -f Procfile.dev
+	@# overmind bricht ab, wenn der Stack schon läuft oder eine verwaiste
+	@# .overmind.sock eines Absturzes liegt; aufräumen kann nur dev-down.
+	@overmind start -D -N -f Procfile.dev || { \
+		echo -e "  $(YELLOW)⚠$(RESET) Nicht gestartet. Läuft der Stack schon: $(WHITE)make dev-logs$(RESET). Nach einem Absturz räumt $(WHITE)make dev-down$(RESET) die Reste auf."; \
+		exit 1; }
 	@echo -e "  $(GREEN)✓$(RESET) Stack läuft — Backend $(BLUE)http://localhost:$(BACKEND_PORT)$(RESET) · Dashboard $(BLUE)http://localhost:$(DASHBOARD_PORT)$(RESET)  ($(WHITE)make dev-logs$(RESET))"
 
 .PHONY: dev-down
 dev-down: ## Dev-Stack gestoppt, Reste nach einem Absturz beseitigt, Ports frei
 	-@overmind quit 2>/dev/null || true
-	@# Raeumt nach einem Absturz overmind/tmux DIESES Projekts, eine verwaiste
-	@# .overmind.sock und die Ports aus .dev-ports.conf.sh auf. dev-ports hat im
-	@# pipx-Paket noch keinen Befehl (ProjectTools T-16); bis dahin aus PROJECT_TOOLS.
-	@if [[ -r "$${PROJECT_TOOLS:-}/bash/dev-ports.sh" ]]; then \
-		"$${PROJECT_TOOLS}/bash/dev-ports.sh" --kill; \
-	else \
-		echo -e "  $(YELLOW)⚠$(RESET) PROJECT_TOOLS nicht gesetzt — Reste nach einem Absturz nicht geprüft"; \
-	fi
+	@# Räumt nach einem Absturz overmind/tmux DIESES Projekts, eine verwaiste
+	@# .overmind.sock und die Ports aus .dev-ports.conf.sh auf; dev-ports kommt
+	@# aus ProjectTools. require-tools erst hier und nicht als Voraussetzung:
+	@# overmind ist damit auch ohne ProjectTools schon gestoppt.
+	@$(MAKE) -s --no-print-directory require-tools
+	@dev-ports --kill
 	@echo -e "  $(GREEN)✓$(RESET) Stack gestoppt"
 
 .PHONY: dev-logs

@@ -29,8 +29,9 @@ Installing and running the finished container is described in the
 - **pipx** and **Deno 2** for the checks: `make install-tools` installs
   ProjectTools, BashLib and CLITheme at the versions in `.dev-tools.conf.sh`
 
-`make setup`, `make help`, `make info`, the `dev-*` targets and
-`make up`/`down` work on a plain clone. With BashLib and CLITheme,
+`make setup`, `make help`, `make info`, `make dev-up`, `make dev-logs` and
+`make up`/`down` work on a plain clone; `make dev-down` stops overmind there
+too, but cleaning up after a crash needs ProjectTools. With BashLib and CLITheme,
 `make help`, `make info` and `make hints` print in your CLITheme theme
 (`clitheme use NAME`); without them, they print plain lists.
 `make test`, `make check`, `make docs-check`, `make status`, `make hints`
@@ -86,12 +87,17 @@ all read them from there; to change a port, change it only in that file.
 use. If the dashboard port is taken, Vite stops instead of moving to another
 one.
 
-`make dev-down` stops the stack. With `PROJECT_TOOLS` pointing to the `src`
-folder of a ProjectTools checkout, it also cleans up after a crash: it ends
-leftover overmind, tmux and app processes of this project, removes a stale
-`.overmind.sock` and frees the ports from `.dev-ports.conf.sh`. It only ends your own
-processes inside this project and can be run as often as you like. Without
-`PROJECT_TOOLS` it only stops overmind and prints a warning.
+`make dev-down` stops the stack and cleans up after a crash with
+`dev-ports --kill` from ProjectTools: it ends leftover overmind, tmux and app
+processes of this project, removes a stale `.overmind.sock` and frees the
+ports from `.dev-ports.conf.sh`. It only ends your own processes inside this
+project and can be run as often as you like. Without ProjectTools it stops
+overmind, then stops with the install command. `dev-ports --status` shows
+who holds a port.
+
+If `make dev-up` refuses to start, the stack is either still running
+(`make dev-logs`) or a crash left a stale `.overmind.sock`; `make dev-down`
+removes it.
 
 The server then runs at `http://localhost:8000`. Interactive API docs (Swagger UI,
 dark theme) live at `http://localhost:8000/docs` (use `http://` in the browser, not
