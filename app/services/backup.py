@@ -22,8 +22,10 @@ from pathlib import Path
 
 import structlog
 
+from pydantic import ValidationError
+
 from app.error_text import error_text
-from app.models import BackupReason, SourceDifference
+from app.models import BackupReason, ErrorDetail, SourceDifference
 from app.persistence.backup_store import (
     UnreadableDatabaseError,
     copy_database,
@@ -55,6 +57,11 @@ soll den Tausch überleben, der die Datenbank ersetzt."""
 _NAME_PATTERN = re.compile(r"^stockinfo-\d{8}T\d{9}Z-[0-9a-f]{12}\.db$")
 """**Ein Name, kein Pfad.** Schrägstriche, `..` und absolute Pfade sind ein
 Versuch, das Verzeichnis zu verlassen; geprüft wird vor jedem Dateizugriff."""
+
+
+# Ein Tausch beim Start scheiterte an etwas anderem als einer Ablehnung von
+# `BackupError` (`params.name`); den Grund nennt das Protokoll (`restore_failed`).
+REASON_RESTORE_FAILED = "restore_failed"
 
 
 class BackupError(Exception):
@@ -400,11 +407,16 @@ def apply_pending(database_path: str, config: SourcesConfig) -> str | None:
 
         replace_database(database_path, source)
     except Exception as exc:  # noqa: BLE001 — ein Start bricht daran nicht ab
-        logger.error("restore_failed", name=name, error=str(exc))
-        _write_atomic(
-            pending,
-            json.dumps({**intent, "failed": error_text(exc)}, indent=2),
+        # Der Ausnahmetext geht ins Protokoll; gespeichert und später
+        # ausgeliefert werden nur Kennung und Name (T-148). Der Text einer
+        # fremden Ausnahme kann enthalten, was niemand ausliefern will.
+        logger.error("restore_failed", name=name, error=error_text(exc))
+        failure = (
+            {"code": exc.code, "params": exc.params}
+            if isinstance(exc, BackupError)
+            else {"code": REASON_RESTORE_FAILED, "params": {"name": name}}
         )
+        _write_atomic(pending, json.dumps({**intent, "failed": failure}, indent=2))
         return None
 
     pending.unlink(missing_ok=True)
@@ -412,24 +424,28 @@ def apply_pending(database_path: str, config: SourcesConfig) -> str | None:
     return name
 
 
-def restore_state(database_path: str) -> tuple[str | None, str]:
+def restore_state(database_path: str) -> tuple[str | None, ErrorDetail | None]:
     """Was von einem angeforderten Wiederherstellen übrig ist.
 
     **Beides zugleich gibt es nicht.** Nach einem Fehler folgt kein Versuch
     mehr; `pending_restore` wäre eine Ankündigung, die niemand einlöst. Der
-    Name wandert in den Grund.
+    Name steht in `params` des Grundes.
 
     Returns:
         Den Namen **oder** — nach einem gescheiterten Tausch — `None` und den
-        Grund. Ein unlesbarer Eintrag ergibt `None`, nicht den Text `"None"`.
+        Grund als Kennung. Ein unlesbarer Eintrag ergibt `None`, nicht den
+        Text `"None"`; ein Grund ohne lesbare Kennung `restore_failed`.
     """
     intent = _read_intent(Path(database_path).parent / PENDING_FILENAME)
     name = intent.get("backup")
     name = name if isinstance(name, str) and name else None
-    failed = str(intent.get("failed") or "")
-    if failed:
-        return None, f"{name}: {failed}" if name else failed
-    return name, ""
+    failed = intent.get("failed")
+    if not failed:
+        return name, None
+    try:
+        return None, ErrorDetail.model_validate(failed)
+    except ValidationError:
+        return None, ErrorDetail(code=REASON_RESTORE_FAILED, params={"name": name or ""})
 
 
 def stamped_fingerprint(database_path: str | Path) -> str | None:

@@ -62,10 +62,20 @@ export function reasonOf(error: unknown, fieldLabels?: Record<string, string>): 
     const params: Record<string, unknown> = isRecord(body.params) ? { ...body.params } : {}
     const label = typeof params.field === 'string' ? fieldLabels?.[params.field] : undefined
     if (label) params.field = label
-    return reasonText(body.code, params, ERROR_REASON_CATALOGS, 'errors.reason.unknown')
+    return errorDetailText({ code: body.code, params })
   }
 
   return null
+}
+
+/**
+ * Der Satz zu einer Kennung, die nicht als Fehler, sondern in einer Antwort
+ * steht — etwa `restore_error` in `GET /backups` (T-148).
+ *
+ * @param detail - `{code, params}` aus dem Backend.
+ */
+export function errorDetailText(detail: { code: string; params: Record<string, unknown> }): string {
+  return reasonText(detail.code, detail.params, ERROR_REASON_CATALOGS, 'errors.reason.unknown')
 }
 
 /** Der Körper als Objekt — oder `null`, wenn es keiner ist. */

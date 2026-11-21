@@ -823,13 +823,15 @@ class SourcesResponse(BaseModel):
     profile: str | None = Field(
         default=None, description="Eingetragenes Profilpaket, sofern eines gilt"
     )
-    provenance_warning: str = Field(
-        default="",
+    provenance_warning: "ErrorDetail | None" = Field(
+        default=None,
         description=(
             "Der Bestand stammt aus einer **anderen** Quellenlage als der "
             "laufenden — etwa nach einem erzwungenen Wiederherstellen. Die "
             "Papiere darin können in einer Form vorliegen, die die laufende "
-            "Kette nicht bedient; leer, solange beides zusammenpasst"
+            "Kette nicht bedient. Kennung `provenance_mismatch` mit "
+            "`params.stamped` und `params.running`; `null`, solange beides "
+            "zusammenpasst"
         ),
     )
     sources: list[SourceEntry]
@@ -1222,12 +1224,14 @@ class BackupList(BaseModel):
             "dann ist die laufende Datenbank noch die alte"
         ),
     )
-    restore_error: str = Field(
-        default="",
+    restore_error: ErrorDetail | None = Field(
+        default=None,
         description=(
-            "Warum der Tausch beim letzten Start scheiterte. Steht hier etwas, "
-            "wird **nicht** erneut versucht: Derselbe Grund träfe beim nächsten "
-            "Start wieder zu. Eine neue Anforderung löst den Zustand ab"
+            "Warum der Tausch beim letzten Start scheiterte, als Kennung mit "
+            "`params.name` (`backup_*` oder `restore_failed`; den Text nennt "
+            "das Serverprotokoll). Steht hier etwas, wird **nicht** erneut "
+            "versucht: Derselbe Grund träfe beim nächsten Start wieder zu. "
+            "Eine neue Anforderung löst den Zustand ab"
         ),
     )
     keep: int = Field(
@@ -1242,8 +1246,11 @@ class RestoreAccepted(BaseModel):
     **Der Dienst startet sich nicht selbst neu.** Ein Prozess, der seinen
     Lebenszyklus an der HTTP-Grenze übernimmt, entzieht ihn dem Container, der
     ihn führt. Die Antwort sagt, was noch fehlt, statt es zu tun.
+
+    `restart_required` ist diese Aussage. Bis T-148 stand daneben ein
+    deutscher Satz in `detail`, der dasselbe sagte; den Satz bildet das UI
+    (`backups.pending` mit dem Namen aus `GET /backups`).
     """
 
     backup: BackupEntry
     restart_required: bool = True
-    detail: str = Field(description="Klartext: der Neustart steht noch aus")

@@ -234,6 +234,13 @@ Meldung schreibt.
 Die beiden `409` `identity_conflict` und `symbol_ambiguous` beschreibt der
 Abschnitt darüber.
 
+Dieselbe Form tragen zwei Statusfelder außerhalb des Core:
+`restore_error` in `GET /backups` (`backup_*` oder `restore_failed`, jeweils
+mit `params.name`) und `provenance_warning` in `GET /sources`
+(`provenance_mismatch` mit `params.stamped` und `params.running`). Beide sind
+`null`, solange nichts vorliegt. `POST /backups/{name}/restore` meldet den
+ausstehenden Neustart nur über `restart_required`.
+
 [↑ Übersicht](#übersicht)
 
 ## Die Generation: woran ein Konsument einen Datensatzwechsel erkennt

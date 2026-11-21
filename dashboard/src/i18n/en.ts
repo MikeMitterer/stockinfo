@@ -289,7 +289,7 @@ export const en = {
     confirmNo: 'Cancel',
     forceLabel: 'Restore anyway — {reason}',
     pending: 'A restart is pending: {name} will be applied on the next start.',
-    failed: 'Restoring failed: {reason}. It will not be retried.',
+    failed: 'Restoring failed. {reason} It will not be retried.',
   },
   settings: {
     title: 'Settings',
@@ -435,9 +435,12 @@ export const en = {
         '{symbol} is carried by several listings — choose one by its listing ID.',
       backup_not_found: 'There is no backup named {name}.',
       backup_incompatible:
-        '{name} was made under a different source setup and does not fit the running one.',
+        '{name} does not fit the running instance. The backup list names the exact reason.',
       backup_schema_too_new:
         '{name} comes from a newer StockInfo version and cannot be restored here.',
+      restore_failed: '{name} could not be restored at startup. The server log names the reason.',
+      provenance_mismatch:
+        'The data comes from source setup {stamped}; this instance runs under {running}.',
       /* Fallback for a code this UI does not know — from a newer backend or a plugin. */
       unknown: 'The source reports an error this interface does not know: {code}.',
     },
