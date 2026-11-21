@@ -1048,18 +1048,45 @@ def invalid_isin_response(*, validation: bool = False) -> dict[int | str, dict[s
     Returns:
         Ein `responses`-Eintrag für genau diese Route.
     """
+    return _rejection_422(
+        "Die Eingabe hat nicht das Format einer ISIN "
+        "(`code: invalid_isin_format`, `params.isin` nennt sie) — der "
+        "Rumpf steht **nicht** unter `detail`. Andere Ablehnungen der "
+        "Route haben dieselbe Form mit eigener Kennung. Wo FastAPI "
+        "zusätzlich prüft, nennt `anyOf` dessen Form mit.",
+        validation=validation,
+    )
+
+
+def invalid_input_response(*, validation: bool = False) -> dict[int | str, dict[str, object]]:
+    """Die `422`-Zusage eines Weges ohne ISIN, etwa mit Symbol oder Zeitfenster.
+
+    Dieselben zwei Formen wie bei `invalid_isin_response`; nur der Anlass ist
+    ein anderer (`invalid_symbol_format`, `invalid_timestamp`,
+    `time_range_reversed`).
+
+    Args:
+        validation: Ob die Route zusätzlich FastAPI-Validierung auslösen kann.
+
+    Returns:
+        Ein `responses`-Eintrag für genau diese Route.
+    """
+    return _rejection_422(
+        "Die Eingabe ist formal falsch; `code` nennt den Grund, etwa "
+        "`invalid_symbol_format` oder `invalid_timestamp`. Wo FastAPI "
+        "zusätzlich prüft, nennt `anyOf` dessen Form mit.",
+        validation=validation,
+    )
+
+
+def _rejection_422(description: str, *, validation: bool) -> dict[int | str, dict[str, object]]:
+    """Der `422`-Eintrag: `ErrorDetail`, mit FastAPI-Prüfung als `anyOf`."""
     schemas: list[dict[str, object]] = [_INVALID_ISIN_SCHEMA]
     if validation:
         schemas.append(_VALIDATION_SCHEMA)
     return {
         422: {
-            "description": (
-                "Die Eingabe hat nicht das Format einer ISIN "
-                "(`code: invalid_isin_format`, `params.isin` nennt sie) — der "
-                "Rumpf steht **nicht** unter `detail`. Andere Ablehnungen der "
-                "Route haben dieselbe Form mit eigener Kennung. Wo FastAPI "
-                "zusätzlich prüft, nennt `anyOf` dessen Form mit."
-            ),
+            "description": description,
             "content": {
                 "application/json": {
                     "schema": schemas[0] if len(schemas) == 1 else {"anyOf": schemas}
@@ -1067,6 +1094,18 @@ def invalid_isin_response(*, validation: bool = False) -> dict[int | str, dict[s
             },
         }
     }
+
+
+QUOTE_UNAVAILABLE_RESPONSE: dict[int | str, dict[str, object]] = {
+    502: {
+        "model": ErrorDetail,
+        "description": (
+            "Keine Quelle konnte einen Preis feststellen "
+            "(`code: quote_unavailable`, `params.identifier` nennt die Eingabe). "
+            "Auf Kurs-, Historien-, Refresh- und Aufnahmeweg dieselbe Form"
+        ),
+    }
+}
 
 INSTRUMENT_NOT_FOUND_RESPONSE: dict[int | str, dict[str, object]] = {
     404: {

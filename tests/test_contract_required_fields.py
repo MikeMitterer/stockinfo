@@ -270,13 +270,17 @@ def test_leerraum_verlaesst_den_kursweg_nicht_als_erfolg(
 
     app.dependency_overrides[get_cached_quote_service] = lambda: service
     try:
-        response = TestClient(app).get("/quote", params={"symbol": "VGWL.DE"})
+        with structlog.testing.capture_logs() as logs:
+            response = TestClient(app).get("/quote", params={"symbol": "VGWL.DE"})
 
         assert response.status_code == 502, (
             f"Leerraum kam als Erfolg durch: {response.text}"
         )
-        assert missing in response.json()["params"]["detail"], (
-            f"die Ablehnung nennt das leere Feld nicht: {response.text}"
+        # Seit T-139 nennt das Protokoll den Grund, nicht die Antwort: Der
+        # Ausnahmetext kann Anbieterdaten enthalten.
+        reasons = [entry["error"] for entry in logs if entry["event"] == "quote_unavailable_reason"]
+        assert reasons and missing in reasons[0], (
+            f"die Ablehnung nennt das leere Feld nicht: {reasons}"
         )
     finally:
         app.dependency_overrides.clear()

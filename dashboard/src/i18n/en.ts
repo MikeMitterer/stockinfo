@@ -416,7 +416,7 @@ export const en = {
       detail_below_minimum: '{field}: the value is below the minimum {minimum}.',
       detail_above_maximum: '{field}: the value is above the maximum {maximum}.',
       detail_boolean_required: '{field}: yes or no is required here.',
-      detail_text_required: '{field}: a non-empty text is required here (at most 1000 characters).',
+      detail_text_required: '{field}: a non-empty text is required here (at most {max_length} characters).',
       detail_currency_code_required: '{field}: a three-letter currency code is required here.',
       detail_currency_required: '{field}: the amount needs a currency.',
       detail_currency_not_allowed: '{field}: this field carries no currency.',

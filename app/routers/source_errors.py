@@ -8,6 +8,8 @@ denselben `QuoteUnavailableError` mit einem deutschen Satz, der Kursweg mit
 einer Kennung.
 """
 
+import structlog
+
 from app.routers.api_error import ApiError
 from app.services.intake_service import REASON_NOT_FOUND
 from app.services.quote_service import (
@@ -15,6 +17,8 @@ from app.services.quote_service import (
     QuoteUnavailableError,
     UnsupportedInstrumentTypeError,
 )
+
+logger = structlog.get_logger()
 
 REASON_QUOTE_UNAVAILABLE = "quote_unavailable"
 
@@ -33,18 +37,23 @@ def quote_unavailable_error(identifier: str, exc: QuoteUnavailableError) -> ApiE
     Eine eigene Aussage: nicht „gibt es nicht" (404) und nicht ein Kurs mit
     Lücke. Für ein Papier ohne Kursquelle (T-31) ist sie der Normalfall.
 
+    **Der Ausnahmetext geht ins Protokoll, nicht in die Antwort.** Er nennt die
+    ausgefallenen Quellen (T-20 `#3`), enthält aber auch den rohen Fehlertext
+    einer Plugin-Ausnahme (`plugin_guard`: „Quelle: Fehlertext“). Darin kann
+    stehen, was ein Anbieter in seine Meldung schreibt, etwa eine URL mit
+    Schlüssel. Bis T-139 ging er als `params.detail` an den Aufrufer.
+
     Args:
         identifier: Die Eingabe des Aufrufers — ISIN, Symbol oder Kennung.
-        exc: Der Ausnahmetext nennt die ausgefallenen Quellen (T-20 `#3`) und
-            reist als `params.detail` mit. Er ist Diagnose für den Betrieb,
-            kein Anzeigetext; den Satz trägt die Kennung.
+        exc: Der Ausfall samt Text für das Protokoll.
 
     Returns:
-        Die Ablehnung `502 quote_unavailable` zum Werfen.
+        Die Ablehnung `502 quote_unavailable` zum Werfen; `params` nennt nur
+        die Eingabe.
     """
-    return ApiError(
-        502, REASON_QUOTE_UNAVAILABLE, {"identifier": identifier, "detail": str(exc)}
-    )
+    # Eigener Ereignisname: Den Code selbst protokolliert der zentrale Handler.
+    logger.warning("quote_unavailable_reason", identifier=identifier, error=str(exc))
+    return ApiError(502, REASON_QUOTE_UNAVAILABLE, {"identifier": identifier})
 
 
 def instrument_not_found_error(identifier: str) -> ApiError:

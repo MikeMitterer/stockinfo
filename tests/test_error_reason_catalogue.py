@@ -18,6 +18,8 @@ from pathlib import Path
 
 import pytest
 
+from app.detail_models import DetailDefinition, DetailInput
+from app.details import REASON_DETAIL_TEXT_REQUIRED, TEXT_MAX_LENGTH, DetailValueError, validate_input
 from tests.test_migration_reason_catalogue import reason_entries
 
 _APP = Path("app")
@@ -102,6 +104,26 @@ def test_jede_kennung_des_backends_hat_einen_satz(catalogue: Path) -> None:
         if len(entries[code].strip()) < _MIN_SENTENCE_LENGTH
     }
     assert not too_short, f"{catalogue.name}: kein brauchbarer Satz für {too_short}"
+
+
+@pytest.mark.parametrize("catalogue", _CATALOGUES, ids=lambda path: path.name)
+def test_die_textgrenze_kommt_aus_dem_backend(catalogue: Path) -> None:
+    """Die Obergrenze für Detailtext steht einmal, in `app/details.py`.
+
+    Der Satz setzt sie über `params.max_length` ein. Schriebe ein Katalog die
+    Zahl ab, zeigte er nach einer Änderung der Prüfung den alten Wert.
+    """
+    sentence = _catalogue_codes(catalogue)[REASON_DETAIL_TEXT_REQUIRED]
+
+    assert "{max_length}" in sentence
+    assert str(TEXT_MAX_LENGTH) not in sentence
+
+    with pytest.raises(DetailValueError) as rejected:
+        validate_input(
+            DetailDefinition(name="fund_domicile", kind="text", label_en="Fund domicile"),
+            DetailInput(value="x" * (TEXT_MAX_LENGTH + 1)),
+        )
+    assert rejected.value.params == {"field": "fund_domicile", "max_length": str(TEXT_MAX_LENGTH)}
 
 
 def test_keine_fehlerantwort_traegt_einen_satz_oder_ein_codeliteral() -> None:

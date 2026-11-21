@@ -120,12 +120,16 @@ REASON_DETAIL_NUMBER_REQUIRED = 'detail_number_required'
 REASON_DETAIL_BELOW_MINIMUM = 'detail_below_minimum'  # dazu `params.minimum`
 REASON_DETAIL_ABOVE_MAXIMUM = 'detail_above_maximum'  # dazu `params.maximum`
 REASON_DETAIL_BOOLEAN_REQUIRED = 'detail_boolean_required'
-REASON_DETAIL_TEXT_REQUIRED = 'detail_text_required'
+REASON_DETAIL_TEXT_REQUIRED = 'detail_text_required'  # dazu `params.max_length`
 REASON_DETAIL_CURRENCY_CODE_REQUIRED = 'detail_currency_code_required'
 REASON_DETAIL_CURRENCY_REQUIRED = 'detail_currency_required'
 REASON_DETAIL_CURRENCY_NOT_ALLOWED = 'detail_currency_not_allowed'
 REASON_DETAIL_NOT_DECLARED = 'detail_not_declared'
 REASON_DETAIL_NOT_EDITABLE = 'detail_not_editable'
+
+# Längster zulässiger Text eines Detailwerts. Der Satz zur Ablehnung bekommt
+# ihn als `params.max_length`; die Kataloge schreiben ihn nicht ab.
+TEXT_MAX_LENGTH = 1000
 
 
 class DetailValueError(ValueError):
@@ -181,8 +185,10 @@ def validate_input(definition: DetailDefinition, entry: DetailInput) -> DetailIn
     elif definition.kind == 'boolean':
         if type(value) is not bool:
             raise DetailValueError(REASON_DETAIL_BOOLEAN_REQUIRED, definition.name)
-    elif not isinstance(value, str) or not value.strip() or len(value) > 1000:
-        raise DetailValueError(REASON_DETAIL_TEXT_REQUIRED, definition.name)
+    elif not isinstance(value, str) or not value.strip() or len(value) > TEXT_MAX_LENGTH:
+        raise DetailValueError(
+            REASON_DETAIL_TEXT_REQUIRED, definition.name, max_length=str(TEXT_MAX_LENGTH)
+        )
     if definition.name == 'fund_currency' and not re.fullmatch('[A-Z]{3}', str(value)):
         raise DetailValueError(REASON_DETAIL_CURRENCY_CODE_REQUIRED, definition.name)
     if definition.currency_required and not re.fullmatch('[A-Z]{3}', entry.currency or ''):

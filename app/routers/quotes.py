@@ -25,11 +25,13 @@ from app.exchanges import REASON_NO_SUFFIX
 from app.models import (
     IDENTITY_CONFLICT_RESPONSE,
     INSTRUMENT_NOT_FOUND_RESPONSE,
+    QUOTE_UNAVAILABLE_RESPONSE,
     SYMBOL_CONFLICT_RESPONSE,
     DailyPoint,
     ErrorDetail,
     QuotePoint,
     QuoteResponse,
+    invalid_input_response,
     invalid_isin_response,
 )
 from app.routers.api_error import ApiError
@@ -87,7 +89,13 @@ Period = Literal["1w", "1m", "3m", "1y", "max"]
 
 
 @router.get(
-    "/quote", response_model=QuoteResponse, responses=SYMBOL_CONFLICT_RESPONSE
+    "/quote",
+    response_model=QuoteResponse,
+    responses={
+        **SYMBOL_CONFLICT_RESPONSE,
+        **QUOTE_UNAVAILABLE_RESPONSE,
+        **invalid_input_response(validation=True),
+    },
 )
 def quote_by_symbol(
     service: ServiceDep,
@@ -127,6 +135,7 @@ def quote_by_symbol(
     responses={
         **IDENTITY_CONFLICT_RESPONSE,
         **INSTRUMENT_NOT_FOUND_RESPONSE,
+        **QUOTE_UNAVAILABLE_RESPONSE,
         **invalid_isin_response(),
     },
 )
@@ -179,7 +188,11 @@ def daily_history(
 @router.get(
     "/quote/by-symbol/{symbol}/daily",
     response_model=list[DailyPoint],
-    responses={**SYMBOL_CONFLICT_RESPONSE, **DAILY_ERROR_RESPONSES},
+    responses={
+        **SYMBOL_CONFLICT_RESPONSE,
+        **DAILY_ERROR_RESPONSES,
+        **invalid_input_response(validation=True),
+    },
 )
 def daily_history_by_symbol(
     symbol: SymbolPath,
@@ -201,7 +214,11 @@ def daily_history_by_symbol(
 @router.get(
     "/quote/by-symbol/{symbol}/history",
     response_model=list[QuotePoint],
-    responses=SYMBOL_CONFLICT_RESPONSE,
+    responses={
+        **SYMBOL_CONFLICT_RESPONSE,
+        **QUOTE_UNAVAILABLE_RESPONSE,
+        **invalid_input_response(validation=True),
+    },
 )
 def quote_history_by_symbol(
     symbol: SymbolPath,
@@ -223,6 +240,7 @@ def quote_history_by_symbol(
     responses={
         **IDENTITY_CONFLICT_RESPONSE,
         **INSTRUMENT_NOT_FOUND_RESPONSE,
+        **QUOTE_UNAVAILABLE_RESPONSE,
         **invalid_isin_response(validation=True),
     },
 )

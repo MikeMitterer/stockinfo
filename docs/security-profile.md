@@ -100,6 +100,13 @@ dort keine Zusage.
   soll.
 - Lesen kann den Schlüssel der Prozess der App und damit auch jedes geladene
   Plugin: Es läuft im selben Prozess und erreicht `os.environ` ohnehin.
+- **Fehlertexte von Quellen bleiben im Protokoll.** Den Text einer
+  Quellenausnahme schreibt der Anbieter, und er kann eine URL samt Schlüssel
+  enthalten. Die REST-Antwort trägt nur Kennung und Eingabe
+  (`quote_unavailable_error`, `app/routers/source_errors.py`); den Text
+  protokolliert der Server (`quote_unavailable_reason`, `source_raised`).
+  `tests/test_error_paths.py` prüft es mit einer Quelle, deren Ausnahme einen
+  Schlüssel trägt.
 - Agenten lesen `.env` nicht (Regel `sensible-dateien`).
 
 ## Anmeldung

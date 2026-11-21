@@ -556,7 +556,8 @@ try {
     await page.keyboard.press('Enter')
     await settle(page)
     const rejected = await page.locator('body').innerText()
-    check(rejected.includes('Fund domicile: a non-empty text is required here'),
+    // „1000“ kommt als `params.max_length` aus dem Backend, nicht aus dem Katalog.
+    check(rejected.includes('Fund domicile: a non-empty text is required here (at most 1000 characters)'),
       'abgelehnter Fondssitz nennt keinen übersetzten Grund mit Beschriftung')
     check(!rejected.includes('fund_domicile'), 'Meldung nennt den internen Feldnamen')
     check((await paper(fund))?.details?.fund_domicile?.manual_value == null, 'zu langer Fondssitz wurde gespeichert')

@@ -4,6 +4,7 @@ import sqlite3
 from collections.abc import Iterator
 
 import pytest
+import structlog
 from fastapi.testclient import TestClient
 
 import app.main as main_module
@@ -375,27 +376,22 @@ def test_unbekanntes_symbol_bleibt_ein_502(client: TestClient) -> None:
     assert client.get("/quote/by-symbol/ZZTEST/daily").status_code == 502
 
 
-def test_ausgefallene_quellen_nennen_sich_im_antwortkoerper(
+def test_ausgefallene_quellen_nennen_sich_im_protokoll_nicht_in_der_antwort(
     client: TestClient,
 ) -> None:
-    """T-20 `#3`: Der 502 soll sagen, wer nicht erreichbar war.
+    """T-20 `#3`: Wer die App betreibt, soll sehen, wer nicht erreichbar war.
 
-    Ohne die Namen steht dort nur „ging nicht" — und wer die App betreibt,
-    weiß nicht, ob er auf OpenFIGI, Yahoo oder sein eigenes Netz schauen soll.
+    **Seit T-139 im Protokoll, nicht mehr im Antwortkörper.** Der Text kommt
+    ungefiltert aus Plugin-Ausnahmen und kann enthalten, was ein Anbieter in
+    seine Meldung schreibt. Der Aufrufer bekommt die Kennung und seine Eingabe.
     """
-    response = client.get("/quote/ZZ0000000000")
+    with structlog.testing.capture_logs() as logs:
+        response = client.get("/quote/ZZ0000000000")
 
     assert response.status_code == 502
-    # **Seit T-31 als `{code, params}`.** Die Anleihe braucht den
-    # `quote_unavailable`-Zustand strukturiert — sie ist der Normalfall ohne
-    # Kursquelle, keine Störung —, und zwei Rumpfformen an einem Endpunkt
-    # wären schlimmer als der alte Freitext. Die Namen reisen als Diagnose in
-    # `params.detail` mit; die geprüfte Aussage bleibt Wort für Wort dieselbe.
-    body = response.json()
-    assert body["code"] == "quote_unavailable"
-    detail = body["params"]["detail"]
-    assert "ZZ0000000000" in detail
-    assert "openfigi" in detail and "yahoo" in detail
+    assert response.json() == {"code": "quote_unavailable", "params": {"identifier": "ZZ0000000000"}}
+    logged = [entry for entry in logs if entry["event"] == "quote_unavailable_reason"]
+    assert logged and "openfigi" in logged[0]["error"] and "yahoo" in logged[0]["error"]
 
 
 @pytest.mark.parametrize(
@@ -428,10 +424,7 @@ def test_kein_kurs_hat_auf_kurs_historie_und_refresh_dieselbe_form(
     Bis T-139 antworteten die Historien- und Refresh-Wege mit dem deutschen
     Satz „Kein Kurs für …", der Kursweg mit `quote_unavailable`.
     """
-    expected = {
-        "code": "quote_unavailable",
-        "params": {"identifier": identifier, "detail": _UNAVAILABLE.format(identifier=identifier)},
-    }
+    expected = {"code": "quote_unavailable", "params": {"identifier": identifier}}
 
     for method, url in requests:
         response = client.request(method, url)

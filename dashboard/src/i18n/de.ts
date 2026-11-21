@@ -497,7 +497,7 @@ export const de = {
       detail_below_minimum: '{field}: Der Wert liegt unter dem Minimum {minimum}.',
       detail_above_maximum: '{field}: Der Wert liegt über dem Maximum {maximum}.',
       detail_boolean_required: '{field}: Hier ist Ja oder Nein nötig.',
-      detail_text_required: '{field}: Hier ist ein nicht leerer Text nötig (höchstens 1000 Zeichen).',
+      detail_text_required: '{field}: Hier ist ein nicht leerer Text nötig (höchstens {max_length} Zeichen).',
       detail_currency_code_required: '{field}: Hier ist ein dreistelliger Währungscode nötig.',
       detail_currency_required: '{field}: Der Betrag braucht eine Währung.',
       detail_currency_not_allowed: '{field}: Dieses Feld trägt keine Währung.',
