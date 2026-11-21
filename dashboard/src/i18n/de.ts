@@ -481,6 +481,45 @@ export const de = {
         'Das Börsenkürzel im Symbol passt auf mehrere Handelsplätze — ' +
         'welcher gemeint ist, sagt die Eingabe nicht.',
       /*
+       * Seit T-139 antwortet jede Ablehnung der API mit Kennung. Die Sätze
+       * darunter ersetzen die deutschen Backendtexte; `tests/
+       * test_error_reason_catalogue.py` hält den Bestand gegen das Backend.
+       */
+      invalid_symbol_format: '{symbol} hat nicht die Form eines Symbols.',
+      invalid_timestamp: '„{name}“ ist kein ISO-8601-Zeitpunkt: {value}.',
+      time_range_reversed: 'Der Beginn {from} liegt nach dem Ende {to}.',
+      isin_or_symbol_required: 'Bitte genau eines angeben: ISIN oder Symbol.',
+      refresh_in_progress: 'Eine Aktualisierung aller Papiere läuft bereits.',
+      instrument_not_stored: '{identifier} ist nicht im Bestand.',
+      listing_not_found: 'Zu dieser Listing-Kennung gibt es kein Papier im Bestand.',
+      isin_taken: 'Die ISIN {isin} gehört bereits zu einem anderen Papier.',
+      detail_number_required: '{field}: Hier ist eine endliche Zahl nötig.',
+      detail_below_minimum: '{field}: Der Wert liegt unter dem Minimum {minimum}.',
+      detail_above_maximum: '{field}: Der Wert liegt über dem Maximum {maximum}.',
+      detail_boolean_required: '{field}: Hier ist Ja oder Nein nötig.',
+      detail_text_required: '{field}: Hier ist ein nicht leerer Text nötig (höchstens {max_length} Zeichen).',
+      detail_currency_code_required: '{field}: Hier ist ein dreistelliger Währungscode nötig.',
+      detail_currency_required: '{field}: Der Betrag braucht eine Währung.',
+      detail_currency_not_allowed: '{field}: Dieses Feld trägt keine Währung.',
+      detail_not_declared: '{field}: Dieses Feld gibt es für dieses Papier nicht.',
+      detail_not_editable: '{field}: Dieses Feld lässt sich nicht von Hand ändern.',
+      contract_unavailable: 'Die Vertragsbeschreibung der API ist nicht lesbar.',
+      migration_not_pending:
+        'Es steht kein Umzug aus, oder Umzug beziehungsweise Start laufen bereits.',
+      migration_pending: 'Ein Datenumzug wartet auf Bestätigung; bis dahin ist StockInfo gesperrt.',
+      startup_failed: 'StockInfo konnte nicht starten. Das Serverprotokoll nennt den Grund.',
+      startup_running: 'StockInfo startet noch. Bitte gleich noch einmal versuchen.',
+      identity_conflict:
+        'Zwei gespeicherte Papiere beanspruchen dieselbe Identität — ' +
+        'sie müssen erst zusammengeführt werden.',
+      symbol_ambiguous:
+        '{symbol} tragen mehrere Listings — die Wahl geht nur über die Listing-Kennung.',
+      backup_not_found: 'Eine Sicherung namens {name} gibt es nicht.',
+      backup_incompatible:
+        '{name} entstand unter einer anderen Quellenlage und passt nicht zur laufenden.',
+      backup_schema_too_new:
+        '{name} stammt aus einer neueren StockInfo-Version und lässt sich hier nicht einspielen.',
+      /*
        * Der Rückfall für eine Kennung, die diese Oberfläche nicht kennt —
        * etwa aus einem neueren Backend oder einem Plugin. Vorher stand die
        * rohe Kennung im Toast; `instrument_not_found` als Satz zu lesen ist

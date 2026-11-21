@@ -28,7 +28,7 @@ void load()
         <dt>{{ localizedLabel(definition, locale) }}</dt>
         <dd><DetailEditor :definition="definition" :value="item.details![definition.name]!" :busy="busy" :options="fieldOptions?.[definition.name]"
           :currency-options="fieldOptions?.fund_currency"
-          @commit="emit('commit', { details: { [definition.name]: $event } })" /></dd>
+          @commit="emit('commit', { details: { [definition.name]: $event }, labels: { [definition.name]: localizedLabel(definition, locale) } })" /></dd>
       </div>
     </dl>
   </div>

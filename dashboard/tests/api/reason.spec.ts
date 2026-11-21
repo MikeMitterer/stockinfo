@@ -99,6 +99,17 @@ describe('reasonOf', () => {
     expect(reasonOf(new ApiError(500, JSON.stringify({ detail: '' })))).toBeNull()
   })
 
+  it('nennt bei einem abgelehnten Detailwert die Beschriftung statt des Feldnamens', () => {
+    // T-139: `params.field` ist der interne Name. Der Detailbereich gibt die
+    // angezeigte Beschriftung mit; der Satz soll sie nennen.
+    const error = new ApiError(422, JSON.stringify({ code: 'detail_text_required', params: { field: 'fund_domicile' } }))
+
+    const reason = reasonOf(error, { fund_domicile: 'Fondssitz' })
+
+    expect(reason).toContain('Fondssitz')
+    expect(reason).not.toContain('fund_domicile')
+  })
+
   it('liefert fuer alles, was kein ApiError ist, keinen Grund', () => {
     expect(reasonOf(new TypeError('kaputt'))).toBeNull()
     expect(reasonOf('irgendwas')).toBeNull()

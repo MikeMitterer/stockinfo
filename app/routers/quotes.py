@@ -18,29 +18,31 @@ zuzusagen wäre eine Zusage ins Blaue.
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, Query
 
 from app.container import get_cached_quote_service, get_daily_history_service
 from app.exchanges import REASON_NO_SUFFIX
 from app.models import (
     IDENTITY_CONFLICT_RESPONSE,
     INSTRUMENT_NOT_FOUND_RESPONSE,
+    QUOTE_UNAVAILABLE_RESPONSE,
     SYMBOL_CONFLICT_RESPONSE,
     DailyPoint,
     ErrorDetail,
     QuotePoint,
     QuoteResponse,
+    invalid_input_response,
     invalid_isin_response,
 )
+from app.routers.api_error import ApiError
 from app.routers.source_errors import (
-    REASON_QUOTE_UNAVAILABLE,
-    currency_mismatch_response,
-    unsupported_type_response,
+    currency_mismatch_error,
+    instrument_not_found_error,
+    quote_unavailable_error,
+    unsupported_type_error,
 )
 from app.routers.validation import IsinPath, SymbolPath, TimeRange, normalize_symbol
 from app.services.daily_history import DailyHistoryService, DailySeriesNotFoundError
-from app.services.intake_service import REASON_NOT_FOUND
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import (
     InstrumentNotFoundError,
@@ -62,32 +64,6 @@ REASON_NO_DAILY_SERIES = "daily_series_not_found"
 REASON_DAILY_UNAVAILABLE = "daily_source_unavailable"
 
 
-def _not_found(isin: str) -> JSONResponse:
-    """„Dieses Papier gibt es nicht" — als **Kennung**, nicht als deutscher Satz.
-
-    Bis T-35 stand hier ``detail=f"Keine Auflösung für ISIN {isin}"``. Das
-    verletzte die eigene Zusage aus `ErrorDetail`: *„Der Text gehört ins UI und
-    muss in DE und EN vorliegen; ein deutscher Backendtext in der englischen
-    Oberfläche wäre auch bei sauberem Parsen falsch."*
-
-    Aufgefallen ist es im UI-Lauf, und zwar doppelt: Die Oberfläche zeigte nur
-    „Hinzufügen fehlgeschlagen", weil sie mit einem Fließtext nichts anfangen
-    kann — den eigentlichen Grund fand man erst in der Browserkonsole. Und der
-    Aufnahmeweg des Dashboards verwendet inzwischen `POST /instruments/intake`;
-    auch Kursabfragen liefern dieselbe strukturierte Kennung.
-
-    Die Kennung ist bewusst dieselbe wie beim Aufnahmeweg
-    (`REASON_NOT_FOUND`): Derselbe Sachverhalt bekommt denselben Namen, sonst
-    braucht die Oberfläche zwei Katalogeinträge für eine Lage.
-    """
-    return JSONResponse(
-        status_code=404,
-        content=ErrorDetail(
-            code=REASON_NOT_FOUND, params={"identifier": isin}
-        ).model_dump(),
-    )
-
-
 # Was die beiden Daily-Routen zusagen. **Beide dasselbe**: Der Unterschied
 # zwischen „gibt es nicht" und „konnte nicht nachsehen" hängt an der Kette,
 # nicht am Eintrittsweg.
@@ -97,16 +73,13 @@ DAILY_ERROR_RESPONSES = {
 }
 
 
-def _daily_error(status: int, code: str, identifier: str) -> JSONResponse:
+def _daily_error(status: int, code: str, identifier: str) -> ApiError:
     """Ein Fehler der Tagesreihe — als Kennung, mit dem gefragten Papier dabei.
 
     Beide Daily-Routen teilen sie sich: Zwei Fassungen wären die Stelle, an der
     `404` und `502` beim nächsten Mal wieder auseinanderlaufen.
     """
-    return JSONResponse(
-        status_code=status,
-        content=ErrorDetail(code=code, params={"identifier": identifier}).model_dump(),
-    )
+    return ApiError(status, code, {"identifier": identifier})
 
 
 ServiceDep = Annotated[CachedQuoteService, Depends(get_cached_quote_service)]
@@ -116,7 +89,13 @@ Period = Literal["1w", "1m", "3m", "1y", "max"]
 
 
 @router.get(
-    "/quote", response_model=QuoteResponse, responses=SYMBOL_CONFLICT_RESPONSE
+    "/quote",
+    response_model=QuoteResponse,
+    responses={
+        **SYMBOL_CONFLICT_RESPONSE,
+        **QUOTE_UNAVAILABLE_RESPONSE,
+        **invalid_input_response(validation=True),
+    },
 )
 def quote_by_symbol(
     service: ServiceDep,
@@ -135,30 +114,19 @@ def quote_by_symbol(
     try:
         return service.get_by_symbol(symbol)
     except QuoteCurrencyMismatchError as exc:
-        return currency_mismatch_response(exc)
+        raise currency_mismatch_error(exc) from exc
     except UnsupportedInstrumentTypeError as exc:
-        return unsupported_type_response(exc)
-    except UnresolvableSymbolError:
+        raise unsupported_type_error(exc) from exc
+    except UnresolvableSymbolError as exc:
         # 400 und nicht 502: Der Aufrufer kann es besser machen, und der Text
         # sagt ihm wie. Ein 502 behauptete einen Ausfall, den es nicht gab.
-        return JSONResponse(
-            status_code=400,
-            content=ErrorDetail(
-                code=REASON_NO_SUFFIX, params={"symbol": symbol}
-            ).model_dump(),
-        )
+        raise ApiError(400, REASON_NO_SUFFIX, {"symbol": symbol}) from exc
     except QuoteUnavailableError as exc:
         # Dieselbe Kennung wie auf dem ISIN-Weg: "keine Quelle konnte einen
         # Preis feststellen" ist derselbe Sachverhalt, gleich über welche Tür
         # gefragt wurde. Zwei Rumpfformen für eine Aussage waren schon einmal
         # der Grund, warum die Oberfläche nur "fehlgeschlagen" zeigen konnte.
-        return JSONResponse(
-            status_code=502,
-            content=ErrorDetail(
-                code=REASON_QUOTE_UNAVAILABLE,
-                params={"identifier": symbol, "detail": str(exc)},
-            ).model_dump(),
-        )
+        raise quote_unavailable_error(symbol, exc) from exc
 
 
 @router.get(
@@ -167,6 +135,7 @@ def quote_by_symbol(
     responses={
         **IDENTITY_CONFLICT_RESPONSE,
         **INSTRUMENT_NOT_FOUND_RESPONSE,
+        **QUOTE_UNAVAILABLE_RESPONSE,
         **invalid_isin_response(),
     },
 )
@@ -178,29 +147,13 @@ def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
         # Dieselbe Auskunft wie am Symboleingang. Bis Runde 6 fiel ein
         # erkannter Index hier in das 404 darunter — für den Benutzer nicht
         # zu unterscheiden von einer erfundenen ISIN.
-        return unsupported_type_response(exc)
-    except InstrumentNotFoundError:
-        return _not_found(isin)
+        raise unsupported_type_error(exc) from exc
+    except InstrumentNotFoundError as exc:
+        raise instrument_not_found_error(isin) from exc
     except QuoteUnavailableError as exc:
-        # **Der strukturierte Zustand, den T-31 fuer die Anleihe braucht.**
-        # „Keine Quelle konnte einen Preis feststellen" ist eine eigene
-        # Aussage — nicht „gibt es nicht" (404) und nicht ein Quote mit
-        # Luecke. Fuer ein Papier ohne Kursquelle ist sie der Normalfall und
-        # keine Stoerung, und die Oberflaeche muss sie als solche zeigen
-        # koennen.
-        #
-        # Der Ausnahmetext nennt die ausgefallenen Quellen (T-20 `#3`) und
-        # reist als Parameter mit: Ohne ihn stuende im Koerper nur „ging
-        # nicht", und wer die App betreibt, wuesste nicht, wohin er schauen
-        # soll. Er ist Diagnose, nicht Anzeigetext — die Kennung traegt den
-        # Satz.
-        return JSONResponse(
-            status_code=502,
-            content=ErrorDetail(
-                code=REASON_QUOTE_UNAVAILABLE,
-                params={"identifier": isin, "detail": str(exc)},
-            ).model_dump(),
-        )
+        # **Der strukturierte Zustand, den T-31 fuer die Anleihe braucht**;
+        # warum er kein 404 ist, steht bei `quote_unavailable_error`.
+        raise quote_unavailable_error(isin, exc) from exc
 
 
 @router.get(
@@ -221,21 +174,25 @@ def daily_history(
     """Liefert echte Tages-Schlusskurse (EOD) zu einer ISIN, inkrementell gecacht."""
     try:
         return service.get_daily(isin=isin, period=period)
-    except InstrumentNotFoundError:
+    except InstrumentNotFoundError as exc:
         # Nicht 502: Ein unbekanntes Papier ist ein Eingabefehler, kein
         # Ausfall bei Yahoo. Beides auf denselben Code zu legen nimmt jedem
         # Client die Möglichkeit, sie auseinanderzuhalten.
-        return _not_found(isin)
-    except DailySeriesNotFoundError:
-        return _daily_error(404, REASON_NO_DAILY_SERIES, isin)
-    except QuoteUnavailableError:
-        return _daily_error(502, REASON_DAILY_UNAVAILABLE, isin)
+        raise instrument_not_found_error(isin) from exc
+    except DailySeriesNotFoundError as exc:
+        raise _daily_error(404, REASON_NO_DAILY_SERIES, isin) from exc
+    except QuoteUnavailableError as exc:
+        raise _daily_error(502, REASON_DAILY_UNAVAILABLE, isin) from exc
 
 
 @router.get(
     "/quote/by-symbol/{symbol}/daily",
     response_model=list[DailyPoint],
-    responses={**SYMBOL_CONFLICT_RESPONSE, **DAILY_ERROR_RESPONSES},
+    responses={
+        **SYMBOL_CONFLICT_RESPONSE,
+        **DAILY_ERROR_RESPONSES,
+        **invalid_input_response(validation=True),
+    },
 )
 def daily_history_by_symbol(
     symbol: SymbolPath,
@@ -245,19 +202,23 @@ def daily_history_by_symbol(
     """Liefert echte Tages-Schlusskurse (EOD) zu einem Symbol, inkrementell gecacht."""
     try:
         return service.get_daily(symbol=symbol, period=period)
-    except DailySeriesNotFoundError:
+    except DailySeriesNotFoundError as exc:
         # **Auch dieser Pfad unterscheidet.** Die Kette trägt bis hierher,
         # ob keine Quelle die Reihe führt oder ob eine gestört war; ein `404`
         # ist damit keine Vermutung über den Anbieter.
-        return _daily_error(404, REASON_NO_DAILY_SERIES, symbol)
-    except QuoteUnavailableError:
-        return _daily_error(502, REASON_DAILY_UNAVAILABLE, symbol)
+        raise _daily_error(404, REASON_NO_DAILY_SERIES, symbol) from exc
+    except QuoteUnavailableError as exc:
+        raise _daily_error(502, REASON_DAILY_UNAVAILABLE, symbol) from exc
 
 
 @router.get(
     "/quote/by-symbol/{symbol}/history",
     response_model=list[QuotePoint],
-    responses=SYMBOL_CONFLICT_RESPONSE,
+    responses={
+        **SYMBOL_CONFLICT_RESPONSE,
+        **QUOTE_UNAVAILABLE_RESPONSE,
+        **invalid_input_response(validation=True),
+    },
 )
 def quote_history_by_symbol(
     symbol: SymbolPath,
@@ -270,7 +231,7 @@ def quote_history_by_symbol(
     try:
         return service.get_history_by_symbol(symbol, date_from, date_to, limit)
     except QuoteUnavailableError as exc:
-        raise HTTPException(status_code=502, detail=f"Kein Kurs für {symbol}") from exc
+        raise quote_unavailable_error(symbol, exc) from exc
 
 
 @router.get(
@@ -279,7 +240,8 @@ def quote_history_by_symbol(
     responses={
         **IDENTITY_CONFLICT_RESPONSE,
         **INSTRUMENT_NOT_FOUND_RESPONSE,
-        **invalid_isin_response(validation=True, detail_text=True),
+        **QUOTE_UNAVAILABLE_RESPONSE,
+        **invalid_isin_response(validation=True),
     },
 )
 def quote_history(
@@ -292,9 +254,7 @@ def quote_history(
     date_from, date_to = time_range
     try:
         return service.get_history(isin, date_from, date_to, limit)
-    except InstrumentNotFoundError:
-        return _not_found(isin)
+    except InstrumentNotFoundError as exc:
+        raise instrument_not_found_error(isin) from exc
     except QuoteUnavailableError as exc:
-        raise HTTPException(
-            status_code=502, detail=f"Kein Kurs für ISIN {isin}"
-        ) from exc
+        raise quote_unavailable_error(isin, exc) from exc

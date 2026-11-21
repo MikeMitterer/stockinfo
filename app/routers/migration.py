@@ -17,10 +17,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.config import Settings, get_settings
 from app.migration_guard import REASON_STARTUP_FAILED, get_gate
 from app.models import MigrationPreview, MigrationReport
+from app.routers.api_error import ApiError
 from app.services import migration
 from app.services.migration import MigrationNotPendingError, StartupFailedError
 
 router = APIRouter(tags=["migration"])
+
+# Kein Umzug steht aus, oder Umzug beziehungsweise Betriebsstart laufen schon.
+REASON_NOT_PENDING = "migration_not_pending"
 
 SettingsDep = Annotated[Settings, Depends(get_settings)]
 
@@ -43,13 +47,11 @@ def migration_confirm(settings: SettingsDep) -> MigrationReport:
     try:
         return migration.confirm(settings.database_path, get_gate())
     except StartupFailedError as exc:
+        # Dieselbe Form wie das `503` des Riegels in `app.main`: die Kennung
+        # in `detail`. Konsumenten erkennen den Betriebszustand daran.
         raise HTTPException(status_code=503, detail=REASON_STARTUP_FAILED) from exc
     except MigrationNotPendingError as exc:
-        raise HTTPException(
-            status_code=409,
-            detail="Es steht kein Umzug aus, oder Umzug beziehungsweise "
-            "Betriebsstart laufen bereits.",
-        ) from exc
+        raise ApiError(409, REASON_NOT_PENDING) from exc
 
 
 @router.get("/migration/report", response_model=MigrationReport)

@@ -460,7 +460,17 @@ export interface DetailValue {
   manual_value: DetailInput['value']
   manual_currency: string | null
 }
-export type OverridePatch = Partial<InstrumentOverrides> & { details?: Record<string, DetailInput> }
+/**
+ * Was der Detailbereich zum Speichern schickt.
+ *
+ * `labels` geht nicht an die API: Es nennt je Feld die angezeigte
+ * Beschriftung, damit eine abgelehnte Eingabe in der Meldung „Fund domicile“
+ * heißt und nicht `fund_domicile` (T-139).
+ */
+export type OverridePatch = Partial<InstrumentOverrides> & {
+  details?: Record<string, DetailInput>
+  labels?: Record<string, string>
+}
 
 
 /** Vor Speicherung vom Core gelieferte Börsenentscheidung. */

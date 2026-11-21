@@ -403,6 +403,41 @@ export const en = {
       ambiguous_exchange_suffix:
         'The exchange suffix matches more than one venue — the input does ' +
         'not say which one is meant.',
+      /* Since T-139 every API rejection is a code — see the German file. */
+      invalid_symbol_format: '{symbol} is not shaped like a symbol.',
+      invalid_timestamp: '“{name}” is not an ISO 8601 timestamp: {value}.',
+      time_range_reversed: 'The start {from} lies after the end {to}.',
+      isin_or_symbol_required: 'Please give exactly one of ISIN or symbol.',
+      refresh_in_progress: 'A refresh of all instruments is already running.',
+      instrument_not_stored: '{identifier} is not among the stored instruments.',
+      listing_not_found: 'No stored instrument has this listing ID.',
+      isin_taken: 'The ISIN {isin} already belongs to another instrument.',
+      detail_number_required: '{field}: a finite number is required here.',
+      detail_below_minimum: '{field}: the value is below the minimum {minimum}.',
+      detail_above_maximum: '{field}: the value is above the maximum {maximum}.',
+      detail_boolean_required: '{field}: yes or no is required here.',
+      detail_text_required: '{field}: a non-empty text is required here (at most {max_length} characters).',
+      detail_currency_code_required: '{field}: a three-letter currency code is required here.',
+      detail_currency_required: '{field}: the amount needs a currency.',
+      detail_currency_not_allowed: '{field}: this field carries no currency.',
+      detail_not_declared: '{field}: this field does not exist for this instrument.',
+      detail_not_editable: '{field}: this field cannot be changed by hand.',
+      contract_unavailable: 'The API contract description cannot be read.',
+      migration_not_pending:
+        'No migration is pending, or the migration or startup is already running.',
+      migration_pending: 'A data migration awaits confirmation; until then StockInfo is locked.',
+      startup_failed: 'StockInfo could not start. The server log names the reason.',
+      startup_running: 'StockInfo is still starting. Please try again in a moment.',
+      identity_conflict:
+        'Two stored instruments claim the same identity — they have to be ' +
+        'merged first.',
+      symbol_ambiguous:
+        '{symbol} is carried by several listings — choose one by its listing ID.',
+      backup_not_found: 'There is no backup named {name}.',
+      backup_incompatible:
+        '{name} was made under a different source setup and does not fit the running one.',
+      backup_schema_too_new:
+        '{name} comes from a newer StockInfo version and cannot be restored here.',
       /* Fallback for a code this UI does not know — from a newer backend or a plugin. */
       unknown: 'The source reports an error this interface does not know: {code}.',
     },

@@ -129,12 +129,19 @@ Die Ordner und ihre Aufgaben beschreibt die
 
 ## Fehler und Ausgaben
 
-- **REST:** Fachfehler, die das Dashboard erklärt, antworten mit
-  `detail = {code, params}` (`ErrorDetail`, `app/routers/validation.py`); das
-  Dashboard übersetzt den Code über `errors.reason` bzw. `migration.reason`
-  (`dashboard/src/api/reason.ts`) und zeigt nie den Text des Backends.
-  **Offen:** Ein Teil der Routen liefert `detail` noch als deutschen Satz
-  (etwa `Kein Kurs für …`); ob alle auf Codes umziehen, ist nicht entschieden.
+- **REST:** Jede fachliche Ablehnung antwortet mit `{code, params}` auf
+  oberster Ebene (`ErrorDetail` in `app/models.py`), nicht mit einem Satz.
+  `params` trägt Eingaben und Grenzen, nie den Text einer Ausnahme; der gehört
+  ins Protokoll. Router werfen dafür
+  `ApiError` (`app/routers/api_error.py`); jede Kennung steht als Konstante
+  `REASON_*` im Modul, das sie wirft. Das Dashboard übersetzt den Code über
+  `errors.reason` bzw. `migration.reason` (`dashboard/src/api/reason.ts`).
+  `tests/test_error_reason_catalogue.py` hält alle Kennungen gegen beide
+  Kataloge und weist `HTTPException` mit Text ab. Entschieden von Mike am
+  2026-11-19: „Codes, StockPortfolio zuerst“. Eigene Formen behalten FastAPIs
+  Request-Validierung (`422` mit `detail`-Liste) und das `503` während Umzug
+  oder Start (Kennung in `detail`); `symbol_ambiguous` trägt zusätzlich den
+  Satz `detail` aus der ersten Fassung des Vertrags. Konvention.
 - **Logs:** strukturiert über `structlog` mit einem Ereignisnamen in
   `snake_case` und Feldern statt eingesetzter Werte. Konvention.
 - **Make und Skripte:** Statuszeilen mit ✓, ✗ oder ⚠; ein Abbruch nennt den
