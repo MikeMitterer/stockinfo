@@ -235,8 +235,10 @@ status: require-tools ## Git-Status aller Workspace-Repos anzeigen
 
 # Ein belegter Port bricht den Start ab, statt dass eine App still ausweicht. Ohne dev-ports
 # (ProjectTools, make setup) nur eine Warnung: dev-up und dev-down sind Entwicklungs-Targets.
+# precheck vorab: Die Statuszeilen brauchen BashLib, und ohne sie soll der Befehl scheitern,
+# bevor er overmind startet oder beendet, nicht danach.
 .PHONY: dev-up
-dev-up: ## Backend und Dashboard laufen im Hintergrund, mit Auto-Reload
+dev-up: precheck ## Backend und Dashboard laufen im Hintergrund, mit Auto-Reload
 	@if command -v dev-ports >/dev/null; then dev-ports --check; \
 	else $(STATUS) "⚠" "dev-ports fehlt (make setup) — Ports vor dem Start nicht geprüft" WARN; fi
 	overmind start -D -N -f Procfile.dev
@@ -245,7 +247,7 @@ dev-up: ## Backend und Dashboard laufen im Hintergrund, mit Auto-Reload
 # Räumt nach einem Absturz overmind/tmux DIESES Projekts, eine verwaiste .overmind.sock und
 # die Ports aus .dev-ports.conf.sh auf (dev-ports --kill).
 .PHONY: dev-down
-dev-down: ## Dev-Stack gestoppt, Reste nach einem Absturz beseitigt, Ports frei
+dev-down: precheck ## Dev-Stack gestoppt, Reste nach einem Absturz beseitigt, Ports frei
 	-@overmind quit 2>/dev/null || true
 	@if command -v dev-ports >/dev/null; then dev-ports --kill; \
 	else $(STATUS) "⚠" "dev-ports fehlt (make setup) — Reste nach einem Absturz nicht geprüft" WARN; fi
@@ -334,8 +336,9 @@ test-dashboard: lint-dashboard ## Dashboard prüfen und testen (ESLint + Vitest)
 
 ##@ Docker
 
+# precheck vorab wie bei dev-up: ohne BashLib scheitern up und down vor docker, nicht danach.
 .PHONY: up
-up: ## Container mit Dashboard und API läuft auf PORT (Image aus make build)
+up: precheck ## Container mit Dashboard und API läuft auf PORT (Image aus make build)
 	-@docker rm -f "$${CONTAINER}" 2>/dev/null || true
 	docker run -d --name "$${CONTAINER}" \
 		-p "$${PORT}":8000 \
@@ -347,7 +350,7 @@ up: ## Container mit Dashboard und API läuft auf PORT (Image aus make build)
 	@$(STATUS) "✓" "Läuft — App http://localhost:$${PORT}/  (zuvor: make build)" OK
 
 .PHONY: down
-down: ## Container gestoppt und entfernt
+down: precheck ## Container gestoppt und entfernt
 	-@if docker rm -f "$${CONTAINER}" 2>/dev/null; then $(STATUS) "✓" "Gestoppt" OK; \
 	else $(STATUS) "⚠" "Kein Container $${CONTAINER}" WARN; fi
 
