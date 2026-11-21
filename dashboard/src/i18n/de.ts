@@ -322,7 +322,8 @@ export const de = {
     confirmNo: 'Abbrechen',
     forceLabel: 'Trotzdem einspielen — {reason}',
     pending: 'Ein Neustart steht aus: {name} wird beim nächsten Start eingespielt.',
-    failed: 'Das Einspielen ist gescheitert: {reason}. Es wird nicht erneut versucht.',
+    /* {reason} ist ein ganzer Satz aus `errors.reason` (T-148). */
+    failed: 'Das Einspielen ist gescheitert. {reason} Es wird nicht erneut versucht.',
   },
   settings: {
     title: 'Einstellungen',
@@ -519,6 +520,9 @@ export const de = {
         '{name} entstand unter einer anderen Quellenlage und passt nicht zur laufenden.',
       backup_schema_too_new:
         '{name} stammt aus einer neueren StockInfo-Version und lässt sich hier nicht einspielen.',
+      restore_failed: '{name} ließ sich beim Start nicht einspielen. Das Serverprotokoll nennt den Grund.',
+      provenance_mismatch:
+        'Der Bestand stammt aus der Quellenlage {stamped}, die Instanz läuft unter {running}.',
       /*
        * Der Rückfall für eine Kennung, die diese Oberfläche nicht kennt —
        * etwa aus einem neueren Backend oder einem Plugin. Vorher stand die

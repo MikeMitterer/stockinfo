@@ -42,7 +42,7 @@ function listing(extra: Partial<BackupList> = {}): BackupList {
   return {
     fingerprint: 'abcdef123456',
     pending_restore: null,
-    restore_error: '',
+    restore_error: null,
     // Absichtlich nicht 10: Die Zahl soll aus der Antwort kommen.
     keep: 7,
     backups: [FITTING, FOREIGN],
@@ -188,15 +188,37 @@ describe('BackupsPanel', () => {
     // Server: Steht beides da, ist der Fehler die jüngere und wichtigere
     // Auskunft — nach ihm folgt kein Versuch mehr.
     vi.spyOn(apiClient, 'get').mockResolvedValue(
-      listing({ pending_restore: FITTING.name, restore_error: 'Zielmedium voll' }),
+      listing({
+        pending_restore: FITTING.name,
+        restore_error: { code: 'restore_failed', params: { name: FITTING.name } },
+      }),
     )
 
     const wrapper = mountPanel()
     await flushPromises()
 
     expect(wrapper.text()).toContain('Das Einspielen ist gescheitert')
-    expect(wrapper.text()).toContain('Zielmedium voll')
+    expect(wrapper.text()).toContain(`${FITTING.name} ließ sich beim Start nicht einspielen`)
     expect(wrapper.text()).not.toContain('Ein Neustart steht aus')
+  })
+
+  it('übersetzt den Grund eines gescheiterten Tauschs in beiden Sprachen', async () => {
+    // T-148: Der Grund kommt als Kennung; den Satz bildet die Oberfläche.
+    vi.spyOn(apiClient, 'get').mockResolvedValue(
+      listing({ restore_error: { code: 'backup_not_found', params: { name: 'weg.db' } } }),
+    )
+    for (const [locale, expected] of [
+      ['de', 'Eine Sicherung namens weg.db gibt es nicht.'],
+      ['en', 'There is no backup named weg.db.'],
+    ] as const) {
+      i18n.global.locale.value = locale
+      const wrapper = mountPanel()
+      await flushPromises()
+
+      expect(wrapper.text()).toContain(expected)
+      expect(wrapper.text()).not.toContain('backup_not_found')
+      wrapper.unmount()
+    }
   })
 
   it('lädt nach dem Anlegen den Serverzustand neu', async () => {

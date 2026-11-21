@@ -9,11 +9,21 @@ aus einer anderen Quellenlage stammt — fallen hier.
 from app.config import Settings
 from app.exchange_catalog import catalog_annotations, prepare_catalog
 from app.exchanges import EXCHANGES, preference_kind
-from app.models import ExchangeEntry, ExchangesResponse, SourceEntry, SourcesResponse
+from app.models import (
+    ErrorDetail,
+    ExchangeEntry,
+    ExchangesResponse,
+    SourceEntry,
+    SourcesResponse,
+)
 from app.persistence.data_versions import declared_versions
 from app.services.backup import fingerprint_of, stamped_fingerprint
 from app.sources_config import ROLES, SourcesConfig
 from app.sources_registry import describe_chain, specs_by_name
+
+# Der Bestand stammt aus einer anderen Quellenlage als der laufenden
+# (`params.stamped`, `params.running`).
+REASON_PROVENANCE_MISMATCH = "provenance_mismatch"
 
 
 def exchange_overview(config: SourcesConfig, settings: Settings) -> ExchangesResponse:
@@ -69,7 +79,7 @@ def source_overview(config: SourcesConfig, settings: Settings) -> SourcesRespons
     )
 
 
-def provenance_warning(config: SourcesConfig, settings: Settings) -> str:
+def provenance_warning(config: SourcesConfig, settings: Settings) -> ErrorDetail | None:
     """Stammt der Bestand aus einer anderen Quellenlage als der laufenden?
 
     **Gemeldet, nicht geheilt.** Die Datenbank trägt die Kennung, unter der sie
@@ -81,12 +91,15 @@ def provenance_warning(config: SourcesConfig, settings: Settings) -> str:
     Die Auskunft kommt aus dem vorhandenen Stempel und der laufenden
     Konfiguration; ein eigener Vermerk daneben wäre eine zweite Wissensquelle,
     die beim ersten Nachtrag von der ersten abwiche.
+
+    Returns:
+        `provenance_mismatch` mit beiden Kennungen, oder `None`, solange sie
+        übereinstimmen. Den Satz bildet das UI (T-148).
     """
     stamped = stamped_fingerprint(settings.database_path)
     running = fingerprint_of(config)
     if not stamped or stamped == running:
-        return ""
-    return (
-        f"Der Bestand stammt aus der Quellenlage {stamped}, die Instanz läuft "
-        f"unter {running}."
+        return None
+    return ErrorDetail(
+        code=REASON_PROVENANCE_MISMATCH, params={"stamped": stamped, "running": running}
     )

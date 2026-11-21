@@ -426,8 +426,8 @@ export interface BackupList {
   fingerprint: string
   /** Gesetzt, solange ein Neustart aussteht — dann ist die DB noch die alte. */
   pending_restore: string | null
-  /** Warum der letzte Tausch scheiterte; dann steht kein Neustart mehr aus. */
-  restore_error: string
+  /** Warum der letzte Tausch scheiterte, als Kennung; dann steht kein Neustart mehr aus. */
+  restore_error: { code: string; params: Record<string, string> } | null
   /** Wie viele Sicherungen bleiben (`KEEP_BACKUPS` im Backend). */
   keep: number
   backups: BackupEntry[]

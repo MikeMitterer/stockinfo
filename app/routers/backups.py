@@ -100,13 +100,6 @@ def restore_backup(
     Ansage nicht nur einmal in einer HTTP-Antwort stand.
     """
     info = service.request_restore(name, force=force)
-    return RestoreAccepted(
-        backup=_entry(info),
-        # „Neustart" steht hier ausdrücklich — „beim nächsten Start" liest sich
-        # wie etwas, das von selbst passiert.
-        detail=(
-            f"{info.name} ist zum Einspielen vorgemerkt. Die Wiederherstellung "
-            "verlangt einen Neustart der App; bis dahin läuft der bisherige "
-            "Bestand unverändert weiter."
-        ),
-    )
+    # Den Satz mit „Neustart“ bildet das UI (`backups.pending`); die Antwort
+    # sagt dasselbe als `restart_required`.
+    return RestoreAccepted(backup=_entry(info))
