@@ -202,8 +202,8 @@ ein Konsument mit einem allgemeinen Satz an, nicht roh.
 Zwei Antworten sind keine fachliche Ablehnung und haben ihre eigene Form:
 
 - **Request-Validierung von FastAPI:** `422` mit einer `detail`-Liste ohne
-  `code` (`HTTPValidationError`), etwa bei `limit=0`. Wo sie vorkommen kann,
-  nennt die OpenAPI-Beschreibung beide `422`-Formen.
+  `code` (`HTTPValidationError`), etwa bei `limit=0`. Bei Kurs-, Tageskurs- und
+  Historienwegen mit beiden `422`-Formen führt OpenAPI beide auf.
 - **Betriebszustand:** Das `503` während eines Umzugs oder Starts trägt die
   Kennung als Zeichenkette in `detail` (`migration_pending`,
   `startup_running`, `startup_failed`).

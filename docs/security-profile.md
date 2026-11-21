@@ -62,8 +62,7 @@ dort keine Zusage.
   ihren Abschnitt (`source_overview` in `app/services/diagnostics.py`, `SourceEntry` in
   `app/models.py`).
 - **Logs:** Kein Log-Aufruf der App übergibt Header, Schlüssel oder den
-  Inhalt eines `providers`-Abschnitts. Belegt ist das mit einem
-  `ast`-Inventar aller Argumente der 104 Log-Aufrufe in `app/`. Aus der
+  Inhalt eines `providers`-Abschnitts direkt. Aus der
   Konfiguration erscheinen nur `database_path`, `strict_exchange` und die
   Namen von Rollen und Abschnitten (`sources_config_loaded`,
   `app/sources_config.py:265`). Der OpenFIGI-Schlüssel geht im Header
@@ -71,7 +70,7 @@ dort keine Zusage.
   (`app/providers/openfigi_provider.py:148-150`). Tracebacks enthalten keine
   lokalen Variablen: structlog läuft unkonfiguriert, `rich` ist nicht
   installiert.
-- **Lücke bei den Logs:** 22 Aufrufe übernehmen den Text einer Ausnahme
+- **Lücke bei den Logs:** Mehrere Aufrufe übernehmen den Text einer Ausnahme
   wörtlich (`error=str(exc)` und ähnliche), darunter `source_raised` im
   Plugin-Guard (`app/plugin_guard.py:240-244`). Schreibt eine Quelle oder ein
   Plugin seinen Schlüssel in eine Ausnahme, steht er im Log.
@@ -100,7 +99,7 @@ dort keine Zusage.
   soll.
 - Lesen kann den Schlüssel der Prozess der App und damit auch jedes geladene
   Plugin: Es läuft im selben Prozess und erreicht `os.environ` ohnehin.
-- **Fehlertexte von Quellen bleiben im Protokoll.** Den Text einer
+- **Quelldiagnose bei `quote_unavailable`.** Den Text einer
   Quellenausnahme schreibt der Anbieter, und er kann eine URL samt Schlüssel
   enthalten. Die REST-Antwort trägt nur Kennung und Eingabe
   (`quote_unavailable_error`, `app/routers/source_errors.py`); den Text
