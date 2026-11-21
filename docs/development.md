@@ -26,18 +26,23 @@ Installing and running the finished container is described in the
 - optional **Docker** (to run the container)
 - **Node.js 24+ with npm** (`make setup` installs the dashboard packages;
   the backend and prebuilt Docker image do not use Node.js on the host)
-- **pipx** and **Deno 2** for the checks: `make install-tools` installs
-  ProjectTools, BashLib and CLITheme at the versions in `.dev-tools.conf.sh`
+- **pipx** and the **devtools** starter, installed once per machine from a
+  local DevTools checkout (its install target); without it `make setup` stops
+  and says so. As long as the tools are not published on GitHub or PyPI,
+  DevTools takes them from your local repositories through its machine-local
+  source mapping.
+- **Deno 2** for `make docs-check`
 
-`make setup`, `make help`, `make info`, the `dev-*` targets and
-`make up`/`down` work on a plain clone. With BashLib and CLITheme,
-`make help`, `make info` and `make hints` print in your CLITheme theme
-(`clitheme use NAME`); without them, they print plain lists.
-`make test`, `make check`, `make docs-check`, `make status`, `make hints`
-and `make changelog` need ProjectTools; without it they stop and print the
-install command. Targets marked **[Maintainer]** in `make help` (`build`, `push`,
-`tag-*`, `version`) also need BashLib. To build the image yourself, run this
-instead of `make build`:
+`make setup` installs ProjectTools, BashLib and CLITheme at the versions in
+`.dev-tools.conf.sh` into `.tools/` of this checkout; each checkout and
+worktree has its own copy. `make help`, `make info`, `make hints` and the
+status lines of the other targets come from BashLib and use your CLITheme
+theme (`clitheme use NAME`). `make test`, `make check`, `make docs-check`,
+`make status`, `make hints` and `make changelog` need ProjectTools in
+`.tools/`; without it they stop and name the next step. `build`, `push`,
+`version`, `tags` and `tag-*` need BashLib and stop with `make setup`
+without it. To build the image without these tools, run this instead of
+`make build`:
 
 ```bash
 docker build -f docker/Dockerfile -t mangolila/stockinfo:latest .
@@ -53,23 +58,21 @@ The Docker image needs none of these tools.
 # 1. Create the configuration
 cp .env.example .env
 
-# 2. Install dependencies (Python .venv, dashboard packages, Git hook)
+# 2. Install dependencies (Python .venv, dashboard packages, tools in .tools/, Git hook)
 make setup
 
-# 3. Install the tools for tests and checks (once per machine, pipx)
-make install-tools
-
-# 4. Start backend :8000 and dashboard :5173 with auto-reload
+# 3. Start backend :8000 and dashboard :5173 with auto-reload
 make dev-up         # stop with make dev-down · logs with make dev-logs
 ```
 
 `make setup` can be run again at any time. It keeps an existing `.venv` and
-only installs again when `requirements.txt`, `requirements-dev.txt` or
-`dashboard/package-lock.json` changed. A package pinned to a Git commit in
-`requirements.txt` is then reinstalled when the installed commit differs from
-the pin, even if the package version stayed the same. Test targets do not set
-anything up themselves: after such a change they stop and ask for
-`make setup`. At the end, `make setup` shows whether the tools are current.
+only installs again when `requirements.txt`, `requirements-dev.txt`,
+`dashboard/package-lock.json` or `.dev-tools.conf.sh` changed. A package
+pinned to a Git commit in `requirements.txt` is then reinstalled when the
+installed commit differs from the pin, even if the package version stayed
+the same. Test targets do not set anything up themselves: after such a change
+they stop and ask for `make setup`. `make info` shows whether the tools are
+current.
 
 `make dev-up` runs both in the background via
 [overmind](https://github.com/DarthSim/overmind) (needs overmind and tmux).
@@ -86,12 +89,14 @@ all read them from there; to change a port, change it only in that file.
 use. If the dashboard port is taken, Vite stops instead of moving to another
 one.
 
-`make dev-down` stops the stack. With `PROJECT_TOOLS` pointing to the `src`
-folder of a ProjectTools checkout, it also cleans up after a crash: it ends
-leftover overmind, tmux and app processes of this project, removes a stale
-`.overmind.sock` and frees the ports from `.dev-ports.conf.sh`. It only ends your own
-processes inside this project and can be run as often as you like. Without
-`PROJECT_TOOLS` it only stops overmind and prints a warning.
+Before starting, `make dev-up` checks the ports with `dev-ports --check`
+(ProjectTools in `.tools/`): if one is taken, it stops and names the process
+holding it. `make dev-down` stops the stack and uses `dev-ports --kill` to
+clean up after a crash: it ends leftover overmind, tmux and app processes of
+this project, removes a stale `.overmind.sock` and frees the ports from
+`.dev-ports.conf.sh`. It only ends your own processes inside this project and
+can be run as often as you like. Without `dev-ports` both targets print a
+warning and go on.
 
 The server then runs at `http://localhost:8000`. Interactive API docs (Swagger UI,
 dark theme) live at `http://localhost:8000/docs` (use `http://` in the browser, not
@@ -404,9 +409,9 @@ duplicate code. A justified exception goes on the line itself
 fail the run.
 
 `make docs-check` checks the documentation against the project; its rules
-are in `.docs-check.conf.sh`. It needs ProjectTools (`make install-tools`)
-and Deno 2; without ProjectTools, `make docs-check`, `make test` and
-`make check` stop and print the install command.
+are in `.docs-check.conf.sh`. It needs ProjectTools in `.tools/`
+(`make setup`) and Deno 2; without ProjectTools, `make docs-check`,
+`make test` and `make check` stop and name the next step.
 
 `make setup` also installs a Git pre-commit hook that runs the check on the
 staged files and stops a commit when it reports problems. Without ProjectTools
@@ -444,7 +449,7 @@ commit and tag it, then generate and commit the changelog. Everything stays
 local; publish the branch and the release tag yourself with
 `git push --follow-tags`. Pass `MSG="Release summary"` for the release tag
 message. A release needs a clean working tree, BashLib and ProjectTools
-(`make install-tools`).
+(`make setup`).
 
 If the changelog step fails after the tag, fix the cause and retry without
 bumping the version again:

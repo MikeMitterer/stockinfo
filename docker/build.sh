@@ -4,9 +4,9 @@
 # Build Docker-Image: mangolila/stockinfo
 #------------------------------------------------------------------------------
 
-# BashLib: make build/push setzen BASH_LIBS; direkt aufgerufen hilft bashlib-path (pipx).
+# BashLib: make build/push setzen BASH_LIBS; direkt aufgerufen hilft bashlib-path (make setup).
 BASH_LIBS="${BASH_LIBS:-$(bashlib-path 2>/dev/null || true)}"
-if [[ -z "${BASH_LIBS}" ]]; then echo "✗ BashLib nicht gefunden. Installieren: make install-tools" >&2; exit 1; fi
+if [[ -z "${BASH_LIBS}" ]]; then echo "✗ BashLib nicht gefunden. Einrichten: make setup" >&2; exit 1; fi
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # -e  bricht bei erstem Fehler ab   (Ausnahme: 'command || true')
