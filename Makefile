@@ -15,8 +15,8 @@ export WORKSPACE WORKSPACE_SQ PROJECT_NAME
 # ohnehin selbst (pydantic-settings), Docker via --env-file.
 -include .env
 
-# Entwicklungs-Targets (setup, dev-up, dev-logs, up/down) laufen ohne die Entwicklungswerkzeuge;
-# dev-down stoppt overmind ohne sie, räumt Reste und Ports aber nur mit ProjectTools auf.
+# Entwicklungs-Targets (setup, dev-*, up/down) laufen ohne die Entwicklungswerkzeuge; fehlt
+# dev-ports aus ProjectTools, warnen dev-up und dev-down nur.
 # Prüf-Targets (test, check, docs-check, status, hints, changelog) brauchen ProjectTools,
 # Maintainer-Targets (build, push, tag-*, version) BashLib; alle kommen über pipx. help, info
 # und hints geben mit BashLib und CLITheme im Theme aus, ohne sie schlicht.
@@ -249,25 +249,30 @@ status: require-tools ## Git-Status aller Workspace-Repos anzeigen
 
 ##@ Entwicklung
 
+# Wie in StockPortfolio und Darwin+Finanzen (makefile-conventions, Dev-Stack): Ein belegter
+# Port bricht den Start ab, statt dass Backend oder Vite scheitern. Ohne dev-ports
+# (ProjectTools) nur eine Warnung: dev-up und dev-down sind Entwicklungsziele.
+# Anders als dort ohne OVERMIND_SKIP_ENV: HOST aus .env erreicht uvicorn in Procfile.dev nur,
+# weil overmind .env lädt; das Makefile exportiert HOST nicht.
 .PHONY: dev-up
 dev-up: ## Backend und Dashboard laufen im Hintergrund, mit Auto-Reload
-	@# overmind bricht ab, wenn der Stack schon läuft oder eine verwaiste
+	@command -v overmind >/dev/null || { echo "  ✗ overmind fehlt; overmind und tmux installieren." >&2; exit 1; }
+	@command -v tmux >/dev/null || { echo "  ✗ tmux fehlt; tmux installieren." >&2; exit 1; }
+	@if command -v dev-ports >/dev/null; then dev-ports --check; \
+	else echo "  ⚠ dev-ports fehlt (make install-tools) — Ports vor dem Start nicht geprüft"; fi
+	@# overmind bricht auch ab, wenn der Stack schon läuft oder eine verwaiste
 	@# .overmind.sock eines Absturzes liegt; aufräumen kann nur dev-down.
 	@overmind start -D -N -f Procfile.dev || { \
-		echo -e "  $(YELLOW)⚠$(RESET) Nicht gestartet. Läuft der Stack schon: $(WHITE)make dev-logs$(RESET). Nach einem Absturz räumt $(WHITE)make dev-down$(RESET) die Reste auf."; \
+		echo "  ⚠ Nicht gestartet. Läuft der Stack schon: make dev-logs. Nach einem Absturz räumt make dev-down die Reste auf."; \
 		exit 1; }
 	@echo -e "  $(GREEN)✓$(RESET) Stack läuft — Backend $(BLUE)http://localhost:$(BACKEND_PORT)$(RESET) · Dashboard $(BLUE)http://localhost:$(DASHBOARD_PORT)$(RESET)  ($(WHITE)make dev-logs$(RESET))"
 
 .PHONY: dev-down
 dev-down: ## Dev-Stack gestoppt, Reste nach einem Absturz beseitigt, Ports frei
 	-@overmind quit 2>/dev/null || true
-	@# Räumt nach einem Absturz overmind/tmux DIESES Projekts, eine verwaiste
-	@# .overmind.sock und die Ports aus .dev-ports.conf.sh auf; dev-ports kommt
-	@# aus ProjectTools. require-tools erst hier und nicht als Voraussetzung:
-	@# overmind ist damit auch ohne ProjectTools schon gestoppt.
-	@$(MAKE) -s --no-print-directory require-tools
-	@dev-ports --kill
-	@echo -e "  $(GREEN)✓$(RESET) Stack gestoppt"
+	@if command -v dev-ports >/dev/null; then dev-ports --kill; \
+	else echo "  ⚠ dev-ports fehlt (make install-tools) — Reste nach einem Absturz nicht geprüft"; fi
+	@echo "  ✓ Stack gestoppt"
 
 .PHONY: dev-logs
 dev-logs: ## Logs des Dev-Stacks live verfolgen
