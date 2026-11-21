@@ -8,9 +8,6 @@ denselben `QuoteUnavailableError` mit einem deutschen Satz, der Kursweg mit
 einer Kennung.
 """
 
-from fastapi.responses import JSONResponse
-
-from app.models import ErrorDetail
 from app.routers.api_error import ApiError
 from app.services.intake_service import REASON_NOT_FOUND
 from app.services.quote_service import (
@@ -66,7 +63,7 @@ def instrument_not_found_error(identifier: str) -> ApiError:
     return ApiError(404, REASON_NOT_FOUND, {"identifier": identifier})
 
 
-def unsupported_type_response(exc: UnsupportedInstrumentTypeError) -> JSONResponse:
+def unsupported_type_error(exc: UnsupportedInstrumentTypeError) -> ApiError:
     """Dieselbe Gattungsablehnung an Kurs- und Aufnahme-Eingang.
 
     Eine eigene Kennung unterscheidet eine verstandene, bewusst abgelehnte
@@ -76,25 +73,17 @@ def unsupported_type_response(exc: UnsupportedInstrumentTypeError) -> JSONRespon
     Benutzereingabe und ist unter diesem Namen im UI-Katalog verankert. Eine
     Umbenennung würde den stabilen Kennungsvertrag der Fehlerantwort brechen.
     """
-    return JSONResponse(
-        status_code=400,
-        content=ErrorDetail(
-            code=REASON_UNSUPPORTED_TYPE,
-            params={"symbol": exc.symbol, "instrument_type": exc.instrument_type},
-        ).model_dump(),
+    return ApiError(
+        400,
+        REASON_UNSUPPORTED_TYPE,
+        {"symbol": exc.symbol, "instrument_type": exc.instrument_type},
     )
 
 
-def currency_mismatch_response(exc: QuoteCurrencyMismatchError) -> JSONResponse:
+def currency_mismatch_error(exc: QuoteCurrencyMismatchError) -> ApiError:
     """Eine falsche Paarwährung ist ein Quellenfehler, kein Eingabefehler."""
-    return JSONResponse(
-        status_code=502,
-        content=ErrorDetail(
-            code=REASON_CURRENCY_MISMATCH,
-            params={
-                "symbol": exc.symbol,
-                "expected": exc.expected,
-                "delivered": exc.delivered,
-            },
-        ).model_dump(),
+    return ApiError(
+        502,
+        REASON_CURRENCY_MISMATCH,
+        {"symbol": exc.symbol, "expected": exc.expected, "delivered": exc.delivered},
     )

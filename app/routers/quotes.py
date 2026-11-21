@@ -19,7 +19,6 @@ zuzusagen wäre eine Zusage ins Blaue.
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import JSONResponse
 
 from app.container import get_cached_quote_service, get_daily_history_service
 from app.exchanges import REASON_NO_SUFFIX
@@ -33,11 +32,12 @@ from app.models import (
     QuoteResponse,
     invalid_isin_response,
 )
+from app.routers.api_error import ApiError
 from app.routers.source_errors import (
-    currency_mismatch_response,
+    currency_mismatch_error,
     instrument_not_found_error,
     quote_unavailable_error,
-    unsupported_type_response,
+    unsupported_type_error,
 )
 from app.routers.validation import IsinPath, SymbolPath, TimeRange, normalize_symbol
 from app.services.daily_history import DailyHistoryService, DailySeriesNotFoundError
@@ -71,16 +71,13 @@ DAILY_ERROR_RESPONSES = {
 }
 
 
-def _daily_error(status: int, code: str, identifier: str) -> JSONResponse:
+def _daily_error(status: int, code: str, identifier: str) -> ApiError:
     """Ein Fehler der Tagesreihe — als Kennung, mit dem gefragten Papier dabei.
 
     Beide Daily-Routen teilen sie sich: Zwei Fassungen wären die Stelle, an der
     `404` und `502` beim nächsten Mal wieder auseinanderlaufen.
     """
-    return JSONResponse(
-        status_code=status,
-        content=ErrorDetail(code=code, params={"identifier": identifier}).model_dump(),
-    )
+    return ApiError(status, code, {"identifier": identifier})
 
 
 ServiceDep = Annotated[CachedQuoteService, Depends(get_cached_quote_service)]
@@ -109,18 +106,13 @@ def quote_by_symbol(
     try:
         return service.get_by_symbol(symbol)
     except QuoteCurrencyMismatchError as exc:
-        return currency_mismatch_response(exc)
+        raise currency_mismatch_error(exc) from exc
     except UnsupportedInstrumentTypeError as exc:
-        return unsupported_type_response(exc)
-    except UnresolvableSymbolError:
+        raise unsupported_type_error(exc) from exc
+    except UnresolvableSymbolError as exc:
         # 400 und nicht 502: Der Aufrufer kann es besser machen, und der Text
         # sagt ihm wie. Ein 502 behauptete einen Ausfall, den es nicht gab.
-        return JSONResponse(
-            status_code=400,
-            content=ErrorDetail(
-                code=REASON_NO_SUFFIX, params={"symbol": symbol}
-            ).model_dump(),
-        )
+        raise ApiError(400, REASON_NO_SUFFIX, {"symbol": symbol}) from exc
     except QuoteUnavailableError as exc:
         # Dieselbe Kennung wie auf dem ISIN-Weg: "keine Quelle konnte einen
         # Preis feststellen" ist derselbe Sachverhalt, gleich über welche Tür
@@ -146,7 +138,7 @@ def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
         # Dieselbe Auskunft wie am Symboleingang. Bis Runde 6 fiel ein
         # erkannter Index hier in das 404 darunter — für den Benutzer nicht
         # zu unterscheiden von einer erfundenen ISIN.
-        return unsupported_type_response(exc)
+        raise unsupported_type_error(exc) from exc
     except InstrumentNotFoundError as exc:
         raise instrument_not_found_error(isin) from exc
     except QuoteUnavailableError as exc:
@@ -173,15 +165,15 @@ def daily_history(
     """Liefert echte Tages-Schlusskurse (EOD) zu einer ISIN, inkrementell gecacht."""
     try:
         return service.get_daily(isin=isin, period=period)
-    except InstrumentNotFoundError:
+    except InstrumentNotFoundError as exc:
         # Nicht 502: Ein unbekanntes Papier ist ein Eingabefehler, kein
         # Ausfall bei Yahoo. Beides auf denselben Code zu legen nimmt jedem
         # Client die Möglichkeit, sie auseinanderzuhalten.
-        raise instrument_not_found_error(isin) from None
-    except DailySeriesNotFoundError:
-        return _daily_error(404, REASON_NO_DAILY_SERIES, isin)
-    except QuoteUnavailableError:
-        return _daily_error(502, REASON_DAILY_UNAVAILABLE, isin)
+        raise instrument_not_found_error(isin) from exc
+    except DailySeriesNotFoundError as exc:
+        raise _daily_error(404, REASON_NO_DAILY_SERIES, isin) from exc
+    except QuoteUnavailableError as exc:
+        raise _daily_error(502, REASON_DAILY_UNAVAILABLE, isin) from exc
 
 
 @router.get(
@@ -197,13 +189,13 @@ def daily_history_by_symbol(
     """Liefert echte Tages-Schlusskurse (EOD) zu einem Symbol, inkrementell gecacht."""
     try:
         return service.get_daily(symbol=symbol, period=period)
-    except DailySeriesNotFoundError:
+    except DailySeriesNotFoundError as exc:
         # **Auch dieser Pfad unterscheidet.** Die Kette trägt bis hierher,
         # ob keine Quelle die Reihe führt oder ob eine gestört war; ein `404`
         # ist damit keine Vermutung über den Anbieter.
-        return _daily_error(404, REASON_NO_DAILY_SERIES, symbol)
-    except QuoteUnavailableError:
-        return _daily_error(502, REASON_DAILY_UNAVAILABLE, symbol)
+        raise _daily_error(404, REASON_NO_DAILY_SERIES, symbol) from exc
+    except QuoteUnavailableError as exc:
+        raise _daily_error(502, REASON_DAILY_UNAVAILABLE, symbol) from exc
 
 
 @router.get(

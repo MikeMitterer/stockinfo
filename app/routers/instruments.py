@@ -34,10 +34,11 @@ from app.services.intake_service import (
     IntakeRejected,
     IntakeService,
 )
+from app.routers.api_error import ApiError
 from app.routers.source_errors import (
-    currency_mismatch_response,
+    currency_mismatch_error,
     quote_unavailable_error,
-    unsupported_type_response,
+    unsupported_type_error,
 )
 from app.services.quote_service import (
     QuoteCurrencyMismatchError,
@@ -75,14 +76,11 @@ def intake(payload: IntakeRequest, service: IntakeDep, response: Response):
     except ExchangeConfirmationRequired as exc:
         return JSONResponse(status_code=202, content=exc.confirmation.model_dump())
     except IntakeRejected as exc:
-        return JSONResponse(
-            status_code=400,
-            content=ErrorDetail(code=exc.code, params=exc.params).model_dump(),
-        )
+        raise ApiError(400, exc.code, exc.params) from exc
     except UnsupportedInstrumentTypeError as exc:
-        return unsupported_type_response(exc)
+        raise unsupported_type_error(exc) from exc
     except QuoteCurrencyMismatchError as exc:
-        return currency_mismatch_response(exc)
+        raise currency_mismatch_error(exc) from exc
     except QuoteUnavailableError as exc:
         # `identifier` ist die Eingabe, wie auf allen anderen Wegen. Bis T-139
         # stand hier der Ausnahmetext, oft ein ganzer Satz aus dem Dienst.
