@@ -67,10 +67,10 @@ SETUP_STAMPS := $(VENV)/.installed dashboard/node_modules/.installed $(TOOLS_STA
 # Ports des Dev-Stacks nennt dev-ports (--port-of NAME) aus ProjectTools; sie stehen dort, wo sie
 # beim Start wirken: das Backend mit --port in Procfile.dev, das Dashboard als server.port in
 # dashboard/vite.config.ts. Das Makefile legt keine der Dateien selbst aus. Ohne dev-ports
-# bleibt der Port leer, und die Adressen nennen stattdessen NO_DEV_PORTS; info, hints und dev-up
-# laufen so auch auf einem frischen Klon. Nur Ziffern werden übernommen; die Werte stehen danach
-# als Zahlen in den Rezepten. Ermittelt erst beim ersten Gebrauch und dann gemerkt, damit die
-# übrigen Targets dev-ports nicht starten.
+# (vor make setup) nennen info und hints statt der Adresse NO_DEV_PORTS; dev-up bricht dann
+# schon in require-tools ab. Nur Ziffern werden übernommen; die Werte stehen danach als Zahlen in
+# den Rezepten. Ermittelt erst beim ersten Gebrauch und dann gemerkt, damit die übrigen Targets
+# dev-ports nicht starten.
 NO_DEV_PORTS := ? (dev-ports fehlt: make setup)
 dev_port     = $(shell $(TOOL_ENV); dev-ports --port-of $(1) 2>/dev/null | grep -xE '[0-9]+')
 # Adresse eines Dienstes mit Pfad $(2), ohne bekannten Port NO_DEV_PORTS.
@@ -181,7 +181,7 @@ hints: ## Links, URLs und Tipps für die tägliche Arbeit
 	@printMakeValue "Vor dem Commit" "make check"
 	@printMakeValue "Einzelne Tests" "make test-backend ARGS='-k name'"
 	@printMakeValue "Stack hängt"    "make dev-down; dann make dev-up"
-	@printMakeValue "Erster Kurs"    'curl $(call dev_url,BACKEND_PORT,/quote/IE00B4L5Y983)'
+	@printMakeValue "Erster Kurs"    '$(if $(BACKEND_PORT),curl )$(call dev_url,BACKEND_PORT,/quote/IE00B4L5Y983)'
 	@printMakeValue "Unraid-Test"    "wget -O /boot/config/plugins/dockerMan/templates-user/stockinfo-test.xml https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml"
 	@printMakeHeading "Werkzeuge (Tag und Quelle in .dev-tools.conf.sh)"
 	@printMakeValue "Stand zeigen"      "make info"
@@ -261,18 +261,16 @@ status: require-tools ## Git-Status aller Workspace-Repos anzeigen
 
 ##@ Entwicklung
 
-# Ein belegter Port bricht den Start ab, statt dass eine App still ausweicht. Ohne dev-ports
-# (ProjectTools, make setup) nur eine Warnung: dev-up und dev-down sind Entwicklungs-Targets.
-# precheck vorab: Die Statuszeilen brauchen BashLib, und ohne sie soll der Befehl scheitern,
-# bevor er overmind startet oder beendet, nicht danach.
+# Ein belegter Port bricht den Start ab, statt dass eine App still ausweicht. dev-ports
+# (ProjectTools) ist Voraussetzung, auch in Procfile.dev: require-tools bricht ohne es ab und
+# nennt den Installationsbefehl, bevor overmind startet oder beendet wird (makefile-conventions).
 # Anders als StockPortfolio und Darwin+Finanzen ohne OVERMIND_SKIP_ENV: HOST aus .env erreicht
 # uvicorn in Procfile.dev nur, weil overmind .env lädt; das Makefile exportiert HOST nicht.
 .PHONY: dev-up
-dev-up: precheck ## Backend und Dashboard laufen im Hintergrund, mit Auto-Reload
+dev-up: require-tools ## Backend und Dashboard laufen im Hintergrund, mit Auto-Reload
 	@command -v overmind >/dev/null || { $(STATUS) "✗" "overmind fehlt: brew install overmind tmux" ERR; exit 1; }
 	@command -v tmux >/dev/null || { $(STATUS) "✗" "tmux fehlt: brew install tmux" ERR; exit 1; }
-	@if command -v dev-ports >/dev/null; then dev-ports --check; \
-	else $(STATUS) "⚠" "dev-ports fehlt (make setup) — Ports vor dem Start nicht geprüft" WARN; fi
+	@dev-ports --check
 	@# overmind bricht auch ab, wenn der Stack schon läuft oder eine verwaiste .overmind.sock
 	@# eines Absturzes liegt; aufräumen kann nur dev-down.
 	@overmind start -D -N -f Procfile.dev || { \
@@ -283,10 +281,9 @@ dev-up: precheck ## Backend und Dashboard laufen im Hintergrund, mit Auto-Reload
 # Räumt nach einem Absturz overmind/tmux DIESES Projekts, eine verwaiste .overmind.sock und
 # die Ports aus Procfile.dev und der Vite-Konfiguration auf (dev-ports --kill).
 .PHONY: dev-down
-dev-down: precheck ## Dev-Stack gestoppt, Reste nach einem Absturz beseitigt, Ports frei
+dev-down: require-tools ## Dev-Stack gestoppt, Reste nach einem Absturz beseitigt, Ports frei
 	-@overmind quit 2>/dev/null || true
-	@if command -v dev-ports >/dev/null; then dev-ports --kill; \
-	else $(STATUS) "⚠" "dev-ports fehlt (make setup) — Reste nach einem Absturz nicht geprüft" WARN; fi
+	@dev-ports --kill
 	@$(STATUS) "✓" "Stack gestoppt" OK
 
 .PHONY: dev-logs

@@ -1,2 +1,2 @@
-backend: env PORT=8000 .venv/bin/uvicorn app.main:app --host "${HOST:-127.0.0.1}" --port 8000 --reload
-dashboard: cd dashboard && exec npm run dev -- --strictPort
+backend: env PORT="$(dev-ports --port-of backend)" .venv/bin/uvicorn app.main:app --host "${HOST:-127.0.0.1}" --port 8000 --reload
+dashboard: env VITE_DEV_API_TARGET="http://127.0.0.1:$(dev-ports --port-of backend)" npm run dev --prefix dashboard -- --strictPort

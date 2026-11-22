@@ -1,21 +1,43 @@
 /// <reference types="vitest/config" />
 import vue from '@vitejs/plugin-vue'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 
 // Die Liste steht in `api-prefixes.ts` — sie hat zwei Verbraucher, und der
 // Test kommt an diese Datei hier nicht heran, ohne esbuild in die
 // Testumgebung zu ziehen.
 import { apiPrefixes } from './api-prefixes'
 
-// Ziel-Backend für den Dev-Proxy: der Port von `backend` in Procfile.dev
-// (`--port`). Ändert sich der dort, ändert er sich auch hier; VITE_DEV_API_TARGET
-// lenkt den Proxy auf ein anderes Backend. 127.0.0.1 statt
-// localhost: Das Backend lauscht per Vorgabe nur auf IPv4, und Node löst
-// localhost womöglich zuerst als ::1 auf.
-const apiTarget = process.env.VITE_DEV_API_TARGET ?? 'http://127.0.0.1:8000'
+// Ziel-Backend für den Dev-Proxy. `make dev-up` setzt VITE_DEV_API_TARGET in
+// Procfile.dev aus `dev-ports --port-of backend`; der Port steht nur dort in der
+// Zeile `backend`, hier gibt es keine zweite Angabe. 127.0.0.1 statt localhost:
+// Das Backend lauscht per Vorgabe nur auf IPv4, und Node löst localhost
+// womöglich zuerst als ::1 auf.
+const apiTarget = process.env.VITE_DEV_API_TARGET
+
+/**
+ * Der Dev-Server startet nicht ohne Proxy-Ziel. Sonst beantwortet er jede
+ * API-Anfrage mit der `index.html` (200), und der Fehler sieht aus wie ein
+ * kaputtes Backend (vgl. T-04 in `tests/viteProxy.spec.ts`). Build, Vorschau
+ * und Vitest brauchen kein Ziel.
+ */
+function requireApiTarget(): Plugin {
+  return {
+    name: 'require-api-target',
+    apply: (_config, { command, isPreview }) =>
+      command === 'serve' && !isPreview && !process.env.VITEST,
+    configResolved() {
+      if (!apiTarget) {
+        throw new Error(
+          'VITE_DEV_API_TARGET fehlt. make dev-up setzt es; allein: ' +
+            'VITE_DEV_API_TARGET="http://127.0.0.1:$(dev-ports --port-of backend)" npm run dev',
+        )
+      }
+    },
+  }
+}
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), requireApiTarget()],
 
   /*
    * Das Fundament liegt als `file:`-Abhängigkeit vor — npm legt dafür einen
@@ -55,9 +77,11 @@ export default defineConfig({
     port: 5173,
     // Das Fundament liegt als Symlink daneben — ohne das 403 auf jede Datei.
     fs: { allow: ['..', '../..'] },
-    proxy: Object.fromEntries(
-      apiPrefixes.map((prefix) => [prefix, { target: apiTarget, changeOrigin: true }]),
-    ),
+    proxy: apiTarget
+      ? Object.fromEntries(
+          apiPrefixes.map((prefix) => [prefix, { target: apiTarget, changeOrigin: true }]),
+        )
+      : undefined,
   },
   test: { environment: 'jsdom', setupFiles: ['tests/setup.ts'] },
 })
