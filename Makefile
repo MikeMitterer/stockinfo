@@ -64,20 +64,23 @@ PYTEST  := $(VENV)/bin/pytest
 TOOLS_STAMP  := $(TOOLS_DIR)/.installed
 SETUP_STAMPS := $(VENV)/.installed dashboard/node_modules/.installed $(TOOLS_STAMP)
 
-# Ports des Dev-Stacks nennt dev-ports (--port-of NAME), damit das Makefile weder Procfile.dev
-# noch .dev-ports.conf.sh selbst auslegt. Ohne dev-ports, oder wenn es den Namen nicht kennt,
-# gilt der Wert aus .dev-ports.conf.sh: info, hints und dev-up laufen so auch auf einem
-# frischen Klon. Nur Ziffern werden übernommen; die Werte stehen danach als Zahlen in den
-# Rezepten. Ermittelt erst beim ersten Gebrauch und dann gemerkt, damit die übrigen Targets
+# Ports des Dev-Stacks nennt dev-ports (--port-of NAME) aus ProjectTools; sie stehen dort, wo sie
+# beim Start wirken: das Backend mit --port in Procfile.dev, das Dashboard als server.port in
+# dashboard/vite.config.ts. Das Makefile legt keine der Dateien selbst aus. Ohne dev-ports
+# (vor make setup) nennen info und hints statt der Adresse NO_DEV_PORTS; dev-up bricht dann
+# schon in require-tools ab. Nur Ziffern werden übernommen; die Werte stehen danach als Zahlen in
+# den Rezepten. Ermittelt erst beim ersten Gebrauch und dann gemerkt, damit die übrigen Targets
 # dev-ports nicht starten.
-dev_port = $(shell $(TOOL_ENV); { command -v dev-ports >/dev/null && dev-ports --port-of $(1) 2>/dev/null || \
-	bash -c 'source ./.dev-ports.conf.sh && printf "%s\n" "$$$(2)"' 2>/dev/null; } | grep -xE '[0-9]+')
+NO_DEV_PORTS := ? (dev-ports fehlt: make setup)
+dev_port     = $(shell $(TOOL_ENV); dev-ports --port-of $(1) 2>/dev/null | grep -xE '[0-9]+')
+# Adresse eines Dienstes mit Pfad $(2), ohne bekannten Port NO_DEV_PORTS.
+dev_url      = $(if $($(1)),http://localhost:$($(1))$(2),$(NO_DEV_PORTS))
 # override: Ein gleichnamiges Make-Argument oder `make -e` setzt sie nicht, sonst stünde ein
 # fremder Wert ungeprüft im Rezepttext. unexport: Stehen sie in der Umgebung, gäbe Make sie an
 # $(shell) weiter und müsste sie dafür mitten in ihrer eigenen Ermittlung auswerten (leerer
 # Port unter Make 4.4).
-override DASHBOARD_PORT = $(eval override DASHBOARD_PORT := $$(call dev_port,dashboard,DASHBOARD_PORT))$(DASHBOARD_PORT)
-override BACKEND_PORT   = $(eval override BACKEND_PORT := $$(call dev_port,backend,BACKEND_PORT))$(BACKEND_PORT)
+override DASHBOARD_PORT = $(eval override DASHBOARD_PORT := $$(call dev_port,dashboard))$(DASHBOARD_PORT)
+override BACKEND_PORT   = $(eval override BACKEND_PORT := $$(call dev_port,backend))$(BACKEND_PORT)
 unexport DASHBOARD_PORT BACKEND_PORT
 
 # Host-Port des Containers bei `make up`, aus .env oder der Umgebung.
@@ -150,7 +153,7 @@ info: ## Projektpfade, Ports und Werkzeugstand anzeigen
 	@printMakeValue VENV             '$(VENV)'
 	@printMakeValue BASH_LIBS        "$${BASH_LIBS:-nicht gefunden (make setup)}"
 	@printMakeValue PROJECT_TOOLS    "$${PROJECT_TOOLS:-nicht gesetzt (nur make push)}"
-	@printMakeValue "Dev-Ports"      '$(DASHBOARD_PORT) (Dashboard) · $(BACKEND_PORT) (Backend)'
+	@printMakeValue "Dev-Ports"      '$(if $(BACKEND_PORT),$(DASHBOARD_PORT) (Dashboard) · $(BACKEND_PORT) (Backend),$(NO_DEV_PORTS))'
 	@printMakeValue "PORT (make up)" "$${PORT}"
 	@printMakeHeading "Werkzeuge (.dev-tools.conf.sh)"
 	@# devtools status gibt je Werkzeug „  Name  Stand“ aus; Name und Stand gehen einzeln an
@@ -169,16 +172,16 @@ hints: ## Links, URLs und Tipps für die tägliche Arbeit
 	@printMakeValue "Letzter Release" "$${RELEASE_TAG}"
 	@printMakeValue "Docker Hub"      "https://hub.docker.com/r/$${IMAGE_NAME}"
 	@printMakeHeading "URLs nach make dev-up (http://, nicht https)"
-	@printMakeValue "Dashboard"           "http://localhost:$(DASHBOARD_PORT)/"
-	@printMakeValue "API"                 "http://localhost:$(BACKEND_PORT)/"
-	@printMakeValue "Swagger"             "http://localhost:$(BACKEND_PORT)/docs"
-	@printMakeValue "Health"              "http://localhost:$(BACKEND_PORT)/health"
+	@printMakeValue "Dashboard"           '$(call dev_url,DASHBOARD_PORT,/)'
+	@printMakeValue "API"                 '$(call dev_url,BACKEND_PORT,/)'
+	@printMakeValue "Swagger"             '$(call dev_url,BACKEND_PORT,/docs)'
+	@printMakeValue "Health"              '$(call dev_url,BACKEND_PORT,/health)'
 	@printMakeValue "Container (make up)" "http://localhost:$${PORT}/"
 	@printMakeHeading "Im Alltag"
 	@printMakeValue "Vor dem Commit" "make check"
 	@printMakeValue "Einzelne Tests" "make test-backend ARGS='-k name'"
 	@printMakeValue "Stack hängt"    "make dev-down; dann make dev-up"
-	@printMakeValue "Erster Kurs"    "curl http://localhost:$(BACKEND_PORT)/quote/IE00B4L5Y983"
+	@printMakeValue "Erster Kurs"    '$(if $(BACKEND_PORT),curl )$(call dev_url,BACKEND_PORT,/quote/IE00B4L5Y983)'
 	@printMakeValue "Unraid-Test"    "wget -O /boot/config/plugins/dockerMan/templates-user/stockinfo-test.xml https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml"
 	@printMakeHeading "Werkzeuge (Tag und Quelle in .dev-tools.conf.sh)"
 	@printMakeValue "Stand zeigen"      "make info"
@@ -258,24 +261,29 @@ status: require-tools ## Git-Status aller Workspace-Repos anzeigen
 
 ##@ Entwicklung
 
-# Ein belegter Port bricht den Start ab, statt dass eine App still ausweicht. Ohne dev-ports
-# (ProjectTools, make setup) nur eine Warnung: dev-up und dev-down sind Entwicklungs-Targets.
-# precheck vorab: Die Statuszeilen brauchen BashLib, und ohne sie soll der Befehl scheitern,
-# bevor er overmind startet oder beendet, nicht danach.
+# Ein belegter Port bricht den Start ab, statt dass eine App still ausweicht. dev-ports
+# (ProjectTools) ist Voraussetzung, auch in Procfile.dev: require-tools bricht ohne es ab und
+# nennt den Installationsbefehl, bevor overmind startet oder beendet wird (makefile-conventions).
+# Anders als StockPortfolio und Darwin+Finanzen ohne OVERMIND_SKIP_ENV: HOST aus .env erreicht
+# uvicorn in Procfile.dev nur, weil overmind .env lädt; das Makefile exportiert HOST nicht.
 .PHONY: dev-up
-dev-up: precheck ## Backend und Dashboard laufen im Hintergrund, mit Auto-Reload
-	@if command -v dev-ports >/dev/null; then dev-ports --check; \
-	else $(STATUS) "⚠" "dev-ports fehlt (make setup) — Ports vor dem Start nicht geprüft" WARN; fi
-	overmind start -D -N -f Procfile.dev
-	@$(STATUS) "✓" "Stack läuft — Backend http://localhost:$(BACKEND_PORT) · Dashboard http://localhost:$(DASHBOARD_PORT)  (make dev-logs)" OK
+dev-up: require-tools ## Backend und Dashboard laufen im Hintergrund, mit Auto-Reload
+	@command -v overmind >/dev/null || { $(STATUS) "✗" "overmind fehlt: brew install overmind tmux" ERR; exit 1; }
+	@command -v tmux >/dev/null || { $(STATUS) "✗" "tmux fehlt: brew install tmux" ERR; exit 1; }
+	@dev-ports --check
+	@# overmind bricht auch ab, wenn der Stack schon läuft oder eine verwaiste .overmind.sock
+	@# eines Absturzes liegt; aufräumen kann nur dev-down.
+	@overmind start -D -N -f Procfile.dev || { \
+		$(STATUS) "⚠" "Nicht gestartet. Läuft der Stack schon: make dev-logs. Nach einem Absturz räumt make dev-down die Reste auf." WARN; \
+		exit 1; }
+	@$(STATUS) "✓" 'Stack läuft — Backend $(call dev_url,BACKEND_PORT,) · Dashboard $(call dev_url,DASHBOARD_PORT,)  (make dev-logs)' OK
 
 # Räumt nach einem Absturz overmind/tmux DIESES Projekts, eine verwaiste .overmind.sock und
-# die Ports aus .dev-ports.conf.sh auf (dev-ports --kill).
+# die Ports aus Procfile.dev und der Vite-Konfiguration auf (dev-ports --kill).
 .PHONY: dev-down
-dev-down: precheck ## Dev-Stack gestoppt, Reste nach einem Absturz beseitigt, Ports frei
+dev-down: require-tools ## Dev-Stack gestoppt, Reste nach einem Absturz beseitigt, Ports frei
 	-@overmind quit 2>/dev/null || true
-	@if command -v dev-ports >/dev/null; then dev-ports --kill; \
-	else $(STATUS) "⚠" "dev-ports fehlt (make setup) — Reste nach einem Absturz nicht geprüft" WARN; fi
+	@dev-ports --kill
 	@$(STATUS) "✓" "Stack gestoppt" OK
 
 .PHONY: dev-logs

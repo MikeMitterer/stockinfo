@@ -1,6 +1,6 @@
 /// <reference types="vitest/config" />
 import vue from '@vitejs/plugin-vue'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 
 // Die Liste steht in `api-prefixes.ts` — sie hat zwei Verbraucher, und der
 // Test kommt an diese Datei hier nicht heran, ohne esbuild in die
@@ -8,14 +8,45 @@ import { defineConfig } from 'vite'
 import { apiPrefixes } from './api-prefixes'
 
 // Ziel-Backend für den Dev-Proxy. `make dev-up` setzt VITE_DEV_API_TARGET in
-// Procfile.dev aus `.dev-ports.conf.sh`, der einzigen Quelle der Dev-Ports. Der
-// Rückfall gilt nur für `npm run dev` ohne `make dev-up`. 127.0.0.1 statt
-// localhost: Das Backend lauscht per Vorgabe nur auf IPv4, und Node löst
-// localhost womöglich zuerst als ::1 auf.
-const apiTarget = process.env.VITE_DEV_API_TARGET ?? 'http://127.0.0.1:8000'
+// Procfile.dev aus `dev-ports --port-of backend`; der Port steht nur dort in der
+// Zeile `backend`, hier gibt es keine zweite Angabe. 127.0.0.1 statt localhost:
+// Das Backend lauscht per Vorgabe nur auf IPv4, und Node löst localhost
+// womöglich zuerst als ::1 auf.
+const apiTarget = process.env.VITE_DEV_API_TARGET
+
+// Einzelstart aus dem Projekt-Root: dev-ports findet Procfile.dev nur dort.
+const START_ALONE =
+  'VITE_DEV_API_TARGET="http://127.0.0.1:$(dev-ports --port-of backend)" ' +
+  'npm run dev --prefix dashboard'
+
+/**
+ * Der Dev-Server startet nicht ohne gültiges Proxy-Ziel. Sonst beantwortet er
+ * jede API-Anfrage mit der `index.html` (200), und der Fehler sieht aus wie ein
+ * kaputtes Backend (vgl. T-04 in `tests/viteProxy.spec.ts`). Unvollständig ist
+ * ein Ziel, das auf `:` endet: So sieht es aus, wenn die Portabfrage mit
+ * dev-ports scheitert. Build, Vorschau und Vitest brauchen kein Ziel.
+ */
+function requireApiTarget(): Plugin {
+  return {
+    name: 'require-api-target',
+    apply: (_config, { command, isPreview }) =>
+      command === 'serve' && !isPreview && !process.env.VITEST,
+    configResolved() {
+      if (!apiTarget) {
+        throw new Error(`VITE_DEV_API_TARGET fehlt. make dev-up setzt es; allein: ${START_ALONE}`)
+      }
+      if (apiTarget.endsWith(':') || !URL.canParse(apiTarget)) {
+        throw new Error(
+          `VITE_DEV_API_TARGET unvollständig: "${apiTarget}". Portabfrage im Projekt-Root: ` +
+            START_ALONE,
+        )
+      }
+    },
+  }
+}
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [vue(), requireApiTarget()],
 
   /*
    * Das Fundament liegt als `file:`-Abhängigkeit vor — npm legt dafür einen
@@ -50,14 +81,16 @@ export default defineConfig({
   },
 
   server: {
-    // Rückfall für `npm run dev`; `make dev-up` übergibt DASHBOARD_PORT aus
-    // `.dev-ports.conf.sh` mit `--port` (Procfile.dev).
+    // Port des Dashboards, auch für `make dev-up`: Procfile.dev nennt keinen,
+    // dev-ports (ProjectTools) liest ihn hier.
     port: 5173,
     // Das Fundament liegt als Symlink daneben — ohne das 403 auf jede Datei.
     fs: { allow: ['..', '../..'] },
-    proxy: Object.fromEntries(
-      apiPrefixes.map((prefix) => [prefix, { target: apiTarget, changeOrigin: true }]),
-    ),
+    proxy: apiTarget
+      ? Object.fromEntries(
+          apiPrefixes.map((prefix) => [prefix, { target: apiTarget, changeOrigin: true }]),
+        )
+      : undefined,
   },
   test: { environment: 'jsdom', setupFiles: ['tests/setup.ts'] },
 })
