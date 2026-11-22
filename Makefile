@@ -72,8 +72,13 @@ SETUP_STAMPS := $(VENV)/.installed dashboard/node_modules/.installed $(TOOLS_STA
 # dev-ports nicht starten.
 dev_port = $(shell $(TOOL_ENV); { command -v dev-ports >/dev/null && dev-ports --port-of $(1) 2>/dev/null || \
 	bash -c 'source ./.dev-ports.conf.sh && printf "%s\n" "$$$(2)"' 2>/dev/null; } | grep -xE '[0-9]+')
-DASHBOARD_PORT = $(eval DASHBOARD_PORT := $$(call dev_port,dashboard,DASHBOARD_PORT))$(DASHBOARD_PORT)
-BACKEND_PORT   = $(eval BACKEND_PORT := $$(call dev_port,backend,BACKEND_PORT))$(BACKEND_PORT)
+# override: Ein gleichnamiges Make-Argument oder `make -e` setzt sie nicht, sonst stünde ein
+# fremder Wert ungeprüft im Rezepttext. unexport: Stehen sie in der Umgebung, gäbe Make sie an
+# $(shell) weiter und müsste sie dafür mitten in ihrer eigenen Ermittlung auswerten (leerer
+# Port unter Make 4.4).
+override DASHBOARD_PORT = $(eval override DASHBOARD_PORT := $$(call dev_port,dashboard,DASHBOARD_PORT))$(DASHBOARD_PORT)
+override BACKEND_PORT   = $(eval override BACKEND_PORT := $$(call dev_port,backend,BACKEND_PORT))$(BACKEND_PORT)
+unexport DASHBOARD_PORT BACKEND_PORT
 
 # Host-Port des Containers bei `make up`, aus .env oder der Umgebung.
 PORT    ?= 8000
@@ -102,13 +107,19 @@ export PORT PLATFORM IMAGE_NAME CONTAINER DATA_VOLUME
 
 # Repo-Adresse (https) und letzter Release-Tag (nur v[0-9]*) für hints, von repo-info aus
 # ProjectTools; ohne Remote oder Tag gibt es selbst einen lesbaren Ersatz aus, ohne ProjectTools
-# nennt die Zeile, was fehlt. hints läuft so auch auf einem frischen Klon. Wie die Ports erst
-# beim ersten Gebrauch ermittelt. repo-info gibt nur erlaubte Zeichen aus
-# (makefile-conventions, Hints-Target); darum dürfen die Werte als Text ins Rezept.
+# nennt die Zeile, was fehlt. hints läuft so auch auf einem frischen Klon. Ermittelt nur, wenn
+# hints aufgerufen wird, und schon beim Lesen des Makefiles: Bei der Ausführung gäbe Make die
+# für hints exportierten Werte an $(shell) weiter und müsste sie dafür mitten in ihrer eigenen
+# Ermittlung auswerten (leerer Wert unter Make 4.4). Beide lassen sich als Make-Argument
+# setzen; die Rezepte lesen sie darum als "$${REPO_URL}" aus der Umgebung, nie als Text.
 NO_REPO_INFO := repo-info fehlt (ProjectTools): make setup
 repo_info    = $(or $(shell $(TOOL_ENV); repo-info $(1) 2>/dev/null),$(NO_REPO_INFO))
-REPO_URL     = $(eval REPO_URL := $$(call repo_info,--url))$(REPO_URL)
-RELEASE_TAG  = $(eval RELEASE_TAG := $$(call repo_info,--release-tag))$(RELEASE_TAG)
+ifneq ($(filter hints,$(MAKECMDGOALS)),)
+repo_url    := $(call repo_info,--url)
+release_tag := $(call repo_info,--release-tag)
+endif
+hints: export REPO_URL = $(repo_url)
+hints: export RELEASE_TAG = $(release_tag)
 
 # ─── Hilfe ────────────────────────────────────────────────────────────────────
 
@@ -153,9 +164,9 @@ info: ## Projektpfade, Ports und Werkzeugstand anzeigen
 .PHONY: hints
 hints: ## Links, URLs und Tipps für die tägliche Arbeit
 	@printMakeHeading "Links"
-	@printMakeValue "Repository"      '$(REPO_URL)'
-	@printMakeValue "Entwicklerdoku"  '$(if $(filter https://%,$(REPO_URL)),$(REPO_URL)/blob/master/docs/development.md,docs/development.md)'
-	@printMakeValue "Letzter Release" '$(RELEASE_TAG)'
+	@printMakeValue "Repository"      "$${REPO_URL}"
+	@printMakeValue "Entwicklerdoku"  "$(if $(filter https://%,$(REPO_URL)),$${REPO_URL}/blob/master/docs/development.md,docs/development.md)"
+	@printMakeValue "Letzter Release" "$${RELEASE_TAG}"
 	@printMakeValue "Docker Hub"      "https://hub.docker.com/r/$${IMAGE_NAME}"
 	@printMakeHeading "URLs nach make dev-up (http://, nicht https)"
 	@printMakeValue "Dashboard"           "http://localhost:$(DASHBOARD_PORT)/"
