@@ -2,9 +2,130 @@
 
 Generated from release tags and Conventional Commits.
 
+## v1.7.0+261122.1139.2f40c — 2026-11-22
+
+Error and diagnostic codes instead of German sentences, background refresh in minutes, quality gates in make check, dev stack ports via dev-ports
+
+### Features
+
+- make push verlangt den Release-Tag in origin (`1bfba83`)
+- hints liest Repo-Adresse und Release-Tag über repo-info (T-133) (`844766a`)
+- Intervall in Minuten und erster Refresh beim Start (T-136) (`7be1852`)
+- Ablehnungen als Kennung mit Werten statt deutscher Sätze (T-139) (`cb1cc12`)
+- abgelehnte Detailwerte nennen Grund und Beschriftung (T-139) (`86061ca`)
+- Erfolgs- und Diagnosefelder als Kennung statt Satz (T-148) (`743090c`)
+- Ports des Dev-Stacks über dev-ports --port-of (T-150) (`07c18a2`)
+- Ports nach dem dev-ports-Modell, .dev-ports.conf.sh entfällt (T-132) (`331805f`)
+
+### Fixes
+
+- DevTools-Quelle im Makefile aus DEVTOOLS\_SOURCE lesen (T-123) (`77a4216`)
+- Ordner der Sicherungen im Sicherheitsprofil nennen (T-124) (`f268a87`)
+- englischer Modulname im Importtest von plugin\_env (T-127) (`b2dced4`)
+- Dev-Ports nur aus .dev-ports.conf.sh (`cab16d7`)
+- sources-profile.sh fragt lokal den Dev-Port ab (`753815e`)
+- tag-\* committen den Changelog lokal, nichts wird gepusht (`e17d439`)
+- Release-Tag wie gitDockerTag nur aus v-Tags wählen (`6970687`)
+- hints ohne devtools command (T-135) (`5193cb2`)
+- vue 3.5.45 und vue-i18n 11.4.23 gegen bekannte Lücken (T-137) (`81ed647`)
+- ExchangesPanel-Test prüft den Rollennamen über analysis.role (T-137) (`45dba85`)
+- feste Texte, Gattungen, Einheiten und Sprachweiche über den Katalog (T-138) (`97cb63c`)
+- Typen von name, type und Kurswährung wie im Backend (T-141) (`b7cc10a`)
+- Zahl der aufbewahrten Sicherungen aus der API statt fest im Dashboard (T-141) (`2d39543`)
+- Bash-Variablen groß, Abbrüche mit ✗ und nächstem Befehl (T-143) (`4aa3c50`)
+- justetf-scraping wieder aus upstream druzsan/justetf-scraping (T-145) (`3204502`)
+- dev-down über dev-ports, dev-up nennt den Weg nach einem Absturz (T-132) (`12e0389`)
+- Quellen-Ausnahmetext nur ins Protokoll, Vertrag 5.0.0 (T-139 R1) (`7d0305e`)
+- backup\_incompatible behauptet keine andere Quellenlage (T-148 R1) (`082b77f`)
+- dev-up und dev-down wie in den Nachbarprojekten (T-132) (`863d305`)
+- dev-up nennt den Installationsbefehl, Doku grenzt den Socket-Fall ein (T-132 R1) (`ec4a898`)
+- BashLib vor dev-up, dev-down, up und down prüfen (T-149 R1) (`54c1ebc`)
+- precheck verlangt auch make.lib.sh (T-149 R2) (`2263a24`)
+- hints ohne ProjectTools, Werkzeuge aus .tools/ auch unter Make 3.81 (T-150 R1) (`e196a27`)
+- Werte von außen in hints über die Umgebung, Ports nicht überschreibbar (T-150 R2) (`5ab61b0`)
+- Backend-Port nur einmal, Procfile und Proxy fragen dev-ports (T-132 R2) (`cc2546e`)
+- Dashboard-Einzelstart aus dem Projekt-Root, unvollständiges Proxy-Ziel stoppt Vite (T-132 R3) (`92affca`)
+- clean nur feste Pfade, build-check prüft die Image-ID und räumt immer auf (T-151 R1) (`0bf0fe3`)
+
+### Other changes
+
+- Werkzeuge über pipx statt .libs-Symlinks einrichten (`8cf286c`)
+- Makefile an makefile-conventions angleichen (`809b86a`)
+- englische Bezeichner im Produktivcode, Gate-Fehler aus dem Katalog (`f3fe2bb`)
+- help, info und hints über make.lib.sh im CLI-Theme (T-134) (`d918d46`)
+- Qualitätslauf – Profil, Doppelungen und tote Stellen (T-137) (`c5c2cab`)
+- Kennzahlenfelder und ihre Art nur in CANONICAL (T-140) (`f8cb8b9`)
+- Schlüsselfelder je Identitätsform in IDENTITY\_KEYS (T-140) (`1a4d27d`)
+- Rollen der Quellenkette aus dem Plugin-Vertrag (T-140) (`b27f0d1`)
+- Fehlertext Typ: Meldung einmal in app/error\_text (T-140) (`adaf078`)
+- MIC-Name, Paar-Symbol und Kern-MICs je einmal (T-140) (`40a022a`)
+- eine Übersetzung EtfDetails → Reading, declared() aus dem Vertrag (T-140) (`ca80022`)
+- Diagnose und Identitätsformen einer Quelle je einmal (T-140) (`3dcf463`)
+- Listing als Resolved einmal in app/plugins/resolution (T-140) (`5a00869`)
+- Regionen, Abdeckungsarten und Vorgaben des Vertrags je einmal (T-140) (`0eb52b8`)
+- Rolle mit Detail-Schema benannt statt dreimal "etf\_meta" (T-140) (`40ae9e6`)
+- Lade- und Fehlergerüst in useRequest, API-Pfade nur aus paths.ts (T-141) (`3d315b9`)
+- Schutz gegen veraltete Antworten in useRequest, Grund beim Speichern (T-141) (`1523566`)
+- Sortierspalten, Pence und yaml-file je einmal (T-141) (`fd3d7fc`)
+- Dialoginhalt und Fokus auf Abbrechen je einmal (T-141) (`3022c82`)
+- Aktionsleiste einmal in InstrumentActions (T-141) (`d35afd9`)
+- Abbildung der Quellenfehler in routers/source\_errors (T-142) (`f5d6819`)
+- Diagnose, Migration und Feldkatalog in Dienste, Betriebszustand an einer Stelle (T-142) (`c5643f7`)
+- messbare Grenzen in make check, make audit als Bericht (T-144) (`72c8a7f`)
+- Kennzahlen nur noch über OpenDetails bearbeiten (T-141) (`f71a68c`)
+- alle Fehlerantworten der Router über ApiError (T-139) (`d50e568`)
+- Makefile nach makefile-conventions, Werkzeuge aus .tools/ (T-149) (`43f6dde`)
+- Releases über tag-version, clean und build-check, dockerhub-readme als Befehl (T-151) (`2ee6ed6`)
+
+### Documentation
+
+- Board-Dateien vor der Umstellung auf agent-lessons nicht mehr voraussetzen (`0a1a845`)
+- Sicherheitsprofil aus der agent-lessons-Vorlage anlegen (`9f92066`)
+- Ist-Stand im Sicherheitsprofil per Inventar belegen (`fde11ad`)
+- Aussagen korrigieren, die nicht mehr stimmen; dev-up nur lokal (`42261dc`)
+- englisches Beispiel im Docstring des Plugin-Laders (`cba9fe5`)
+- Absatz zu den Dev-Ports neu umbrochen (`567df9f`)
+- development.md nach hints-Änderung geprüft (T-135) (`84643f3`)
+- Screenshots nach T-136 geprüft (`d402c0a`)
+- Feld Refresh interval (minutes) aus dem Template (T-136, R1-F1) (`2790c5b`)
+- Hinweise nach dem Qualitätslauf geprüft (T-137) (`6e01826`)
+- READMEs und Screenshots nach T-138 geprüft (`923ddd7`)
+- erlaubte Regionen einer ExchangeSpec nennen (T-140) (`eb5914d`)
+- Swagger-Screenshot nach T-140 geprüft (`ee5e70f`)
+- Swagger-Screenshot nach T-142 geprüft (`5be4091`)
+- Screenshots und READMEs nach T-141 geprüft (`404c1c4`)
+- Screenshots und READMEs nach T-139 geprüft (`db1fe10`)
+- Screenshots nach der Beschriftung in Fehlermeldungen geprüft (T-139) (`91bdd95`)
+- Swagger-Screenshot nach der ApiError-Umstellung geprüft (T-139) (`6f849b3`)
+- Screenshots und READMEs nach T-139 Runde 1 geprüft (`5eedd17`)
+- Screenshots und READMEs nach T-148 geprüft (`434df79`)
+- READMEs nach T-148 Runde 1 geprüft (`8a152b3`)
+- welche Targets BashLib brauchen und vor jeder Aktion abbrechen (T-149 R1) (`2c8a9e7`)
+- Settings-Felder erkennt die Prüfung seit ProjectTools v0.12.0 (T-150) (`dd78fec`)
+
 ## v1.6.0+261015.2039.a7b4e — 2026-10-15
 
 1.6.0: justETF fund metrics fixed, third-party notices, reworked documentation, REST contract without unbuilt promises
+
+### Features
+
+- docs-check mit Config, Make-Target und Pre-Commit-Hook einrichten (`bc8e0c8`)
+- Hinweise zu Fremdkomponenten in THIRD\_PARTY\_NOTICES.md (`a3faa7f`)
+
+### Fixes
+
+- dev-down beendet nur overmind dieses Projekts (`c14ee87`)
+- Pre-Commit-Hook prüft den vorgemerkten Stand, Pflichtdateien mit Grund (`e57c7f4`)
+- Hook löst relativen PROJECT\_TOOLS-Pfad auf, Deno 2 als Voraussetzung (`9fc2e8e`)
+- justetf-scraping auf Fork mit Korrektur der Basistabelle pinnen (`86d0e15`)
+- justETF-Antwort ohne Kennzahlen lässt den gespeicherten Stand stehen (`558add9`)
+- Anzahl der geprüften Lizenzdokumente aus der Liste nennen (`1d3ad0b`)
+- Inter-Copyright vollständig aus der Paketlizenz (`c68c088`)
+- README-Vorlage und Unraid-Absatz korrigieren (`8e80372`)
+
+### Other changes
+
+- JSON-Vertragstest, Fixtures und planned entfernen (T-110) (`5b3a929`)
 
 ### Documentation
 
@@ -24,44 +145,17 @@ Generated from release tags and Conventional Commits.
 - Swagger-Screenshot nach Docstring-Änderung quittiert (`da653ce`)
 - Übersicht, Rücksprünge und Befehlsblöcke nach docs-conventions (T-111) (`dcd735d`)
 
-### Fixes
-
-- dev-down beendet nur overmind dieses Projekts (`c14ee87`)
-- Pre-Commit-Hook prüft den vorgemerkten Stand, Pflichtdateien mit Grund (`e57c7f4`)
-- Hook löst relativen PROJECT\_TOOLS-Pfad auf, Deno 2 als Voraussetzung (`9fc2e8e`)
-- justetf-scraping auf Fork mit Korrektur der Basistabelle pinnen (`86d0e15`)
-- justETF-Antwort ohne Kennzahlen lässt den gespeicherten Stand stehen (`558add9`)
-- Anzahl der geprüften Lizenzdokumente aus der Liste nennen (`1d3ad0b`)
-- Inter-Copyright vollständig aus der Paketlizenz (`c68c088`)
-- README-Vorlage und Unraid-Absatz korrigieren (`8e80372`)
-
-### Features
-
-- docs-check mit Config, Make-Target und Pre-Commit-Hook einrichten (`bc8e0c8`)
-- Hinweise zu Fremdkomponenten in THIRD\_PARTY\_NOTICES.md (`a3faa7f`)
-
-### Other changes
-
-- JSON-Vertragstest, Fixtures und planned entfernen (T-110) (`5b3a929`)
-
 ## v1.5.0+261003.1224.04ac2 — 2026-10-03
 
 chore: bump version to 1.5.0
 
-### Documentation
+### Features
 
-- Dashboard und Swagger auf Stand 1.4.0 (`1407d05`)
-- Fondsgroessen-Waehrung ueberall zutreffend beschreiben (`2caca38`)
-- Projektaufbau nennt app/persistence (`1d02a82`)
-- Projektaufbau nennt SQLModel (`880884c`)
-- Grammatik im Session-Docstring (`7d0be5e`)
-- T-95 Grenze der ISIN-Ablehnung genau benennen (`c0dd47e`)
-- /fx und /backups in der Endpunkt-Tabelle (`20d6080`)
-- Hinweis auf inoffizielle Quellen justETF und Yahoo (`23c0547`)
-- Support-Erwartung in allen drei Anleitungen (`1376375`)
-- CORS\_ORIGINS für StockPortfolio erklären, PUID/PGID nicht bewerben (`846868a`)
-- justETF und Yahoo als Voreinstellung benennen (`f720529`)
-- Release-Highlight 1.5.0, CORS-Hinweise für StockPortfolio entfernt (`ad10866`)
+- berechnete Volatilitaet fuer alle Gattungen deklarieren (`fecdad0`)
+- berechnete Werte mit Quellname und Stand anzeigen (`9b55a13`)
+- SQLModel-Session und Modelle der Kerntabellen (`c08d328`)
+- Vorher-nachher-Vergleich auf einer Kopie des Arbeitsbestands (`7e0be2c`)
+- Sicherungsliste und Quellen mit vergleichen, Laufpfade ausblenden (`780abf3`)
 
 ### Fixes
 
@@ -77,14 +171,6 @@ chore: bump version to 1.5.0
 - Runde-1-Befunde — Exit-Code, Aufräumen, keine Ausnahmen, Persistenz, sichtbares W17 (`c72cdaf`)
 - Schreibweg prüft HTTP-Status und eine echte Aktualisierung (B6) (`46f908d`)
 
-### Features
-
-- berechnete Volatilitaet fuer alle Gattungen deklarieren (`fecdad0`)
-- berechnete Werte mit Quellname und Stand anzeigen (`9b55a13`)
-- SQLModel-Session und Modelle der Kerntabellen (`c08d328`)
-- Vorher-nachher-Vergleich auf einer Kopie des Arbeitsbestands (`7e0be2c`)
-- Sicherungsliste und Quellen mit vergleichen, Laufpfade ausblenden (`780abf3`)
-
 ### Other changes
 
 - Datenbankmodule nach app/persistence verschieben (`2b5f908`)
@@ -96,6 +182,21 @@ chore: bump version to 1.5.0
 - Modellspalten typgerecht mit col() ansprechen (`6366844`)
 - uebrige Tabellen auf SQLModel, rohes SQL nur noch begruendet (`81d9434`)
 - Tabellenname des Umzugsberichts typgerecht (`833e3cf`)
+
+### Documentation
+
+- Dashboard und Swagger auf Stand 1.4.0 (`1407d05`)
+- Fondsgroessen-Waehrung ueberall zutreffend beschreiben (`2caca38`)
+- Projektaufbau nennt app/persistence (`1d02a82`)
+- Projektaufbau nennt SQLModel (`880884c`)
+- Grammatik im Session-Docstring (`7d0be5e`)
+- T-95 Grenze der ISIN-Ablehnung genau benennen (`c0dd47e`)
+- /fx und /backups in der Endpunkt-Tabelle (`20d6080`)
+- Hinweis auf inoffizielle Quellen justETF und Yahoo (`23c0547`)
+- Support-Erwartung in allen drei Anleitungen (`1376375`)
+- CORS\_ORIGINS für StockPortfolio erklären, PUID/PGID nicht bewerben (`846868a`)
+- justETF und Yahoo als Voreinstellung benennen (`f720529`)
+- Release-Highlight 1.5.0, CORS-Hinweise für StockPortfolio entfernt (`ad10866`)
 
 ## v1.4.0+261001.2241.6c366 — 2026-10-01
 
@@ -127,6 +228,12 @@ Datenhinweis im Dashboard, robusterer Containerstart bei Rechteproblemen, make s
 
 About-Seite mit Datenhinweisen und Anbieterangaben
 
+### Features
+
+- add data use notice and About links (`6134b6b`)
+- complete StockInfo About provider panel (`5d0ea26`)
+- Changelog aus Tags erzeugen und veröffentlichen (`66ca7b1`)
+
 ### Fixes
 
 - Backup in den Einstellungen einheitlich benennen (`67f72c0`)
@@ -134,15 +241,17 @@ About-Seite mit Datenhinweisen und Anbieterangaben
 - Fehlermeldung bei leerer Serverantwort anzeigen (`cb7fbe7`)
 - YAML-Tagesreihen ohne Datumsfenster prüfen (`78059a8`)
 
-### Features
-
-- add data use notice and About links (`6134b6b`)
-- complete StockInfo About provider panel (`5d0ea26`)
-- Changelog aus Tags erzeugen und veröffentlichen (`66ca7b1`)
-
 ## v1.2.0+260927.2159.9e591 — 2026-09-27
 
 StockInfo unter EUPL 1.2 bereitstellen
+
+### Features
+
+- sync readme after successful image push (`6f31bbc`)
+
+### Fixes
+
+- call isolated Bash uploader from push (`0cef0f0`)
 
 ### Documentation
 
@@ -154,109 +263,99 @@ StockInfo unter EUPL 1.2 bereitstellen
 - Doppelte Installationsangaben durch Verweise ersetzen (`b975952`)
 - Apps als Standardinstallation beschreiben (`a26fbbf`)
 
-### Features
-
-- sync readme after successful image push (`6f31bbc`)
-
-### Fixes
-
-- call isolated Bash uploader from push (`0cef0f0`)
-
 ## v1.1.0+260926.1131.84631 — 2026-09-26
 
 Instrument-Types können abgefragt werden
+
+### Features
+
+- Verfügbare Plugin-Assettypen über REST bereitstellen (`a559c09`)
 
 ### Fixes
 
 - Feldbeschreibungen durchgehend auf Englisch liefern (`fc0063e`)
 - Plugin-Typkatalog auch aus Swagger weiterleiten (`fc67ea3`)
 
-### Features
-
-- Verfügbare Plugin-Assettypen über REST bereitstellen (`a559c09`)
-
 ## v1.0.0+260925.1818.661d5 — 2026-09-25
 
 StockInfo 1.0.0: AGPL-Lizenz und geprüfte Docker-Veröffentlichung
 
-### Documentation
+### Breaking changes
 
-- Screenshots und README für 0.6.0 — Oberfläche auf Englisch (`1b2bb35`)
-- Design für das Plugin-System — deklarativ und als Code (`5117084`)
-- nur Python-Plugins — der deklarative Weg entfällt (`a43364a`)
-- Runde 2 der Codex-Review eingearbeitet, Spec wird Rückkanal (`cf6bf42`)
-- Runde 3 — StockPortfolio ist ein Konsument, das ändert T-21 (`bd9ae47`)
-- Begründung für den REST-Vertrag korrigiert (`0b52f2a`)
-- Runde 4 — Core geschlossen, Details offen; Profilwechsel als T-25 (`1d423bd`)
-- Runde 5 — listing\_id, abfragbarer Vertrag, T-26 angelegt (`9f406c0`)
-- Runde 6 eingearbeitet, T-27 für die Test-Infrastruktur (`4259c8d`)
-- Runde 7 — Testbarkeit beantwortet, T-27 geschnitten (`d94c249`)
-- Runde 8 — Ticket-Schleife aufgelöst, Crash-Matrix nachgetragen (`b79a1cd`)
-- Frage zur generation\_id an Codex, T-35 ist committet (`15771c0`)
-- Runde 9 — Generationstransport entschieden (`cf91985`)
-- Runde 10 — Ticket-Schleife entfernt, vier Begriffe geschärft (`c98c527`)
-- Runde 11 — auch die Generationsbestätigungen können sich überholen (`0e4c501`)
-- Runde 12 — Single-Flight gewählt, T-35 neu nummeriert (`99d9036`)
-- Entwurf abgenommen — Umsetzung kann beginnen (`2907004`)
-- T-21 Teil 3 entworfen — Kombination im Vertrag statt Handzuordnung (`f65dfcc`)
-- T-21 Teil 3 ueberarbeitet — Alias, Waehrung und Inventur berichtigt (`7321bfc`)
-- T-21 Teil 3 Runde 11 — Exchange-Descriptor statt Laengenregel (`72f2b8a`)
-- T-21 Teil 3 Runde 12 — ein Alias, getrennte Sammelcodes, POST (`8904093`)
-- T-21 Teil 3 Runde 12 an Codex uebergeben (`9211a74`)
-- Entwurfsrunden im Automationsvertrag geregelt (`8f0e9b4`)
-- T-21 Teil 3 Runde 14 — Erfolgsvertrag und eine Mitgliedschaft (`fecd40d`)
-- T-21 Teil 3 Runde 15 — IntakeResult und atomare Vertragsgrenze (`fb1bc55`)
-- T-21 Teil 3 Runde 16 — nullable Identitaet und created aus der Transaktion (`1dca99e`)
-- T-21 Teil 3 Runde 17 — keine halbe Identitaet mehr (`201c960`)
-- T-21 Teil 3 Runde 18 — Meldung vor Datenverlust, Ticket entwidersprochen (`c9d6670`)
-- T-21 Teil 3 Runde 19 — zweiphasige Migration, Ticket einstimmig (`20a4422`)
-- T-21 Teil 3 Runde 20 — Pending-Guard, /ready bleibt gesund (`5970806`)
-- T-21 Teil 3 Runde 21 — /ready bleibt 503, Allowlist nach Pfad (`28ba9f9`)
-- T-21 Teil 3 Runde 22 — Allowlist konkret, /operational, 2A/2B (`a9fde37`)
-- T-21 Teil 3 Runde 23 — Static-Allowlist abgeleitet, Vite-Proxy ergaenzt (`fd79566`)
-- T-21 Teil 3 Runde 24 — / ist ein Alias, keine Datei (`c5d0388`)
-- strengerer /quote?symbol= wandert nach Uebergabe 2A (`b5044c3`)
-- der Diagnosevertrag nennt alle vier 503-Gruende (`22735a1`)
-- Plugin-MVP vor Folgearbeiten priorisieren (`c3f72f5`)
-- T-22 freigegeben, Arbeit an T-27a aufgenommen (`11d8009`)
-- Restprosa des Offline-Modells entfernen (`08814ff`)
-- Orakel und Verdrahtung trennen — und was die Orakel entschieden haben (`08acf51`)
-- T-31 Runde 5 zurueckgeben (`bf99282`)
-- den Vertrag propagieren — Beispiel, Pflichtfelder, Contract-Kit (`96b3184`)
-- Scope-Unterbrecher spezifizieren (`d9653f0`)
-- Scope-Spec formatieren (`4f428fc`)
-- Scope-Guard-Umsetzung planen (`a07b836`)
-- Scope-Guard als umgesetzt markieren (`2b47b53`)
-- T-37 Rollenvertrag begrenzt zurueckgeben (`e727932`)
-- englischer Autorenleitfaden mit lauffaehigem Beispielpaket (`951f866`)
-- T-50 Runde 5 — Waechter raus, WAL-Ursache belegt, vier Drains (`62127bf`)
-- das dritte Quellenprofil entfaellt (T-52 R3) (`14a270f`)
-- T-54 Scope-Checkpoint — zweiter Defekt blockiert Verify 2 (`1370cfe`)
-- T-53 Scope-Checkpoint — 26 Stellen schreiben den Text, nicht eine (`f9e27b1`)
-- Review des Agenten-Workflow-Serverentwurfs (`ef265a4`)
-- context\_budget als gesetzte Grenze, nicht als Fensteranteil (`34314ec`)
-- Runde 2 zur Stellungnahme, acht Punkte je Befund (`fa07047`)
-- Runde 3 zum Kanban-Schnitt, acht Befunde (`b7407f1`)
-- Runde 3, Nachtrag mit Mikes Entscheidungen (`73cf97d`)
-- Antwort auf Codex' Stellungnahme, Konsolidierung als Vorschlag (`4efbd8b`)
-- K-01 bis K-04 in den Vorschlag, Herkunft der Regeln getrennt (`61a8aab`)
-- Rueckmeldung an Codex zum Reviewvorgehen (`d83e53d`)
-- data\_version in Beispielplugins explizit zeigen (`6d85046`)
-- Ticket verwerfen, Bestandsschutzregel nach T-30 uebernehmen (`35a7545`)
-- define T-30 contract and scope checkpoint (`d0e6ad0`)
-- MIC-Regeln und Prüfbeschreibungen korrigieren (`f0fb8c8`)
-- MIC-Vertrag ohne Ablösungshinweis beschreiben (`4bacaf2`)
-- T-67 Runde 1 mit changes\_requested beantworten (`56ffe1f`)
-- kleinen Migrationsablauf zur Umfangsprüfung vorbereiten (`b2abac0`)
-- Paketversion und Startriegel aktuell beschreiben (`fdd3312`)
-- unabhängige Freigabe dokumentieren (`a386a47`)
-- Ticket aktualisieren und abschliessen (`c1ce421`)
-- Einstieg auf den fertigen Stand bringen (`debb3d1`)
-- Verweise auf die verschobenen Dateien anpassen (`3d01098`)
-- Relative Links im Archiv vervollständigen (`d76ac27`)
-- Ticketregeln und Projektdokumentation konsolidieren (`778e449`)
-- AGPL-Pflicht in Alltagssprache erklären (`216466a`)
-- AGPL-Nutzung und MIT-Ausnahmen klarstellen (`3b0f817`)
+- Identitaet als getaggte Union, API\_VERSION 2 (`c767ca1`)
+- QuoteResponse verbietet unbekannte Felder (`29bed9f`)
+- core\_version auf 3.0.0 — und warum hier statt in T-38 (`15f94f4`)
+- Identitaets-Union bis in die Oberflaeche (`e792447`)
+- der Frischstart zerstoert die Formregel nicht mehr (`fadd6f6`)
+
+### Features
+
+- ETF-Metadaten je nach Domizil aus justETF oder Yahoo (`809c48a`)
+- Vertragspaket für Datenquellen-Plugins skizziert (`840121c`)
+- REST-Core als pruefbares Artefakt festgeschrieben (T-24, Teil 1) (`403020b`)
+- Vertrag zur Laufzeit abfragbar, Waehrung ist Pflicht (T-24, Teil 2) (`d792ce9`)
+- Aufloesung erreicht mehr Maerkte (T-18) (`32e08ea`)
+- Quellen antworten differenziert statt mit None (T-20) (`5d79a6d`)
+- (ticker, mic) und listing\_id neben symbol (T-21, Teil 1) (`fce1bab`)
+- neue Papiere bringen ticker und mic mit (T-21, Teil 2) (`6abce88`)
+- Boersenkatalog trennt Handelsplaetze von Sammelcodes (`0f79eec`)
+- Ablehnungsgruende und Vorschau-Bausteine fuer T-21 2A (`18040d4`)
+- Umzug ausfuehren, Bericht ueberlebt die geloeschte Zeile (`595e134`)
+- Pending-Guard mit abgeleiteter Allowlist (`0a33c50`)
+- /quote?symbol= lehnt ein unzuordenbares Symbol ab (`6d9ebaa`)
+- Pflichtablauf verdrahtet — Guard, Endpunkte, /operational (`f702bee`)
+- die Pflicht-Oberflaeche fuer den Identitaets-Umzug (`5b0fa31`)
+- created als Tatsache der schreibenden Transaktion (`38940ec`)
+- Zwei-Formen-Eingaberegel und Intake-Service (`20daa7a`)
+- core\_version 2.0.0 mit Aufnahmeweg und zugesagter Identitaet (`62130cb`)
+- mehrdeutiges Symbol ist ein 409 mit Kandidaten statt geratenem Listing (`2dd0dc3`)
+- Quellen aus sources.yaml statt aus der Verdrahtung (T-22) (`20af8fa`)
+- Contract-Kit fuer alle fuenf Rollen (T-27a) (`6121a94`)
+- OpenFIGI als Resolver-Rolle, mit Integrationstest (`ebf8a14`)
+- Registry laedt Quellen ueber zwei Wege (`e2578c6`)
+- justETF und yfinance als Rollen, Auswahl per Konfiguration (`e6ca003`)
+- vertikaler Lauf Registry -\> Core -\> REST, beide Ladewege (`e35d190`)
+- fuenf Befunde aus Codex-Runde 3, inklusive Installationsweg (`adcb505`)
+- CSV-Profil mit derselben Pruefstrecke (T-37) (`d313318`)
+- Union durch Vertrag, Plugins, Adapter und Schema (`b9078dc`)
+- Identitaet als ein Feld mit diskriminierter Union (`6c9d02e`)
+- Repository und Services auf die Union (`56c9fe8`)
+- Cache-Weg und Test-Doubles auf die Union (`cdd6ef9`)
+- identity im Vertragsartefakt statt ticker/mic/isin (`740bcd4`)
+- Konfliktmeldung und Aufnahmeweg auf die Union (`94fd38c`)
+- identity auch in den veroeffentlichten Fixtures (`d71f920`)
+- der duenne vertikale Pfad — ein Paar kommt herein (`df279d9`)
+- eine Fehlerform statt zweier, und die Kennung im Katalog (`2940f64`)
+- die Waehrung des Paars gehoert zur Identitaet (Matrix #7) (`d39ce87`)
+- quote\_unavailable als Zustand, nicht als Fliesstext (`516b53f`)
+- die Anleihe kommt ohne Kurs in den Bestand — Pfad vollstaendig (`2f0de62`)
+- die Union ist an den Raendern genau (Codex P1 #4) (`296fd98`)
+- BTC-EUR kommt durch die \*\*reale\*\* Kette (Codex P0) (`65e312b`)
+- eine fuenfte Antwort fuer "erkannt, aber nicht gefuehrt" (`5b3c406`)
+- Name und Gattung werden Pflichtfelder (T-38) (`e108801`)
+- die REST-Zusage zieht mit — Name und Gattung garantiert (`1920e91`)
+- ein Plugin, eine Datei, fuenf Rollen — vier CSV-Quellen entfallen (`f34cc3f`)
+- der Smoke bekommt sein YAML-Profil, die Doku zieht nach (`6494064`)
+- Kurs- und History-Kaskaden ausfuehren (`35979d8`)
+- konfigurierte Quellen als Kaskade abfragen (`6b734cb`)
+- YAML als echten Online-Fallback verdrahten (`115ac6c`)
+- die Statuszeile nennt die Kursquelle (`50b7341`)
+- die Diagnose misst die konfigurierte Kette (T-46) (`9e97d24`)
+- Sicherung, Manifest und Liste (T-47 Runde 1a) (`c56c7b6`)
+- Wiederherstellen pruefen, vormerken, beim Start einloesen (T-47 1b) (`0e6ca65`)
+- Sicherungen im Dashboard anzeigen und wiederherstellen (T-47 UI) (`b0f5280`)
+- eine geaenderte Fachdatei wirkt ohne Neustart (T-48) (`a9d66a0`)
+- beide Quellenprofile als Vorlagen unter examples/ (T-52) (`d9819c0`)
+- das Gate legt die Sicherung an, zu der es raet (`7b8d3bc`)
+- Plugin-Felder in REST und Dashboard durchreichen (`abda3c9`)
+- Kompatibilität über Plugin-data\_version prüfen (`ac49828`)
+- merge plugin MIC declarations into intake and REST (`0336d10`)
+- Plugin-Handelsplätze dynamisch anzeigen (`7e70827`)
+- expose active exchange coverage (`2c1d01b`)
+- validate exchange coverage during asset intake (`d7b4ab3`)
+- ergänze Projektlinks und plane Aufnahmeentscheidung (`11e77fa`)
+- bestätige abweichendes Listing vor dem Speichern (`9c1eb3d`)
+- Datenmigration vor dem Fachbetrieb ausführen (`37c9025`)
 
 ### Fixes
 
@@ -413,116 +512,88 @@ StockInfo 1.0.0: AGPL-Lizenz und geprüfte Docker-Veröffentlichung
 - T-37 auf den abgespaltenen Umfang zurueckschneiden (`472a5e9`)
 - Pruefdaten zu den Tests, Betriebsvorlagen ins Repo (`f24354f`)
 
-### Features
+### Documentation
 
-- ETF-Metadaten je nach Domizil aus justETF oder Yahoo (`809c48a`)
-- Vertragspaket für Datenquellen-Plugins skizziert (`840121c`)
-- REST-Core als pruefbares Artefakt festgeschrieben (T-24, Teil 1) (`403020b`)
-- Vertrag zur Laufzeit abfragbar, Waehrung ist Pflicht (T-24, Teil 2) (`d792ce9`)
-- Aufloesung erreicht mehr Maerkte (T-18) (`32e08ea`)
-- Quellen antworten differenziert statt mit None (T-20) (`5d79a6d`)
-- (ticker, mic) und listing\_id neben symbol (T-21, Teil 1) (`fce1bab`)
-- neue Papiere bringen ticker und mic mit (T-21, Teil 2) (`6abce88`)
-- Boersenkatalog trennt Handelsplaetze von Sammelcodes (`0f79eec`)
-- Ablehnungsgruende und Vorschau-Bausteine fuer T-21 2A (`18040d4`)
-- Umzug ausfuehren, Bericht ueberlebt die geloeschte Zeile (`595e134`)
-- Pending-Guard mit abgeleiteter Allowlist (`0a33c50`)
-- /quote?symbol= lehnt ein unzuordenbares Symbol ab (`6d9ebaa`)
-- Pflichtablauf verdrahtet — Guard, Endpunkte, /operational (`f702bee`)
-- die Pflicht-Oberflaeche fuer den Identitaets-Umzug (`5b0fa31`)
-- created als Tatsache der schreibenden Transaktion (`38940ec`)
-- Zwei-Formen-Eingaberegel und Intake-Service (`20daa7a`)
-- core\_version 2.0.0 mit Aufnahmeweg und zugesagter Identitaet (`62130cb`)
-- mehrdeutiges Symbol ist ein 409 mit Kandidaten statt geratenem Listing (`2dd0dc3`)
-- Quellen aus sources.yaml statt aus der Verdrahtung (T-22) (`20af8fa`)
-- Contract-Kit fuer alle fuenf Rollen (T-27a) (`6121a94`)
-- OpenFIGI als Resolver-Rolle, mit Integrationstest (`ebf8a14`)
-- Registry laedt Quellen ueber zwei Wege (`e2578c6`)
-- justETF und yfinance als Rollen, Auswahl per Konfiguration (`e6ca003`)
-- vertikaler Lauf Registry -\> Core -\> REST, beide Ladewege (`e35d190`)
-- fuenf Befunde aus Codex-Runde 3, inklusive Installationsweg (`adcb505`)
-- CSV-Profil mit derselben Pruefstrecke (T-37) (`d313318`)
-- Union durch Vertrag, Plugins, Adapter und Schema (`b9078dc`)
-- Identitaet als ein Feld mit diskriminierter Union (`6c9d02e`)
-- Repository und Services auf die Union (`56c9fe8`)
-- Cache-Weg und Test-Doubles auf die Union (`cdd6ef9`)
-- identity im Vertragsartefakt statt ticker/mic/isin (`740bcd4`)
-- Konfliktmeldung und Aufnahmeweg auf die Union (`94fd38c`)
-- identity auch in den veroeffentlichten Fixtures (`d71f920`)
-- der duenne vertikale Pfad — ein Paar kommt herein (`df279d9`)
-- eine Fehlerform statt zweier, und die Kennung im Katalog (`2940f64`)
-- die Waehrung des Paars gehoert zur Identitaet (Matrix #7) (`d39ce87`)
-- quote\_unavailable als Zustand, nicht als Fliesstext (`516b53f`)
-- die Anleihe kommt ohne Kurs in den Bestand — Pfad vollstaendig (`2f0de62`)
-- die Union ist an den Raendern genau (Codex P1 #4) (`296fd98`)
-- BTC-EUR kommt durch die \*\*reale\*\* Kette (Codex P0) (`65e312b`)
-- eine fuenfte Antwort fuer "erkannt, aber nicht gefuehrt" (`5b3c406`)
-- Name und Gattung werden Pflichtfelder (T-38) (`e108801`)
-- die REST-Zusage zieht mit — Name und Gattung garantiert (`1920e91`)
-- ein Plugin, eine Datei, fuenf Rollen — vier CSV-Quellen entfallen (`f34cc3f`)
-- der Smoke bekommt sein YAML-Profil, die Doku zieht nach (`6494064`)
-- Kurs- und History-Kaskaden ausfuehren (`35979d8`)
-- konfigurierte Quellen als Kaskade abfragen (`6b734cb`)
-- YAML als echten Online-Fallback verdrahten (`115ac6c`)
-- die Statuszeile nennt die Kursquelle (`50b7341`)
-- die Diagnose misst die konfigurierte Kette (T-46) (`9e97d24`)
-- Sicherung, Manifest und Liste (T-47 Runde 1a) (`c56c7b6`)
-- Wiederherstellen pruefen, vormerken, beim Start einloesen (T-47 1b) (`0e6ca65`)
-- Sicherungen im Dashboard anzeigen und wiederherstellen (T-47 UI) (`b0f5280`)
-- eine geaenderte Fachdatei wirkt ohne Neustart (T-48) (`a9d66a0`)
-- beide Quellenprofile als Vorlagen unter examples/ (T-52) (`d9819c0`)
-- das Gate legt die Sicherung an, zu der es raet (`7b8d3bc`)
-- Plugin-Felder in REST und Dashboard durchreichen (`abda3c9`)
-- Kompatibilität über Plugin-data\_version prüfen (`ac49828`)
-- merge plugin MIC declarations into intake and REST (`0336d10`)
-- Plugin-Handelsplätze dynamisch anzeigen (`7e70827`)
-- expose active exchange coverage (`2c1d01b`)
-- validate exchange coverage during asset intake (`d7b4ab3`)
-- ergänze Projektlinks und plane Aufnahmeentscheidung (`11e77fa`)
-- bestätige abweichendes Listing vor dem Speichern (`9c1eb3d`)
-- Datenmigration vor dem Fachbetrieb ausführen (`37c9025`)
-
-### Breaking changes
-
-- Identitaet als getaggte Union, API\_VERSION 2 (`c767ca1`)
-- QuoteResponse verbietet unbekannte Felder (`29bed9f`)
-- core\_version auf 3.0.0 — und warum hier statt in T-38 (`15f94f4`)
-- Identitaets-Union bis in die Oberflaeche (`e792447`)
-- der Frischstart zerstoert die Formregel nicht mehr (`fadd6f6`)
+- Screenshots und README für 0.6.0 — Oberfläche auf Englisch (`1b2bb35`)
+- Design für das Plugin-System — deklarativ und als Code (`5117084`)
+- nur Python-Plugins — der deklarative Weg entfällt (`a43364a`)
+- Runde 2 der Codex-Review eingearbeitet, Spec wird Rückkanal (`cf6bf42`)
+- Runde 3 — StockPortfolio ist ein Konsument, das ändert T-21 (`bd9ae47`)
+- Begründung für den REST-Vertrag korrigiert (`0b52f2a`)
+- Runde 4 — Core geschlossen, Details offen; Profilwechsel als T-25 (`1d423bd`)
+- Runde 5 — listing\_id, abfragbarer Vertrag, T-26 angelegt (`9f406c0`)
+- Runde 6 eingearbeitet, T-27 für die Test-Infrastruktur (`4259c8d`)
+- Runde 7 — Testbarkeit beantwortet, T-27 geschnitten (`d94c249`)
+- Runde 8 — Ticket-Schleife aufgelöst, Crash-Matrix nachgetragen (`b79a1cd`)
+- Frage zur generation\_id an Codex, T-35 ist committet (`15771c0`)
+- Runde 9 — Generationstransport entschieden (`cf91985`)
+- Runde 10 — Ticket-Schleife entfernt, vier Begriffe geschärft (`c98c527`)
+- Runde 11 — auch die Generationsbestätigungen können sich überholen (`0e4c501`)
+- Runde 12 — Single-Flight gewählt, T-35 neu nummeriert (`99d9036`)
+- Entwurf abgenommen — Umsetzung kann beginnen (`2907004`)
+- T-21 Teil 3 entworfen — Kombination im Vertrag statt Handzuordnung (`f65dfcc`)
+- T-21 Teil 3 ueberarbeitet — Alias, Waehrung und Inventur berichtigt (`7321bfc`)
+- T-21 Teil 3 Runde 11 — Exchange-Descriptor statt Laengenregel (`72f2b8a`)
+- T-21 Teil 3 Runde 12 — ein Alias, getrennte Sammelcodes, POST (`8904093`)
+- T-21 Teil 3 Runde 12 an Codex uebergeben (`9211a74`)
+- Entwurfsrunden im Automationsvertrag geregelt (`8f0e9b4`)
+- T-21 Teil 3 Runde 14 — Erfolgsvertrag und eine Mitgliedschaft (`fecd40d`)
+- T-21 Teil 3 Runde 15 — IntakeResult und atomare Vertragsgrenze (`fb1bc55`)
+- T-21 Teil 3 Runde 16 — nullable Identitaet und created aus der Transaktion (`1dca99e`)
+- T-21 Teil 3 Runde 17 — keine halbe Identitaet mehr (`201c960`)
+- T-21 Teil 3 Runde 18 — Meldung vor Datenverlust, Ticket entwidersprochen (`c9d6670`)
+- T-21 Teil 3 Runde 19 — zweiphasige Migration, Ticket einstimmig (`20a4422`)
+- T-21 Teil 3 Runde 20 — Pending-Guard, /ready bleibt gesund (`5970806`)
+- T-21 Teil 3 Runde 21 — /ready bleibt 503, Allowlist nach Pfad (`28ba9f9`)
+- T-21 Teil 3 Runde 22 — Allowlist konkret, /operational, 2A/2B (`a9fde37`)
+- T-21 Teil 3 Runde 23 — Static-Allowlist abgeleitet, Vite-Proxy ergaenzt (`fd79566`)
+- T-21 Teil 3 Runde 24 — / ist ein Alias, keine Datei (`c5d0388`)
+- strengerer /quote?symbol= wandert nach Uebergabe 2A (`b5044c3`)
+- der Diagnosevertrag nennt alle vier 503-Gruende (`22735a1`)
+- Plugin-MVP vor Folgearbeiten priorisieren (`c3f72f5`)
+- T-22 freigegeben, Arbeit an T-27a aufgenommen (`11d8009`)
+- Restprosa des Offline-Modells entfernen (`08814ff`)
+- Orakel und Verdrahtung trennen — und was die Orakel entschieden haben (`08acf51`)
+- T-31 Runde 5 zurueckgeben (`bf99282`)
+- den Vertrag propagieren — Beispiel, Pflichtfelder, Contract-Kit (`96b3184`)
+- Scope-Unterbrecher spezifizieren (`d9653f0`)
+- Scope-Spec formatieren (`4f428fc`)
+- Scope-Guard-Umsetzung planen (`a07b836`)
+- Scope-Guard als umgesetzt markieren (`2b47b53`)
+- T-37 Rollenvertrag begrenzt zurueckgeben (`e727932`)
+- englischer Autorenleitfaden mit lauffaehigem Beispielpaket (`951f866`)
+- T-50 Runde 5 — Waechter raus, WAL-Ursache belegt, vier Drains (`62127bf`)
+- das dritte Quellenprofil entfaellt (T-52 R3) (`14a270f`)
+- T-54 Scope-Checkpoint — zweiter Defekt blockiert Verify 2 (`1370cfe`)
+- T-53 Scope-Checkpoint — 26 Stellen schreiben den Text, nicht eine (`f9e27b1`)
+- Review des Agenten-Workflow-Serverentwurfs (`ef265a4`)
+- context\_budget als gesetzte Grenze, nicht als Fensteranteil (`34314ec`)
+- Runde 2 zur Stellungnahme, acht Punkte je Befund (`fa07047`)
+- Runde 3 zum Kanban-Schnitt, acht Befunde (`b7407f1`)
+- Runde 3, Nachtrag mit Mikes Entscheidungen (`73cf97d`)
+- Antwort auf Codex' Stellungnahme, Konsolidierung als Vorschlag (`4efbd8b`)
+- K-01 bis K-04 in den Vorschlag, Herkunft der Regeln getrennt (`61a8aab`)
+- Rueckmeldung an Codex zum Reviewvorgehen (`d83e53d`)
+- data\_version in Beispielplugins explizit zeigen (`6d85046`)
+- Ticket verwerfen, Bestandsschutzregel nach T-30 uebernehmen (`35a7545`)
+- define T-30 contract and scope checkpoint (`d0e6ad0`)
+- MIC-Regeln und Prüfbeschreibungen korrigieren (`f0fb8c8`)
+- MIC-Vertrag ohne Ablösungshinweis beschreiben (`4bacaf2`)
+- T-67 Runde 1 mit changes\_requested beantworten (`56ffe1f`)
+- kleinen Migrationsablauf zur Umfangsprüfung vorbereiten (`b2abac0`)
+- Paketversion und Startriegel aktuell beschreiben (`fdd3312`)
+- unabhängige Freigabe dokumentieren (`a386a47`)
+- Ticket aktualisieren und abschliessen (`c1ce421`)
+- Einstieg auf den fertigen Stand bringen (`debb3d1`)
+- Verweise auf die verschobenen Dateien anpassen (`3d01098`)
+- Relative Links im Archiv vervollständigen (`d76ac27`)
+- Ticketregeln und Projektdokumentation konsolidieren (`778e449`)
+- AGPL-Pflicht in Alltagssprache erklären (`216466a`)
+- AGPL-Nutzung und MIT-Ausnahmen klarstellen (`3b0f817`)
 
 ## v0.6.0+260819.1053.222ed — 2026-08-19
 
 ETF-Extras im Detailbereich, Datenverlust-Fehler behoben
-
-### Documentation
-
-- README auf Englisch + Screenshots für README und CA-Template (`78101aa`)
-- Excel-Beispielmappe mit Power-Query-Anbindung hinzugefügt (`ee10c6a`)
-- Design für Analyse-Tab + Volatilität aus akkumulierendem EOD-Cache (`6d22a2a`)
-- Implementierungsplan Analyse-Tab + EOD-Volatilität-Cache (`9530de1`)
-- Design für weltweite Default-Börsen + FX-Endpoint (`52c7d55`)
-- Währungs-Spec um UI (datengetriebene Börsen + Devisen-Tab) und FX-Semantik ergänzt (`df74da5`)
-- Implementierungsplan Währungen (weltweite Börsen + FX, Backend + UI) (`5da4f2e`)
-- Ticket-Board (\_tickets) sowie FX-Spec und -Plan ergänzen (`d62bfdf`)
-- T-05 (Responsive-Header) nach solved; Spec und Plan ergänzen (`5a36a75`)
-- T-11a — Design Navigation entrümpeln + Einstellungsseite (`66b4102`)
-- T-11a — Implementierungsplan Navigation + Einstellungsseite (`f60887d`)
-- T-11b — Implementierungsplan Token-Aliase (`8e36fe6`)
-- T-11c — Implementierungsplan mobile Kartenliste (`3355e15`)
-- T-11d — Implementierungsplan elf Paletten (`307c6bc`)
-- T-11d auf dreizehn Paletten umgeschrieben (`743be12`)
-- ETF-Extras vollständig nachtragen + aufklappbare Zeile (`a5c1f3b`)
-- Implementierungsplan für ETF-Extras und Schublade (`db65984`)
-- Namensregel am Bestand ausrichten, Helfer englisch (`0c75db1`)
-- Rundlauf-Test von Task 2 nach Task 4 ziehen (`47ee780`)
-- DRY als globale Vorgabe, nicht nur als Sonderfall (`d9cc73b`)
-- Bezeichner ausnahmslos englisch, auch lokale (`90fc5c4`)
-- deutschen Testbezeichner im Task-5-Block ersetzen (`ba7a3cb`)
-- Übergabe für T-15 — Stand, offene Punkte, Urteile (`4b24802`)
-- Übergabe nachgezogen — Branch ist nicht mergefähig (`4de0462`)
-- Verweise auf die gelöschte ManualMetric.vue klarstellen (`67b5de9`)
-- Betriebsmodell und Readiness im README (`3bf1f66`)
-- Übergabe zu T-15 entfernen — die Einheit ist gemerged (`ed089e2`)
 
 ### Features
 
@@ -579,30 +650,6 @@ ETF-Extras im Detailbereich, Datenverlust-Fehler behoben
 - Schublade nennt die Quelle der Kennzahlen (`3df83fd`)
 - Escape schließt die Schublade (`7dd389d`)
 
-### Other changes
-
-- inkrementelle EOD-Sync in wiederverwendbare DailyCloseSync ziehen (`0208dc0`)
-- TabKey auf finale Arbeitsbereiche + Settings bereinigt (T-11a) (`1295824`)
-- Nav-Icons an ux-standards angleichen — Schieberegler statt Zahnrad, Globus für Assets (T-11a) (`c17ef92`)
-- Börsen-Icon als Kurstafel; veraltete Zahnrad-Kommentare (T-11a) (`4094aee`)
-- Theme-Paletten als RGB-Tripel + ux-standards-Token (T-11b) (`842e491`)
-- $color-\*/$health-\* auf Token, token()-Funktion (T-11b) (`20c59bb`)
-- hartkodierte Farben auf Token (T-11b) (`3d3fd0a`)
-- color-mix durch token(--x, alpha) ersetzt (T-11b) (`1b35029`)
-- ISIN-Editor aus der Tabelle herausgezogen (T-11c) (`dc44acc`)
-- mobile Sortierung als leise Textzeile statt Formularleiste (T-11c) (`e41b6ac`)
-- Lage der Meldungen aus dem Fundament übernehmen (`9c300f2`)
-- Overrides über OVERRIDE\_FIELDS statt Einzelparameter (`866d83f`)
-- englische Bezeichner in neuem Overrides-Code (`e4c997a`)
-- Tabelle zeigt Kennzahlen nur noch an (`6aacb48`)
-- Override-Modell auf alle acht Felder erweitern (`5a1e437`)
-- repository.py auf englische Bezeichner (`c02958c`)
-- OverrideField aus OVERRIDE\_FIELDS ableiten (`25f86b8`)
-- InstrumentOverrides aus OVERRIDE\_FIELDS ableiten (`e12f833`)
-- Feldbeschriftungen an einer Stelle (`b3485b5`)
-- Pfeil und Erklärzeichen kommen aus dem Fundament (T-16) (`d913827`)
-- „Schublade" heißt jetzt „Detailbereich" (`41a35d4`)
-
 ### Fixes
 
 - finale Fixwave nach Code-Review – Volatilität, Cleanup, UX (`8244fe4`)
@@ -641,22 +688,85 @@ ETF-Extras im Detailbereich, Datenverlust-Fehler behoben
 
 - den ungenutzten Gettex-Kurs nicht mehr mitholen (`7eb59bb`)
 
+### Other changes
+
+- inkrementelle EOD-Sync in wiederverwendbare DailyCloseSync ziehen (`0208dc0`)
+- TabKey auf finale Arbeitsbereiche + Settings bereinigt (T-11a) (`1295824`)
+- Nav-Icons an ux-standards angleichen — Schieberegler statt Zahnrad, Globus für Assets (T-11a) (`c17ef92`)
+- Börsen-Icon als Kurstafel; veraltete Zahnrad-Kommentare (T-11a) (`4094aee`)
+- Theme-Paletten als RGB-Tripel + ux-standards-Token (T-11b) (`842e491`)
+- $color-\*/$health-\* auf Token, token()-Funktion (T-11b) (`20c59bb`)
+- hartkodierte Farben auf Token (T-11b) (`3d3fd0a`)
+- color-mix durch token(--x, alpha) ersetzt (T-11b) (`1b35029`)
+- ISIN-Editor aus der Tabelle herausgezogen (T-11c) (`dc44acc`)
+- mobile Sortierung als leise Textzeile statt Formularleiste (T-11c) (`e41b6ac`)
+- Lage der Meldungen aus dem Fundament übernehmen (`9c300f2`)
+- Overrides über OVERRIDE\_FIELDS statt Einzelparameter (`866d83f`)
+- englische Bezeichner in neuem Overrides-Code (`e4c997a`)
+- Tabelle zeigt Kennzahlen nur noch an (`6aacb48`)
+- Override-Modell auf alle acht Felder erweitern (`5a1e437`)
+- repository.py auf englische Bezeichner (`c02958c`)
+- OverrideField aus OVERRIDE\_FIELDS ableiten (`25f86b8`)
+- InstrumentOverrides aus OVERRIDE\_FIELDS ableiten (`e12f833`)
+- Feldbeschriftungen an einer Stelle (`b3485b5`)
+- Pfeil und Erklärzeichen kommen aus dem Fundament (T-16) (`d913827`)
+- „Schublade" heißt jetzt „Detailbereich" (`41a35d4`)
+
+### Documentation
+
+- README auf Englisch + Screenshots für README und CA-Template (`78101aa`)
+- Excel-Beispielmappe mit Power-Query-Anbindung hinzugefügt (`ee10c6a`)
+- Design für Analyse-Tab + Volatilität aus akkumulierendem EOD-Cache (`6d22a2a`)
+- Implementierungsplan Analyse-Tab + EOD-Volatilität-Cache (`9530de1`)
+- Design für weltweite Default-Börsen + FX-Endpoint (`52c7d55`)
+- Währungs-Spec um UI (datengetriebene Börsen + Devisen-Tab) und FX-Semantik ergänzt (`df74da5`)
+- Implementierungsplan Währungen (weltweite Börsen + FX, Backend + UI) (`5da4f2e`)
+- Ticket-Board (\_tickets) sowie FX-Spec und -Plan ergänzen (`d62bfdf`)
+- T-05 (Responsive-Header) nach solved; Spec und Plan ergänzen (`5a36a75`)
+- T-11a — Design Navigation entrümpeln + Einstellungsseite (`66b4102`)
+- T-11a — Implementierungsplan Navigation + Einstellungsseite (`f60887d`)
+- T-11b — Implementierungsplan Token-Aliase (`8e36fe6`)
+- T-11c — Implementierungsplan mobile Kartenliste (`3355e15`)
+- T-11d — Implementierungsplan elf Paletten (`307c6bc`)
+- T-11d auf dreizehn Paletten umgeschrieben (`743be12`)
+- ETF-Extras vollständig nachtragen + aufklappbare Zeile (`a5c1f3b`)
+- Implementierungsplan für ETF-Extras und Schublade (`db65984`)
+- Namensregel am Bestand ausrichten, Helfer englisch (`0c75db1`)
+- Rundlauf-Test von Task 2 nach Task 4 ziehen (`47ee780`)
+- DRY als globale Vorgabe, nicht nur als Sonderfall (`d9cc73b`)
+- Bezeichner ausnahmslos englisch, auch lokale (`90fc5c4`)
+- deutschen Testbezeichner im Task-5-Block ersetzen (`ba7a3cb`)
+- Übergabe für T-15 — Stand, offene Punkte, Urteile (`4b24802`)
+- Übergabe nachgezogen — Branch ist nicht mergefähig (`4de0462`)
+- Verweise auf die gelöschte ManualMetric.vue klarstellen (`67b5de9`)
+- Betriebsmodell und Readiness im README (`3bf1f66`)
+- Übergabe zu T-15 entfernen — die Einheit ist gemerged (`ed089e2`)
+
 ## v0.5.0+260715.1816.8829a — 2026-07-15
 
 Chart-Dock, Copy-Fallback ohne https, dezente Scrollbars
-
-### Fixes
-
-- Kopieren funktioniert auch ohne https (Unraid) (`0cf017c`)
 
 ### Features
 
 - Kurshistorie als Dock am unteren Rand (`9d1f30c`)
 - Scrollbars dünn und nur beim Scrollen sichtbar (`7df461b`)
 
+### Fixes
+
+- Kopieren funktioniert auch ohne https (Unraid) (`0cf017c`)
+
 ## v0.4.0+260715.1234.edcb6 — 2026-07-15
 
 Spalten-Sortierung, Environment-Hinweis zum Auto-Refresh, sofortige Container-Logs, CA-Template auf :latest
+
+### Features
+
+- Hinweis auf automatischen Kurs-Update im Environment (`fff7680`)
+- Spalten-Sortierung in der Assets-Tabelle (`9136741`)
+
+### Fixes
+
+- Container-Logs erscheinen sofort (PYTHONUNBUFFERED) (`4b680fb`)
 
 ### Other changes
 
@@ -666,29 +776,20 @@ Spalten-Sortierung, Environment-Hinweis zum Auto-Refresh, sofortige Container-Lo
 
 - Unraid-Template-Install als Hint (`fcd928e`)
 
-### Fixes
-
-- Container-Logs erscheinen sofort (PYTHONUNBUFFERED) (`4b680fb`)
-
-### Features
-
-- Hinweis auf automatischen Kurs-Update im Environment (`fff7680`)
-- Spalten-Sortierung in der Assets-Tabelle (`9136741`)
-
 ## v0.3.0+260715.1136.9ac04 — 2026-07-15
 
 Swagger-UI dark, DE/EN-Umschaltung (vue-i18n), Unraid-Template-Automatik
-
-### Fixes
-
-- JSON-Modal kopiert vollständige URL statt nur den Pfad (`2d017d2`)
-- Sprach-Umschalter näher an die Navigation gerückt (`b6faba1`)
 
 ### Features
 
 - Template folgt dem Image-Tag automatisch nach jedem Push (`c4b02a5`)
 - Swagger-UI in Dark-Optik, ReDoc entfernt (`e0400b7`)
 - DE/EN-Umschaltung mit vue-i18n (`1526dac`)
+
+### Fixes
+
+- JSON-Modal kopiert vollständige URL statt nur den Pfad (`2d017d2`)
+- Sprach-Umschalter näher an die Navigation gerückt (`b6faba1`)
 
 ## v0.2.0+260715.1041.cf4ea — 2026-07-15
 
@@ -699,16 +800,15 @@ Versionen gleichgezogen
 - Container-Template für Unraid hinzufügen (`316e56f`)
 - PNG-Icon für Community-Applications-Kompatibilität (`1a64d24`)
 
-### Documentation
-
-- Template-Beschreibung und Parameter auf Englisch umgestellt (`1722fd9`)
-- TZ-Default UTC + OpenFIGI-/Timezone-Hinweise in Overview (`433967d`)
-
 ### Fixes
 
 - Versionen pinnen — Build-Abbruch durch pip-Backtracking behoben (`0be5c12`)
 - Datenlücken, verlorene Cache-Kurse und Refresh-Kollisionen behoben (`3f0a0b9`)
 - Chart-Races, unsichtbare Fehler und URL-Encoding behoben (`e4d52f5`)
+
+### Performance
+
+- BuildKit-Cache-Mounts für npm/pip + UTF-8-Locale (`189b815`)
 
 ### Other changes
 
@@ -716,9 +816,10 @@ Versionen gleichgezogen
 - totes API\_KEY-Setting entfernt (`67817c1`)
 - pyproject.toml als Versions-Quelle statt VERSION-Datei (`679e17e`)
 
-### Performance
+### Documentation
 
-- BuildKit-Cache-Mounts für npm/pip + UTF-8-Locale (`189b815`)
+- Template-Beschreibung und Parameter auf Englisch umgestellt (`1722fd9`)
+- TZ-Default UTC + OpenFIGI-/Timezone-Hinweise in Overview (`433967d`)
 
 ## v0.1.0 — 2026-07-13
 
@@ -761,6 +862,15 @@ Release v0.1.0: Single-Container-Deployment (Backend serviert Dashboard) + build
 - vereinheitlichtes Multi-Stage-Image (Backend serviert Dashboard) (`9e4b4de`)
 - build.sh (Build/Push nach Ökosystem-Konvention) (`0243e21`)
 
+### Fixes
+
+- GITHUB\_OWNER für GHCR-Image-Referenz lowercasen (`114bcf5`)
+- docs-Links im Dev proxien + README-Dev-Anleitung korrigieren (`044b1ec`)
+
+### Other changes
+
+- effizienter Instrument-Count für /refresh und sauberer Test-Output (`bc70077`)
+
 ### Documentation
 
 - Spec für Vue-Dashboard (DB/Environment-Visualisierung, Refresh, History-Graph) (`e6628b6`)
@@ -771,12 +881,3 @@ Release v0.1.0: Single-Container-Deployment (Backend serviert Dashboard) + build
 - README auf aktuellen Funktionsstand aktualisiert (`c1c81b3`)
 - Spec für Single-Container-Deployment + build.sh (`31103ad`)
 - Umsetzungsplan für Single-Container-Deployment (`a224237`)
-
-### Other changes
-
-- effizienter Instrument-Count für /refresh und sauberer Test-Output (`bc70077`)
-
-### Fixes
-
-- GITHUB\_OWNER für GHCR-Image-Referenz lowercasen (`114bcf5`)
-- docs-Links im Dev proxien + README-Dev-Anleitung korrigieren (`044b1ec`)
