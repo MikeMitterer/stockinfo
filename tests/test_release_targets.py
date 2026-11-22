@@ -62,7 +62,7 @@ def _release_sandbox(tmp_path: Path) -> tuple[Path, Path]:
     _git(repository, "config", "user.email", "release-test@example.invalid")
     _git(repository, "config", "commit.gpgsign", "false")
     _git(repository, "config", "tag.gpgsign", "false")
-    for name in ("Makefile", ".dev-tools.conf.sh", ".dev-ports.conf.sh"):
+    for name in ("Makefile", ".dev-tools.conf.sh"):
         shutil.copy(ROOT / name, repository / name)
     (repository / "pyproject.toml").write_text(
         '[project]\nname = "release-test"\nversion = "0.1.0"\n'

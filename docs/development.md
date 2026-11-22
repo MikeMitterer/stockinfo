@@ -38,12 +38,13 @@ Installing and running the finished container is described in the
 worktree has its own copy. `make help`, `make info`, `make hints` and the
 status lines of the other targets come from BashLib and use your CLITheme
 theme (`clitheme use NAME`). `make test`, `make check`, `make docs-check`,
-`make status` and `make changelog` need ProjectTools in `.tools/`; without
-it they stop and name the next step. Without ProjectTools, `make hints`
-shows `repo-info fehlt` instead of the repository and the last release and
-takes the ports from `.dev-ports.conf.sh`. `make setup`
+`make status`, `make changelog`, `make dev-up`, `make dev-down`, `make push`
+and `make tag-*` need ProjectTools in `.tools/`; without it they stop and
+name the next step before they start or stop anything. Without ProjectTools, `make hints` shows
+`repo-info fehlt` instead of the repository and the last release, and
+`dev-ports fehlt` instead of the local addresses. `make setup`
 installs BashLib; `help`, `info`, `hints`, `dev-up`, `dev-down`, `up`,
-`down`, `build`, `push`, `version`, `tags` and `tag-*` need it.
+`down`, `build`, `build-check`, `push`, `version`, `tags` and `tag-*` need it.
 All of them except `help`, `info` and `hints` stop with `make setup` before
 they start or stop anything. To build the
 image without these tools, run this instead of `make build`:
@@ -87,25 +88,33 @@ everything in `data/` and the build record in `docker/` stay.
 overmind loads `.env` into the environment of both processes, so the values
 in `.env` apply to the backend.
 
-The ports of the dev stack stand in `.dev-ports.conf.sh`: `DASHBOARD_PORT`
-(default 5173) and `BACKEND_PORT` (default 8000). `Procfile.dev`, the Vite
-proxy, `dev-ports` and `scripts/sources-profile.sh --show` read them from
-there; to change a port, change it only in that file. `make info`,
-`make hints` and the address after `make dev-up` ask `dev-ports --port-of`
-for them; without `dev-ports` they read the file themselves.
-`PORT` in `.env` is the host port of `make up`; for the dev backend
-`Procfile.dev` sets it to `BACKEND_PORT`, so `GET /env` shows the port in
-use. If the dashboard port is taken, Vite stops instead of moving to another
-one.
+Each port of the dev stack stands once, where it takes effect at start: the
+backend port (8000) as `--port` in the `backend` line of `Procfile.dev`, the
+dashboard port (5173) as `server.port` in `dashboard/vite.config.ts`. To
+change one, change it only there. `dev-ports` (ProjectTools) reads them from
+there; everything else asks it with `dev-ports --port-of`:
 
-Before starting, `make dev-up` checks the ports with `dev-ports --check`
-(ProjectTools in `.tools/`): if one is taken, it stops and names the process
-holding it. `make dev-down` stops the stack and uses `dev-ports --kill` to
-clean up after a crash: it ends leftover overmind, tmux and app processes of
-this project, removes a stale `.overmind.sock` and frees the ports from
-`.dev-ports.conf.sh`. It only ends your own processes inside this project and
-can be run as often as you like. Without `dev-ports` both targets print a
-warning and go on.
+- `Procfile.dev` itself, for `PORT` of the backend (so `GET /env` shows the
+  port in use, not `PORT` from `.env`, which is the host port of `make up`)
+  and for the target of the Vite proxy (`VITE_DEV_API_TARGET`),
+- `make info`, `make hints` and the address after `make dev-up`,
+- `scripts/sources-profile.sh --show`.
+
+If the dashboard port is taken, Vite stops instead of moving to another one.
+
+Before starting, `make dev-up` checks that overmind and tmux are installed
+(otherwise it stops with the install command) and checks the ports with
+`dev-ports --check` (ProjectTools in `.tools/`): if one is taken, it stops
+and names the process holding it. `make dev-down` stops the stack and uses
+`dev-ports --kill` to clean up after a crash: it ends leftover overmind, tmux
+and app processes of this project, removes a stale `.overmind.sock` and
+frees the ports of the dev stack. It only ends your own processes inside
+this project and can be run as often as you like. `dev-ports --status` shows
+who holds a port.
+
+If `make dev-up` reports that Overmind is already running, a
+`.overmind.sock` exists: either the stack is still running (`make dev-logs`)
+or a crash left the file behind, and `make dev-down` removes it.
 
 The server then runs at `http://localhost:8000`. Interactive API docs (Swagger UI,
 dark theme) live at `http://localhost:8000/docs` (use `http://` in the browser, not
@@ -159,9 +168,9 @@ explains what anyone who can reach the port can do. The container always
 listens on `0.0.0.0` inside; the port mapping of `docker run` decides who
 reaches it.
 
-The settings above are read by `app/config.py`. `make docs-check` does not
-see them, so a new setting has to be added here and to the
-[Docker guide](../docker/README.md#configuration) by hand.
+The settings above are read by `app/config.py`; `make docs-check` reports a
+new one until it is described here and in the
+[Docker guide](../docker/README.md#configuration).
 
 [↑ Contents](#contents)
 
@@ -169,20 +178,22 @@ see them, so a new setting has to be added here and to the
 
 The web frontend lives in [`dashboard/`](../dashboard/) (Vue 3 + Vite +
 TypeScript + SCSS). `make dev-up` starts it together with the backend. To run
-it on its own:
+it on its own, from the project root (`dev-ports` finds `Procfile.dev`
+only there; `make setup` puts it into `.tools/bin`):
 
 ```bash
-cd dashboard
-npm install
-npm run dev                # http://localhost:5173
+export PATH="$PWD/.tools/bin:$PATH"
+VITE_DEV_API_TARGET="http://127.0.0.1:$(dev-ports --port-of backend)" npm run dev --prefix dashboard   # http://localhost:5173
 ```
 
-The Vite dev proxy forwards API requests to the backend automatically. With
-`make dev-up` it targets `BACKEND_PORT` from `.dev-ports.conf.sh`; started
-on its own as above, it targets `http://127.0.0.1:8000`. Set
-`VITE_DEV_API_TARGET` for another backend (`dashboard/vite.config.ts`).
-`VITE_API_BASE_URL` (`dashboard/src/config.ts`) is not needed in dev. The
-backend must run in parallel.
+The Vite dev proxy forwards API requests to the backend at
+`VITE_DEV_API_TARGET`; `make dev-up` sets it from the `backend` line of
+`Procfile.dev`. Without it, or with an incomplete value such as
+`http://127.0.0.1:` when the port lookup failed, the dev server does not
+start and names the command above (`dashboard/vite.config.ts`); otherwise
+every API request would get the dashboard page instead of an answer. `VITE_API_BASE_URL`
+(`dashboard/src/config.ts`) is not needed in dev. The backend must run in
+parallel.
 
 [↑ Contents](#contents)
 
