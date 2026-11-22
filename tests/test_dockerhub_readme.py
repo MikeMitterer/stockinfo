@@ -11,15 +11,14 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 RELEASE_TAG = "v1.0.0+260101.1200.abcde"
 OTHER_TAG = "deploy-2026-11"
-PROJECT_TOOLS = os.environ.get("PROJECT_TOOLS", "")
-SCRIPT = Path(PROJECT_TOOLS) / "bash/dockerhub-readme.sh" if PROJECT_TOOLS else None
+COMMAND = "dockerhub-readme"
+SCRIPT = shutil.which(COMMAND)
 
-# Der README-Upload ist ein Maintainer-Werkzeug aus ProjectTools; einen
-# pipx-Befehl hat er noch nicht, deshalb kommt er über PROJECT_TOOLS. Ohne die
-# Variable gilt der Test als übersprungen statt als Fehler.
+# Der README-Upload ist der Befehl dockerhub-readme aus ProjectTools (make setup,
+# .tools/bin). Ohne ihn gilt der Test als übersprungen statt als Fehler.
 requires_project_tools = pytest.mark.skipif(
-    SCRIPT is None or not SCRIPT.exists(),
-    reason="PROJECT_TOOLS zeigt nicht auf ProjectTools/src (Maintainer-Werkzeug)",
+    SCRIPT is None,
+    reason="dockerhub-readme (ProjectTools) nicht installiert: make setup",
 )
 
 
@@ -68,7 +67,8 @@ def _push_sandbox(tmp_path: Path, target: str) -> dict[str, str]:
     """Echtes Buildscript in tmp_path; Git, Docker und BashLib sind Attrappen.
 
     Returns:
-        Umgebung für den Push-Lauf, ohne PROJECT_TOOLS.
+        Umgebung für den Push-Lauf; dockerhub-readme ist nur im PATH, wenn ein
+        Test es in bin/ anlegt.
     """
     for directory in ("docker", "bin", "libs"):
         (tmp_path / directory).mkdir(parents=True)
@@ -108,12 +108,16 @@ def _push_sandbox(tmp_path: Path, target: str) -> dict[str, str]:
         path = tmp_path / name
         path.write_text("#!/bin/sh\n" + content)
         path.chmod(0o755)
-    environment = {
-        key: value for key, value in os.environ.items() if key != "PROJECT_TOOLS"
-    }
+    # Den PATH ohne Ordner, die schon einen echten dockerhub-readme haben.
+    system_path = os.pathsep.join(
+        entry
+        for entry in os.environ["PATH"].split(os.pathsep)
+        if not (Path(entry) / COMMAND).exists()
+    )
+    environment = dict(os.environ)
     environment.update(
         {
-            "PATH": f"{tmp_path / 'bin'}:{os.environ['PATH']}",
+            "PATH": f"{tmp_path / 'bin'}{os.pathsep}{system_path}",
             "BASH_LIBS": str(tmp_path / "libs"),
             "TARGET": target,
             "AMAZON_REPO_URI": "example.ecr",
@@ -158,8 +162,7 @@ def test_push_startet_readme_nur_nach_erfolgreichem_hub_push(
 ) -> None:
     """Echtes Buildscript; Git, Docker und Upload-Prozess sind äußere Testgrenzen."""
     environment = _push_sandbox(tmp_path, target)
-    upload = tmp_path / "tools/bash/dockerhub-readme.sh"
-    upload.parent.mkdir(parents=True)
+    upload = tmp_path / "bin" / COMMAND
     upload.write_text(
         '#!/bin/sh\necho readme >> "$CALL_LOG"\nprintf "%s\\n" "$@" > "$ARG_LOG"\n'
         'exit "$README_STATUS"\n'
@@ -167,7 +170,6 @@ def test_push_startet_readme_nur_nach_erfolgreichem_hub_push(
     upload.chmod(0o755)
     environment.update(
         {
-            "PROJECT_TOOLS": str(tmp_path / "tools"),
             "ARG_LOG": str(tmp_path / "args"),
             "IMAGE_STATUS": str(image_status),
             "README_STATUS": str(readme_status),
@@ -211,12 +213,13 @@ def test_push_verlangt_den_release_tag_im_remote(
     assert "git push --follow-tags" in result.stderr
 
 
-def test_push_ohne_project_tools_nennt_die_variable(tmp_path: Path) -> None:
-    """Nach dem Hub-Push fehlt der Upload: klare Meldung statt „No such file“."""
+def test_push_ohne_dockerhub_readme_bricht_vor_dem_image_ab(tmp_path: Path) -> None:
+    """Fehlt der Upload-Befehl, geht kein Image hinaus und die Meldung nennt make setup."""
     result = _push(tmp_path, _push_sandbox(tmp_path, "dockerhub"))
     assert result.returncode == 1, result.stdout + result.stderr
-    assert (tmp_path / "calls").read_text().splitlines() == ["image"]
-    assert "PROJECT_TOOLS zeigt nicht auf ProjectTools/src" in result.stderr
+    assert not (tmp_path / "calls").exists()
+    assert "dockerhub-readme (ProjectTools) fehlt" in result.stderr
+    assert "make setup" in result.stderr
 
 
 @requires_project_tools

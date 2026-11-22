@@ -367,6 +367,47 @@ build() {
     printf '%s\n' "${TAG}" "$(date +%s)" "${BUILT_IMAGE_ID}" "${BUILD_SOURCE_COMMIT}" "${TARGET}" > "${TAGFILE}"
 }
 
+# check — Das zuletzt gebaute Image starten, wie es ein User ohne Klon tut, und prüfen
+#
+#   Nur das lokal gebaute Image, nie eines aus der Registry (--pull never).
+#   Wegwerf-Container: Daten in einem anonymen Volume, das mit dem Container verschwindet,
+#   ohne Aktualisierung beim Start (kein Netz nötig), Port nur an 127.0.0.1 und frei
+#   gewählt. Geprüft wird, dass GET /health "ok" meldet und / das Dashboard ausliefert.
+#   Der Container wird in jedem Fall entfernt.
+#
+check() {
+    local LAST_TAG CONTAINER_ID HOST_PORT HEALTH PAGE _ATTEMPT
+    LAST_TAG=$(loadLastBuildTag) || exit 1
+    local -r CHECK_IMAGE="${NAMESPACE}/${NAME}:${LAST_TAG}"
+    CONTAINER_ID=$(docker run -d --rm --pull never -p 127.0.0.1::8000 --mount type=volume,target=/data \
+        -e REFRESH_ON_START=false "${CHECK_IMAGE}") || {
+        echo -e "${RED}✗ Prüfung fehlgeschlagen:${NC} ${CHECK_IMAGE} startet nicht." >&2
+        return 1
+    }
+    # shellcheck disable=SC2064  # CONTAINER_ID jetzt einsetzen, nicht beim Auslösen
+    trap "docker rm -f '${CONTAINER_ID}' >/dev/null 2>&1" RETURN
+    HOST_PORT=$(docker port "${CONTAINER_ID}" 8000/tcp | head -n 1)
+    HOST_PORT="${HOST_PORT##*:}"
+    for _ATTEMPT in $(seq 1 30); do
+        HEALTH=$(curl -s --max-time 2 "http://127.0.0.1:${HOST_PORT}/health") &&
+            [[ "${HEALTH}" == *'"status":"ok"'* ]] && break
+        HEALTH=""
+        sleep 1
+    done
+    if [[ -z "${HEALTH}" ]]; then
+        echo -e "${RED}✗ Prüfung fehlgeschlagen:${NC} ${CHECK_IMAGE} meldet nach 30 s kein /health ok." >&2
+        echo -e "${YELLOW}Log ansehen:${NC} docker logs ${CONTAINER_ID}" >&2
+        docker logs --tail 20 "${CONTAINER_ID}" >&2
+        return 1
+    fi
+    PAGE=$(curl -s --max-time 5 "http://127.0.0.1:${HOST_PORT}/")
+    if [[ "${PAGE}" != *'<div id="app"'* ]]; then
+        echo -e "${RED}✗ Prüfung fehlgeschlagen:${NC} ${CHECK_IMAGE} liefert unter / kein Dashboard." >&2
+        return 1
+    fi
+    echo -e "${GREEN}Image geprüft:${NC} ${CHECK_IMAGE} startet, /health ${HEALTH}, Dashboard unter /."
+}
+
 # loadLastBuildTag — Tag des letzten Builds lesen und zurückgeben
 #
 #   Gibt den gespeicherten Tag via stdout zurück (für Zuweisung per $(...)).
@@ -459,6 +500,14 @@ push() {
         return 1
     fi
     verifyRemoteReleaseTag "${SAVED_COMMIT}" || return 1
+    # Vor dem Image-Push prüfen, nicht danach: Sonst stünde das Image schon auf Docker Hub,
+    # und die Beschreibung fehlte. dockerhub-readme kommt mit make setup nach .tools/bin;
+    # make push stellt es vorn in den PATH.
+    if [[ "${TARGET}" == "dockerhub" ]] && ! command -v dockerhub-readme >/dev/null; then
+        echo -e "${RED}✗ Push abgebrochen:${NC} dockerhub-readme (ProjectTools) fehlt." >&2
+        echo -e "${YELLOW}Einrichten und wiederholen:${NC} make setup; make push" >&2
+        return 1
+    fi
     for REF in "${NAMESPACE}/${NAME}:${LAST_TAG}" "${NAMESPACE}/${NAME}:latest" "${IMAGE}:${LAST_TAG}" "${IMAGE}:latest"; do
         CURRENT_IMAGE_ID=$(docker image inspect "${REF}" --format '{{.Id}}') || return 1
         if [[ "${CURRENT_IMAGE_ID}" != "${SAVED_IMAGE_ID}" ]]; then
@@ -473,14 +522,8 @@ push() {
 
     echo -e "\n${GREEN}Push erfolgreich: ${IMAGE}:${LAST_TAG}${NC}"
     if [[ "${TARGET}" == "dockerhub" ]]; then
-        # dockerhub-readme hat im pipx-Paket noch keinen Befehl (ProjectTools T-16).
-        if [[ ! -r "${PROJECT_TOOLS:-}/bash/dockerhub-readme.sh" ]]; then
-            echo -e "${RED}✗ Docker-Hub-Beschreibung nicht übertragen:${NC} PROJECT_TOOLS zeigt nicht auf ProjectTools/src." >&2
-            echo -e "${YELLOW}Setzen und wiederholen:${NC} PROJECT_TOOLS=<pfad>/ProjectTools/src make push" >&2
-            return 1
-        fi
         if ! DOCKER_README_AFTER_PUSH=1 \
-            "${PROJECT_TOOLS}/bash/dockerhub-readme.sh" \
+            dockerhub-readme \
             --project-dir "${SCRIPTPATH}/.." --ref master \
             --publish --repository "${NAMESPACE}/${NAME}" --token-file "${DOCKER_PW_FILE}"; then
             return 1
@@ -531,6 +574,7 @@ usage() {
     usageLine "                                         " "${YELLOW}arm | m1${NC} - shortcut for ${YELLOW}linux/arm64${NC}" 2
     echo
     usageLine "-p | --push                              " "Push zu ${YELLOW}${IMAGE}${NC}"
+    usageLine "-c | --check                             " "Zuletzt gebautes Image starten und prüfen wie ein User ohne Klon"
     echo
     usageLine "-i | --images                            " "Images anzeigen: ${YELLOW}${NAMESPACE}/${NAME}${NC}"
     usageLine "-s | --samples                           " "Beispiel docker run Befehle anzeigen"
@@ -558,6 +602,10 @@ case "${CMDLINE}" in
 
     -p|--push)
         push
+    ;;
+
+    -c|--check)
+        check
     ;;
 
     help|-help|--help|*)
