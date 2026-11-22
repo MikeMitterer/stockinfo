@@ -38,8 +38,10 @@ Installing and running the finished container is described in the
 worktree has its own copy. `make help`, `make info`, `make hints` and the
 status lines of the other targets come from BashLib and use your CLITheme
 theme (`clitheme use NAME`). `make test`, `make check`, `make docs-check`,
-`make status`, `make hints` and `make changelog` need ProjectTools in
-`.tools/`; without it they stop and name the next step. `make setup`
+`make status` and `make changelog` need ProjectTools in `.tools/`; without
+it they stop and name the next step. Without ProjectTools, `make hints`
+shows `repo-info fehlt` instead of the repository and the last release and
+takes the ports from `.dev-ports.conf.sh`. `make setup`
 installs BashLib; `help`, `info`, `hints`, `dev-up`, `dev-down`, `up`,
 `down`, `build`, `push`, `version`, `tags` and `tag-*` need it.
 All of them except `help`, `info` and `hints` stop with `make setup` before
@@ -84,8 +86,10 @@ in `.env` apply to the backend.
 
 The ports of the dev stack stand in `.dev-ports.conf.sh`: `DASHBOARD_PORT`
 (default 5173) and `BACKEND_PORT` (default 8000). `Procfile.dev`, the Vite
-proxy, `make hints`, `make dev-down` and `scripts/sources-profile.sh --show`
-all read them from there; to change a port, change it only in that file.
+proxy, `dev-ports` and `scripts/sources-profile.sh --show` read them from
+there; to change a port, change it only in that file. `make info`,
+`make hints` and the address after `make dev-up` ask `dev-ports --port-of`
+for them; without `dev-ports` they read the file themselves.
 `PORT` in `.env` is the host port of `make up`; for the dev backend
 `Procfile.dev` sets it to `BACKEND_PORT`, so `GET /env` shows the port in
 use. If the dashboard port is taken, Vite stops instead of moving to another

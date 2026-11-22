@@ -41,6 +41,10 @@ BASH_LIBS := $(shell $(WORKSPACE_SQ)/$(TOOLS_DIR)/bin/bashlib-path 2>/dev/null)
 BASHLIB_FROM_TOOLS := $(if $(BASH_LIBS),yes)
 endif
 export BASH_LIBS
+# Vorspann für $(shell) mit einem Werkzeug aus .tools/: $(shell $(TOOL_ENV); befehl). GNU Make
+# vor 4.4 (macOS: 3.81) gibt das exportierte PATH nicht an $(shell) weiter, und das BASH_ENV
+# von help, info und hints gehört nicht in die Werkzeuge.
+TOOL_ENV = unset BASH_ENV; PATH=$(WORKSPACE_SQ)/$(TOOLS_DIR)/bin:"$$PATH"
 
 # Statuszeile und Zwischenüberschrift außerhalb von help, info und hints, im CLI-Theme von
 # BashLib. Im Rezept: @$(STATUS) "✓" "Text" OK  (Rollen OK, WARN, ERR) bzw.
@@ -60,11 +64,21 @@ PYTEST  := $(VENV)/bin/pytest
 TOOLS_STAMP  := $(TOOLS_DIR)/.installed
 SETUP_STAMPS := $(VENV)/.installed dashboard/node_modules/.installed $(TOOLS_STAMP)
 
-# Ports des Dev-Stacks aus .dev-ports.conf.sh, dieselbe Quelle wie dev-ports. Nur
-# Ziffern werden übernommen; die Werte stehen danach als Zahlen in den Rezepten.
-DEV_PORTS      := $(shell bash -c 'source ./.dev-ports.conf.sh && printf "%s %s" "$$DASHBOARD_PORT" "$$BACKEND_PORT"' 2>/dev/null | grep -xE '[0-9]+ [0-9]+')
-DASHBOARD_PORT := $(word 1,$(DEV_PORTS))
-BACKEND_PORT   := $(word 2,$(DEV_PORTS))
+# Ports des Dev-Stacks nennt dev-ports (--port-of NAME), damit das Makefile weder Procfile.dev
+# noch .dev-ports.conf.sh selbst auslegt. Ohne dev-ports, oder wenn es den Namen nicht kennt,
+# gilt der Wert aus .dev-ports.conf.sh: info, hints und dev-up laufen so auch auf einem
+# frischen Klon. Nur Ziffern werden übernommen; die Werte stehen danach als Zahlen in den
+# Rezepten. Ermittelt erst beim ersten Gebrauch und dann gemerkt, damit die übrigen Targets
+# dev-ports nicht starten.
+dev_port = $(shell $(TOOL_ENV); { command -v dev-ports >/dev/null && dev-ports --port-of $(1) 2>/dev/null || \
+	bash -c 'source ./.dev-ports.conf.sh && printf "%s\n" "$$$(2)"' 2>/dev/null; } | grep -xE '[0-9]+')
+# override: Ein gleichnamiges Make-Argument oder `make -e` setzt sie nicht, sonst stünde ein
+# fremder Wert ungeprüft im Rezepttext. unexport: Stehen sie in der Umgebung, gäbe Make sie an
+# $(shell) weiter und müsste sie dafür mitten in ihrer eigenen Ermittlung auswerten (leerer
+# Port unter Make 4.4).
+override DASHBOARD_PORT = $(eval override DASHBOARD_PORT := $$(call dev_port,dashboard,DASHBOARD_PORT))$(DASHBOARD_PORT)
+override BACKEND_PORT   = $(eval override BACKEND_PORT := $$(call dev_port,backend,BACKEND_PORT))$(BACKEND_PORT)
+unexport DASHBOARD_PORT BACKEND_PORT
 
 # Host-Port des Containers bei `make up`, aus .env oder der Umgebung.
 PORT    ?= 8000
@@ -92,10 +106,20 @@ DATA_VOLUME := $(strip $(DATA_VOLUME))
 export PORT PLATFORM IMAGE_NAME CONTAINER DATA_VOLUME
 
 # Repo-Adresse (https) und letzter Release-Tag (nur v[0-9]*) für hints, von repo-info aus
-# ProjectTools; ohne Remote oder Tag gibt es selbst einen lesbaren Ersatz aus. Die Rezepte
-# lesen beide über die Umgebung, nicht als Text im Rezept.
-export REPO_URL    := $(shell repo-info --url 2>/dev/null)
-export RELEASE_TAG := $(shell repo-info --release-tag 2>/dev/null)
+# ProjectTools; ohne Remote oder Tag gibt es selbst einen lesbaren Ersatz aus, ohne ProjectTools
+# nennt die Zeile, was fehlt. hints läuft so auch auf einem frischen Klon. Ermittelt nur, wenn
+# hints aufgerufen wird, und schon beim Lesen des Makefiles: Bei der Ausführung gäbe Make die
+# für hints exportierten Werte an $(shell) weiter und müsste sie dafür mitten in ihrer eigenen
+# Ermittlung auswerten (leerer Wert unter Make 4.4). Beide lassen sich als Make-Argument
+# setzen; die Rezepte lesen sie darum als "$${REPO_URL}" aus der Umgebung, nie als Text.
+NO_REPO_INFO := repo-info fehlt (ProjectTools): make setup
+repo_info    = $(or $(shell $(TOOL_ENV); repo-info $(1) 2>/dev/null),$(NO_REPO_INFO))
+ifneq ($(filter hints,$(MAKECMDGOALS)),)
+repo_url    := $(call repo_info,--url)
+release_tag := $(call repo_info,--release-tag)
+endif
+hints: export REPO_URL = $(repo_url)
+hints: export RELEASE_TAG = $(release_tag)
 
 # ─── Hilfe ────────────────────────────────────────────────────────────────────
 
@@ -104,7 +128,7 @@ export RELEASE_TAG := $(shell repo-info --release-tag 2>/dev/null)
 # Verweis auf BASH_LIBS statt des Pfads, ein $(…) im Checkout-Pfad bleibt Text.
 # CLITHEME_EXPORT reicht die Werte von clitheme export einmal je make-Lauf weiter, statt
 # clitheme in jeder Zeile zu starten.
-clitheme_export = $(eval clitheme_export := $$(shell clitheme export --bash 2>/dev/null))$(clitheme_export)
+clitheme_export = $(eval clitheme_export := $$(shell $$(TOOL_ENV); clitheme export --bash 2>/dev/null))$(clitheme_export)
 help info hints: export BASH_ENV := $${BASH_LIBS}/make.lib.sh
 help info hints: export CLITHEME_EXPORT = $(clitheme_export)
 
@@ -138,7 +162,7 @@ info: ## Projektpfade, Ports und Werkzeugstand anzeigen
 
 # Links, URLs und Tipps für den Alltag; das Einrichten beschreibt docs/development.md.
 .PHONY: hints
-hints: require-tools ## Links, URLs und Tipps für die tägliche Arbeit
+hints: ## Links, URLs und Tipps für die tägliche Arbeit
 	@printMakeHeading "Links"
 	@printMakeValue "Repository"      "$${REPO_URL}"
 	@printMakeValue "Entwicklerdoku"  "$(if $(filter https://%,$(REPO_URL)),$${REPO_URL}/blob/master/docs/development.md,docs/development.md)"

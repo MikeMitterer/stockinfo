@@ -6,4 +6,4 @@ README.md|dashboard/src/i18n/en.ts|082b77f29b40d6f2706b13f791a14af5ee9177bf|2026
 README.de.md|dashboard/src/i18n/de.ts|082b77f29b40d6f2706b13f791a14af5ee9177bf|2026-11-21
 unraid/screenshots/dashboard.png|dashboard/src/App.vue,dashboard/src/components,dashboard/src/i18n,dashboard/src/styles|082b77f29b40d6f2706b13f791a14af5ee9177bf|2026-11-21
 unraid/screenshots/detail-area.png|dashboard/src/App.vue,dashboard/src/components,dashboard/src/i18n,dashboard/src/styles|082b77f29b40d6f2706b13f791a14af5ee9177bf|2026-11-21
-docs/development.md|Makefile|2263a24ccee8096179b5f702f3e7b0f71ed608db|2026-11-21
+docs/development.md|Makefile|5ab61b0b4d00cf4d376673c1f79fe96ef34247a0|2026-11-22

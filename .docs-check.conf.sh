@@ -113,11 +113,10 @@ KNOWN_VARIABLES=(
 # der Code dort liest, braucht eine Beschreibung (meist docs/development.md,
 # docker/README.md oder docs/plugin-authors.md); sonst scheitert make test.
 #
-# Grenzen: Erkannt werden nur ausdrückliche Lesezugriffe in einer Zeile wie
-# os.environ["X"] oder import.meta.env.X.
-# - Die Felder der Settings-Klasse in app/config.py liest pydantic-settings
-#   ohne solchen Aufruf. Neue Einstellungen dort von Hand in
-#   docs/development.md und docker/README.md eintragen (Configuration).
+# Erkannt werden Lesezugriffe in einer Zeile wie os.environ["X"] oder
+# import.meta.env.X und die Felder der Settings-Klasse in app/config.py
+# (pydantic-settings, als Name in Großbuchstaben).
+# Grenzen:
 # - Shell-Variablen ($X) zählen nicht; docker/entrypoint.sh steht deshalb
 #   nicht in der Liste, seine Variablen deckt docker/README.md ab.
 CODE_VARIABLES=(
@@ -132,6 +131,7 @@ CODE_VARIABLES=(
 # CONTRACT_PATH (app/contract.py), Pfad des Vertragsartefakts, nur nötig,
 # wenn die App nicht neben contract/ liegt.
 INTERNAL_VARIABLES=(
+    "STATIC_DIR|Ort des gebauten Dashboards im Image (/app/web); Vorgabe und docker/Dockerfile setzen denselben Wert, kein Betreiber stellt ihn ein"
 )
 
 # ─── Dateien, die es geben muss ────────────────────────────────────────────────
