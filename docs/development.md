@@ -175,19 +175,20 @@ new one until it is described here and in the
 
 The web frontend lives in [`dashboard/`](../dashboard/) (Vue 3 + Vite +
 TypeScript + SCSS). `make dev-up` starts it together with the backend. To run
-it on its own:
+it on its own, from the project root (`dev-ports` finds `Procfile.dev`
+only there; `make setup` puts it into `.tools/bin`):
 
 ```bash
-cd dashboard
-npm install
-VITE_DEV_API_TARGET="http://127.0.0.1:$(dev-ports --port-of backend)" npm run dev   # http://localhost:5173
+export PATH="$PWD/.tools/bin:$PATH"
+VITE_DEV_API_TARGET="http://127.0.0.1:$(dev-ports --port-of backend)" npm run dev --prefix dashboard   # http://localhost:5173
 ```
 
 The Vite dev proxy forwards API requests to the backend at
 `VITE_DEV_API_TARGET`; `make dev-up` sets it from the `backend` line of
-`Procfile.dev`. Without it, the dev server does not start and names the
-command above (`dashboard/vite.config.ts`); otherwise every API request
-would get the dashboard page instead of an answer. `VITE_API_BASE_URL`
+`Procfile.dev`. Without it, or with an incomplete value such as
+`http://127.0.0.1:` when the port lookup failed, the dev server does not
+start and names the command above (`dashboard/vite.config.ts`); otherwise
+every API request would get the dashboard page instead of an answer. `VITE_API_BASE_URL`
 (`dashboard/src/config.ts`) is not needed in dev. The backend must run in
 parallel.
 

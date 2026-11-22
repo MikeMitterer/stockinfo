@@ -14,11 +14,17 @@ import { apiPrefixes } from './api-prefixes'
 // womöglich zuerst als ::1 auf.
 const apiTarget = process.env.VITE_DEV_API_TARGET
 
+// Einzelstart aus dem Projekt-Root: dev-ports findet Procfile.dev nur dort.
+const START_ALONE =
+  'VITE_DEV_API_TARGET="http://127.0.0.1:$(dev-ports --port-of backend)" ' +
+  'npm run dev --prefix dashboard'
+
 /**
- * Der Dev-Server startet nicht ohne Proxy-Ziel. Sonst beantwortet er jede
- * API-Anfrage mit der `index.html` (200), und der Fehler sieht aus wie ein
- * kaputtes Backend (vgl. T-04 in `tests/viteProxy.spec.ts`). Build, Vorschau
- * und Vitest brauchen kein Ziel.
+ * Der Dev-Server startet nicht ohne gültiges Proxy-Ziel. Sonst beantwortet er
+ * jede API-Anfrage mit der `index.html` (200), und der Fehler sieht aus wie ein
+ * kaputtes Backend (vgl. T-04 in `tests/viteProxy.spec.ts`). Unvollständig ist
+ * ein Ziel, das auf `:` endet: So sieht es aus, wenn die Portabfrage mit
+ * dev-ports scheitert. Build, Vorschau und Vitest brauchen kein Ziel.
  */
 function requireApiTarget(): Plugin {
   return {
@@ -27,9 +33,12 @@ function requireApiTarget(): Plugin {
       command === 'serve' && !isPreview && !process.env.VITEST,
     configResolved() {
       if (!apiTarget) {
+        throw new Error(`VITE_DEV_API_TARGET fehlt. make dev-up setzt es; allein: ${START_ALONE}`)
+      }
+      if (apiTarget.endsWith(':') || !URL.canParse(apiTarget)) {
         throw new Error(
-          'VITE_DEV_API_TARGET fehlt. make dev-up setzt es; allein: ' +
-            'VITE_DEV_API_TARGET="http://127.0.0.1:$(dev-ports --port-of backend)" npm run dev',
+          `VITE_DEV_API_TARGET unvollständig: "${apiTarget}". Portabfrage im Projekt-Root: ` +
+            START_ALONE,
         )
       }
     },
