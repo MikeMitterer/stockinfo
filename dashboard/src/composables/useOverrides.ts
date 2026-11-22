@@ -44,7 +44,7 @@ export function useOverrides(): {
      * erweitert wurde. Mit Zusicherung liefe derselbe Fall stumm durch, und
      * das Backend löschte die neue Kennzahl bei jedem Schreiben.
      */
-    const { details, ...legacyPatch } = patch
+    const { details, labels, ...legacyPatch } = patch
     const payload: InstrumentOverrides = {
       ter: item.manual_ter,
       volatility: item.manual_volatility,
@@ -66,7 +66,7 @@ export function useOverrides(): {
         await apiClient.put(symbolPath('/instruments', item.symbol, '/overrides'), payload)
       }
     } catch (err) {
-      error.value = describeFailure(translate('errors.overrides'), err)
+      error.value = describeFailure(translate('errors.overrides'), err, labels)
       consola.error('useOverrides.save', item.symbol, err)
     } finally {
       saving.value = null

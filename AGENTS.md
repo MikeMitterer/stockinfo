@@ -147,9 +147,7 @@ und Anker; Verweise auf andere Dokumente deshalb als Link schreiben.
 Meldungen, die nach dem Prüfen nichts verlangen, mit
 `docs-check --ack <datei>` quittieren und
 `.docs-check.ack` mitcommitten; nie ungesehen. `--no-verify` nur im Notfall
-und mit Begründung im Bericht. Einstellungen der Settings-Klasse in
-`app/config.py` erkennt die Prüfung nicht; neue Einstellungen von Hand
-dokumentieren.
+und mit Begründung im Bericht.
 
 **Doku-Abgleich im Ablauf:**
 

@@ -1,6 +1,6 @@
 # Der REST-Core von StockInfo — was zugesagt ist
 
-**Vertragsversion 4.4.1** · Stand 2026-10-15
+**Vertragsversion 5.0.0** · Stand 2026-11-21
 
 `GET /fields` liefert den Feldvertrag und das aktuelle Detailschema.
 `GET /instrument-types` liefert die Typen der konfigurierten Plugins.
@@ -18,6 +18,7 @@ Tests halten die laufende App gegen dieses Artefakt.
 - [Was der Core umfasst](#was-der-core-umfasst)
 - [Die Begriffe, die sich sonst niemand erschließt](#die-begriffe-die-sich-sonst-niemand-erschließt)
 - [Identität: `listing_id` für Maschinen, `symbol` für Menschen](#identität-listing_id-für-maschinen-symbol-für-menschen)
+- [Fehlerantworten: Kennung statt Satz](#fehlerantworten-kennung-statt-satz)
 - [Die Generation: woran ein Konsument einen Datensatzwechsel erkennt](#die-generation-woran-ein-konsument-einen-datensatzwechsel-erkennt)
 - [Was additiv ist und was ein Bruch wäre](#was-additiv-ist-und-was-ein-bruch-wäre)
 - [Der `details`-Container](#der-details-container)
@@ -184,6 +185,64 @@ nicht nebenbei in einer Kursabfrage statt.
 
 [↑ Übersicht](#übersicht)
 
+## Fehlerantworten: Kennung statt Satz
+
+**Jede fachliche Ablehnung antwortet mit `{code, params}` auf oberster
+Ebene.** Fachlich heißt: StockInfo selbst lehnt ab. Einen Satz zum Anzeigen
+enthält die Antwort nicht. `code` ist eine stabile Kennung, `params` enthält
+die Werte für den Satz als Zeichenketten. Den Satz bildet der Konsument in
+seiner Sprache; das Dashboard nimmt ihn aus `errors.reason` bzw.
+`migration.reason` in `dashboard/src/i18n/`. Eine unbekannte Kennung zeigt
+ein Konsument mit einem allgemeinen Satz an, nicht roh.
+
+```json
+{ "code": "quote_unavailable", "params": { "identifier": "IE00B3RBWM25" } }
+```
+
+Zwei Antworten sind keine fachliche Ablehnung und haben ihre eigene Form:
+
+- **Request-Validierung von FastAPI:** `422` mit einer `detail`-Liste ohne
+  `code` (`HTTPValidationError`), etwa bei `limit=0`. Bei Kurs-, Tageskurs- und
+  Historienwegen mit beiden `422`-Formen führt OpenAPI beide auf.
+- **Betriebszustand:** Das `503` während eines Umzugs oder Starts trägt die
+  Kennung als Zeichenkette in `detail` (`migration_pending`,
+  `startup_running`, `startup_failed`).
+
+Außerdem behält `symbol_ambiguous` zusätzlich das Feld `detail` mit einem
+Satz aus der ersten Fassung des Vertrags; ein Konsument liest `code`.
+
+| Bereich | `code` | `params` |
+|---|---|---|
+| Eingabeform (`422`; `invalid_isin_format` am Aufnahmeweg `400`) | `invalid_isin_format` · `invalid_symbol_format` · `invalid_timestamp` · `time_range_reversed` | `isin` · `symbol` · `name`, `value` · `from`, `to` |
+| Kursquellen | `instrument_not_found` (`404`) · `quote_unavailable` (`502`) · `quote_currency_mismatch` (`502`) · `unsupported_instrument_type` (`400`) | `identifier` · `symbol`, `expected`, `delivered` · `symbol`, `instrument_type` |
+| Tageskurse | `daily_series_not_found` (`404`) · `daily_source_unavailable` (`502`) | `identifier` |
+| Devisen | `fx_pair_not_found` (`404`) · `fx_source_unavailable` (`502`) · `invalid_currency_code` (`422`) | `base`, `quote` |
+| Aufnahme und Symbolform (`400`) | `identifier_empty` · `identifier_unknown_form` · `symbol_without_exchange_suffix` · `unknown_exchange_suffix` · `non_canonical_ticker` · `ambiguous_exchange_suffix` · `exchange_not_covered` | — · `identifier` (Symbolform-Kennungen am Kursweg: `symbol`) · `mic` |
+| Bestand (Dashboard-Wege) | `instrument_not_stored` (`404`) · `listing_not_found` (`404`) · `isin_taken` (`409`) · `refresh_in_progress` (`409`) · `isin_or_symbol_required` (`422`) | `identifier` · `listing_id` · `isin` · — · — |
+| Detailwerte (`422`) | `detail_number_required` · `detail_below_minimum` · `detail_above_maximum` · `detail_boolean_required` · `detail_text_required` · `detail_currency_code_required` · `detail_currency_required` · `detail_currency_not_allowed` · `detail_not_declared` · `detail_not_editable` | `field`; dazu `minimum`, `maximum` bzw. `max_length` |
+| Vertrag und Umzug | `contract_unavailable` (`503`) · `migration_not_pending` (`409`) | — |
+| Sicherungen | `backup_not_found` (`404`) · `backup_incompatible` (`409`) · `backup_schema_too_new` (`422`) | `name`; dazu `reason` mit der Passungsursache |
+
+`instrument_not_found` und `instrument_not_stored` sind verschiedene
+Aussagen: Beim ersten haben die Quellen geantwortet und kennen das Papier
+nicht, beim zweiten führt der Bestand es nicht, und keine Quelle wurde
+gefragt. Welche Quelle bei `quote_unavailable` ausfiel, steht im
+Serverprotokoll (Ereignis `quote_unavailable_reason`), nicht in der Antwort: Der Text
+stammt aus Ausnahmen der Quellen und kann enthalten, was ein Anbieter in seine
+Meldung schreibt.
+
+Die beiden `409` `identity_conflict` und `symbol_ambiguous` beschreibt der
+Abschnitt darüber.
+
+Dieselbe Form tragen zwei Statusfelder außerhalb des Core:
+`restore_error` in `GET /backups` (`backup_*` oder `restore_failed`, jeweils
+mit `params.name`) und `provenance_warning` in `GET /sources`
+(`provenance_mismatch` mit `params.stamped` und `params.running`). Beide sind
+`null`, solange nichts vorliegt. `POST /backups/{name}/restore` meldet den
+ausstehenden Neustart nur über `restart_required`.
+
+[↑ Übersicht](#übersicht)
+
 ## Die Generation: woran ein Konsument einen Datensatzwechsel erkennt
 
 `GET /fields` liefert `generation_id` aus der Datenbank. Die UUID bleibt
@@ -237,7 +296,7 @@ Gekürzter Auszug; `core` und `endpoints` enthalten hier jeweils nur einen Eintr
 
 ```json
 {
-  "core_version": "4.4.1",
+  "core_version": "5.0.0",
   "core": { "quote": [ {"name": "price", "kind": "number", "required": true, "meaning": "Latest known price in the trading currency. Never guessed or converted."} ] },
   "endpoints": { "quote": [ {"path": "/quote/{isin}", "method": "GET", "query": []} ] },
   "generation_id": "550e8400-e29b-41d4-a716-446655440000",

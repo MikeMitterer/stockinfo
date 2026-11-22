@@ -86,6 +86,31 @@ class Silent(DailyCloseSource, FxSource):
 SOURCES = [Silent]
 '''
 
+# Ein Resolver, dessen Ausnahme ein Geheimnis im Text trägt — wie ein Anbieter,
+# der die aufgerufene URL samt Schlüssel in seine Fehlermeldung schreibt.
+_SECRET = "SECRET-TOKEN-123"
+_LEAKY = f'''
+from stockinfo_plugin import Resolver
+
+
+class Leaky(Resolver):
+    """Zustaendig, wirft aber mit einem Schluessel in der Meldung."""
+
+    name = "leaky"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({{"listed", "pair", "isin_only"}})
+    SUPPORTED_TYPES = frozenset({{"stock", "etf", "etc", "fund", "crypto", "bond"}})
+
+    def handles(self, request) -> bool:
+        return True
+
+    def resolve(self, request):
+        raise RuntimeError("401 for https://api.example/v1?api_key={_SECRET}")
+
+
+SOURCES = [Leaky]
+'''
+
 _BOND = "DE0001102531"
 
 
@@ -96,6 +121,7 @@ def volume(tmp_path: Path) -> Path:
     plugins.mkdir()
     (plugins / "disturbed.py").write_text(_DISTURBED, encoding="utf-8")
     (plugins / "silent.py").write_text(_SILENT, encoding="utf-8")
+    (plugins / "leaky.py").write_text(_LEAKY, encoding="utf-8")
     return tmp_path
 
 
@@ -220,22 +246,20 @@ def test_eine_gestoerte_devisenquelle_neben_einem_nichttreffer_bleibt_502(
 #
 # Je Weg steht hier, **welche 422-Formen dort wirklich vorkommen** — gemessen,
 # nicht angenommen. `ErrorDetail` an jedem, weil die gemeinsame Prüfung überall
-# hängt; die beiden anderen nur, wo die Route sie erzeugen kann.
+# hängt; `HTTPValidationError` nur, wo FastAPI selbst prüft. Die frühere
+# Fließtext-Form `DetailText` gibt es seit T-139 nicht mehr: Zeitfenster,
+# Symbolformat und fehlende Kennung antworten ebenfalls als `ErrorDetail`.
 ISIN_ROUTES = [
     ("/quote/{isin}", "get", {"ErrorDetail"}),
     ("/quote/{isin}/daily", "get", {"ErrorDetail", "HTTPValidationError"}),
-    (
-        "/quote/{isin}/history",
-        "get",
-        {"ErrorDetail", "HTTPValidationError", "DetailText"},
-    ),
+    ("/quote/{isin}/history", "get", {"ErrorDetail", "HTTPValidationError"}),
     ("/refresh/{isin}", "post", {"ErrorDetail"}),
     ("/instruments/{isin}", "delete", {"ErrorDetail"}),
-    ("/analyze", "get", {"ErrorDetail", "DetailText"}),
+    ("/analyze", "get", {"ErrorDetail"}),
     (
         "/instruments/by-symbol/{symbol}/isin",
         "put",
-        {"ErrorDetail", "HTTPValidationError", "DetailText"},
+        {"ErrorDetail", "HTTPValidationError"},
     ),
 ]
 
@@ -274,18 +298,6 @@ def test_der_vertrag_nennt_je_route_alle_moeglichen_422_formen(
             f"{method.upper()} {path}"
         )
 
-    # Die Fließtext-Variante sagt `detail` als **Pflicht** zu. Ohne diese Zeile
-    # erlaubte der Vertrag `{}` und beschriebe damit gerade nicht, was sie
-    # ausmacht.
-    detail_text = next(
-        variant
-        for variant in schema["paths"]["/analyze"]["get"]["responses"]["422"]["content"][
-            "application/json"
-        ]["schema"]["anyOf"]
-        if variant.get("title") == "DetailText"
-    )
-    assert detail_text["required"] == ["detail"]
-
 
 def test_jeder_isin_weg_liefert_zur_laufzeit_die_zugesagte_kennung(
     client: TestClient,
@@ -320,6 +332,63 @@ def test_jeder_isin_weg_liefert_zur_laufzeit_die_zugesagte_kennung(
             "code": "invalid_isin_format",
             "params": {"isin": "BTC-EUR"},
         }, f"{method.upper()} {url}"
+
+
+def _declared_502_model(schema: dict, path: str) -> str | None:
+    """Das zugesagte Modell des `502` einer GET-Route, oder `None` ohne Zusage."""
+    declared = schema["paths"][path]["get"]["responses"].get("502")
+    if declared is None:
+        return None
+    return declared["content"]["application/json"]["schema"]["$ref"].rsplit("/", 1)[-1]
+
+
+def test_kurs_und_historienwege_sagen_ihre_fehlerformen_zu(client: TestClient) -> None:
+    """T-139 R1-F4: Was die Wege zur Laufzeit liefern, steht auch im Vertrag.
+
+    Die Laufzeit belegen `test_der_text_einer_quellenausnahme_erreicht_keinen_aufrufer`
+    (`502`) und die Anfragen unten (`422` am Symbolweg).
+    """
+    schema = client.get("/openapi.json").json()
+
+    for path in ("/quote", "/quote/{isin}", "/quote/{isin}/history", "/quote/by-symbol/{symbol}/history"):
+        assert _declared_502_model(schema, path) == "ErrorDetail", path
+    for path in ("/quote", "/quote/by-symbol/{symbol}/history", "/quote/by-symbol/{symbol}/daily"):
+        assert _declared_422_forms(schema, path, "get") == {"ErrorDetail", "HTTPValidationError"}, path
+
+    for url, code in (
+        ("/quote/by-symbol/a%20b/history", "invalid_symbol_format"),
+        ("/quote/by-symbol/EUNL.DE/history?from=morgen", "invalid_timestamp"),
+    ):
+        response = client.get(url)
+        assert response.status_code == 422, url
+        assert response.json()["code"] == code, url
+
+
+def test_der_text_einer_quellenausnahme_erreicht_keinen_aufrufer(
+    client: TestClient, volume: Path
+) -> None:
+    """T-139: Kein Kurs-, Historien-, Refresh- oder Aufnahmeweg liefert den Ausnahmetext.
+
+    Die Ausnahme einer Quelle landet über `plugin_guard` und die Kette im
+    `QuoteUnavailableError`. Bis T-139 Runde 1 reiste dieser Text als
+    `params.detail` mit — und mit ihm, was der Anbieter hineingeschrieben hat.
+    """
+    _profile(volume, {"resolvers": ["leaky"], "quotes": ["yaml-file"]})
+    requests = [
+        ("get", f"/quote/{_BOND}", None),
+        ("get", f"/quote/{_BOND}/history", None),
+        ("post", f"/refresh/{_BOND}", None),
+        ("post", "/instruments/intake", {"identifier": _BOND}),
+    ]
+
+    for method, url, payload in requests:
+        response = client.request(method, url, json=payload)
+        assert response.status_code == 502, f"{method.upper()} {url}: {response.text}"
+        assert response.json() == {
+            "code": "quote_unavailable",
+            "params": {"identifier": _BOND},
+        }, f"{method.upper()} {url}"
+        assert _SECRET not in response.text
 
 
 def test_ein_unbrauchbarer_waehrungscode_wird_mit_kennung_abgelehnt(

@@ -14,6 +14,8 @@ docker/.last_login
 # Reste des früheren `make setup` in bestehenden Checkouts; die Werkzeuge kommen
 # über pipx (.dev-tools.conf.sh). Den Ordner darf man löschen.
 .libs/
+# Werkzeuge dieses Checkouts aus .dev-tools.conf.sh, eingerichtet von `make setup`.
+.tools/
 _tickets/ACTIVITY.md
 # Bauartefakte der Python-Pakete (`plugin_api/`, das Beispiel-Plugin).
 #

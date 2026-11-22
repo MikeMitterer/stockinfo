@@ -56,7 +56,7 @@ from app.persistence.repository import (
 )
 from app.plugin_loader import load_all
 from app.routers import backups, dashboard, fields, fx, instruments, migration, quotes
-from app.routers.validation import REASON_INVALID_ISIN, InvalidIsinError
+from app.routers.api_error import ApiError
 from app.scheduler import RefreshScheduler
 from app.services.backup import (
     BackupError,
@@ -269,34 +269,29 @@ async def identity_conflict(
     )
 
 
-@app.exception_handler(InvalidIsinError)
-async def invalid_isin(request: Request, exc: InvalidIsinError) -> JSONResponse:
-    """Macht aus dem unbrauchbaren ISIN-Format einen `422` **mit Kennung**.
+@app.exception_handler(ApiError)
+async def api_error(request: Request, exc: ApiError) -> JSONResponse:
+    """Macht aus jeder Router-Ablehnung `{code, params}` auf oberster Ebene.
 
-    **Zentral, aus demselben Grund wie die beiden Handler daneben:** Die
-    Prüfung hängt als Abhängigkeit an jedem ISIN-Weg — `/quote/{isin}`, beide
-    Historien und der Aufnahmeweg. Ein Handler je Router wäre dieselbe Regel
-    viermal.
+    **Zentral, aus demselben Grund wie die Handler daneben:** Abgelehnt wird
+    in Routern und in Abhängigkeiten wie der ISIN- und Symbolprüfung, die an
+    vielen Wegen hängen. Ein Handler je Router wäre dieselbe Regel mehrfach.
 
     Der Rumpf steht **nicht** unter `detail`. Eine `HTTPException` verpackte
     ihn dort, und ein Konsument müsste erst auspacken, was er typisiert
     erwartet — genau das schließt `ErrorDetail` aus.
 
     Args:
-        request: Der auslösende Request; nur für die Signatur nötig.
-        exc: Die Eingabe, die kein ISIN-Format hat.
+        request: Der auslösende Request; nur für das Log.
+        exc: Status, Kennung und Werte der Ablehnung.
 
     Returns:
-        `422` mit `{code, params}` — dieselbe Form wie jede andere Ablehnung.
+        Der Status der Ablehnung mit `{code, params}`.
     """
-    logger.info(REASON_INVALID_ISIN, path=request.url.path, isin=exc.isin)
+    logger.info(exc.code, path=request.url.path, status=exc.status_code, **exc.params)
     return JSONResponse(
-        # `…_CONTENT` und nicht `…_ENTITY`: Letzteres ist in dieser
-        # Starlette-Fassung verworfen und warnt bei jedem Aufruf.
-        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-        content=ErrorDetail(
-            code=REASON_INVALID_ISIN, params={"isin": exc.isin}
-        ).model_dump(),
+        status_code=exc.status_code,
+        content=ErrorDetail(code=exc.code, params=exc.params).model_dump(),
     )
 
 

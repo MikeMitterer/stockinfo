@@ -1,39 +1,36 @@
 #!/usr/bin/env bash
-# Versionen der Entwicklungswerkzeuge, die dieses Projekt über pipx braucht.
-# Das Makefile bindet die Datei mit include ein; Bash kann sie sourcen.
+# Entwicklungswerkzeuge, die dieses Projekt über pipx braucht, im Format von devtools
+# (README, Abschnitt Config file): je Werkzeug NAME_PACKAGE, NAME_TAG, NAME_SOURCE und
+# optional NAME_LABEL. Das Makefile bindet die Datei mit include ein; Bash kann sie sourcen.
 # Deshalb NAME=wert ohne Anführungszeichen und ohne Leerzeichen um das =.
 # shellcheck disable=SC2034  # vom Makefile gelesen
 
-# Gelesen von devtools (Paket mmit-devtools, Projekt DevTools). Je Werkzeug: PACKAGE ist das
-# pipx-Paket, TAG der Release-Tag, seine SemVer-Zahl die Mindestversion. SOURCE ist die Quelle
-# für make install-tools: die Git-URL (dann gilt der Tag) oder der Pfad einer Arbeitskopie.
-# EDITABLE=yes bindet eine Arbeitskopie bearbeitbar ein (pipx install -e), no als festen Stand.
-# make install-tools bringt die Werkzeuge auf diesen Stand; make setup zeigt ihn.
+# make setup installiert die Werkzeuge mit devtools --project install nach .tools/ dieses
+# Checkouts; make info zeigt ihren Stand. Der SemVer-Teil eines Tags ist die Mindestversion.
+# SOURCE nennt immer die GitHub-Quelle; auf dem Entwicklungsrechner setzt die rechnerlokale
+# Zuordnung von DevTools die lokalen Repos dafür ein, auch mit ungepushtem Tag.
 
-# DevTools selbst (devtools status|install|check), aufgerufen mit pipx run. Ohne
-# DEVTOOLS_PACKAGE installiert devtools sich nicht selbst; SOURCE dient devtools upgrade.
-DEVTOOLS_TAG=v0.2.0+261101.1319.09840
+# DevTools selbst: Das Makefile ruft das einmal je Rechner installierte devtools auf (Starter);
+# ist es älter als DEVTOOLS_TAG, gibt es an diesen Tag aus DEVTOOLS_SOURCE weiter.
+DEVTOOLS_TAG=v0.7.0+261119.1249.b3946
 DEVTOOLS_SOURCE=git+https://github.com/MikeMitterer/python-devtools.git
 
-# ProjectTools (docs-check, repo-status, changelog, repo-info), aus der lokalen Arbeitskopie.
+# ProjectTools (docs-check, repo-status, changelog, repo-info, dev-ports).
 PROJECTTOOLS_PACKAGE=mmit-projecttools
 PROJECTTOOLS_LABEL=ProjectTools
-PROJECTTOOLS_TAG=v0.11.0+261118.1922.975db
-PROJECTTOOLS_SOURCE=/Volumes/DevLocal/DevBash/Production/ProjectTools
-PROJECTTOOLS_EDITABLE=yes
+PROJECTTOOLS_TAG=v0.12.0+261121.2308.3755c
+PROJECTTOOLS_SOURCE=git+https://github.com/MikeMitterer/bash-ProjectTools.git
 
-# BashLib (version, tag-*, docker/build.sh, scripts/; make.lib.sh für help, info und hints),
-# aus der lokalen Arbeitskopie.
+# BashLib (make.lib.sh für help, info, hints und Statuszeilen; version, tag-*,
+# docker/build.sh und scripts/).
 BASHLIB_PACKAGE=mmit-bashlib
 BASHLIB_LABEL=BashLib
 BASHLIB_TAG=v0.14.0+261119.1230.2ace6
-BASHLIB_SOURCE=/Volumes/DevLocal/DevBash/Production/BashLib
-BASHLIB_EDITABLE=yes
+BASHLIB_SOURCE=git+https://github.com/MikeMitterer/bash-lib.git
 
-# CLITheme (clitheme export: Farben und Abstände für help, info und hints über make.lib.sh),
-# aus der lokalen Arbeitskopie. Ohne clitheme bleibt die Ausgabe ohne Farben.
+# CLITheme (clitheme export: Farben und Abstände der Ausgabe über BashLib). Ohne clitheme
+# bleibt die Ausgabe ohne Farben.
 CLITHEME_PACKAGE=mmit-clitheme
 CLITHEME_LABEL=CLITheme
 CLITHEME_TAG=v0.12.0+261119.1304.0816b
-CLITHEME_SOURCE=/Volumes/DevLocal/DevPython/Production/CLITheme
-CLITHEME_EDITABLE=yes
+CLITHEME_SOURCE=git+https://github.com/MikeMitterer/python-clitheme.git

@@ -62,7 +62,7 @@ def test_persistenz_merge_und_kompatibilitaetsprojektion(tmp_path):
     row = service.get_instrument_summary(saved.instrument_id)
     assert row['details']['sample.risk']['value'] == 0
     assert row['details']['sample.risk']['source'] == 'sample'
-    with pytest.raises(ValueError, match='bearbeitbar'):
+    with pytest.raises(ValueError, match='detail_not_editable'):
         service.set_detail_overrides(row['listing_id'], {'sample.risk': DetailInput(value=4)})
     assert service.get_by_isin('IE00B3RBWM25').details['sample.risk'].value == 0
 

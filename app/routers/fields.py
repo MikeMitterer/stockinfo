@@ -8,11 +8,12 @@ Antwort Pflicht sind.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, Response
 
 from app.container import get_field_catalog, get_sources_config
 from app.contract import ContractUnavailableError
 from app.models import FieldsResponse, InstrumentTypesResponse
+from app.routers.api_error import ApiError
 from app.services.field_catalog import FieldCatalogService
 from app.services.instrument_types import instrument_type_catalog
 
@@ -20,9 +21,12 @@ router = APIRouter(tags=["contract"])
 
 CatalogDep = Annotated[FieldCatalogService, Depends(get_field_catalog)]
 
+# Das Vertragsartefakt unter `contract/` fehlt oder ist nicht lesbar.
+REASON_CONTRACT_UNAVAILABLE = "contract_unavailable"
 
-def _contract_unavailable(exc: ContractUnavailableError) -> HTTPException:
-    return HTTPException(status_code=503, detail="Vertragsartefakt nicht lesbar")
+
+def _contract_unavailable() -> ApiError:
+    return ApiError(503, REASON_CONTRACT_UNAVAILABLE)
 
 
 @router.get("/instrument-types", response_model=InstrumentTypesResponse)
@@ -30,12 +34,13 @@ def instrument_types(response: Response, catalog: CatalogDep) -> InstrumentTypes
     """Liefert den aktuellen Typkatalog der konfigurierten Plugin-Rollen.
 
     Raises:
-        HTTPException: 503, wenn das Vertragsartefakt fehlt, wie bei `/fields`.
+        ApiError: `503 contract_unavailable`, wenn das Vertragsartefakt fehlt,
+            wie bei `/fields`.
     """
     try:
         header, generation = catalog.generation_header()
     except ContractUnavailableError as exc:
-        raise _contract_unavailable(exc) from exc
+        raise _contract_unavailable() from exc
     response.headers["Cache-Control"] = "no-store"
     response.headers[header] = generation
     return instrument_type_catalog(get_sources_config())
@@ -50,11 +55,11 @@ def fields(catalog: CatalogDep) -> FieldsResponse:
     ungenauer als das vorhandene OpenAPI-Dokument.
 
     Raises:
-        HTTPException: 503, wenn das Vertragsartefakt fehlt. Eine leere
-            Feldliste auszuliefern wäre schlimmer als ein Fehler: Sie sähe wie
-            eine Zusage aus.
+        ApiError: `503 contract_unavailable`, wenn das Vertragsartefakt fehlt.
+            Eine leere Feldliste auszuliefern wäre schlimmer als ein Fehler:
+            Sie sähe wie eine Zusage aus.
     """
     try:
         return catalog.fields()
     except ContractUnavailableError as exc:
-        raise _contract_unavailable(exc) from exc
+        raise _contract_unavailable() from exc

@@ -4,6 +4,7 @@ import sqlite3
 from collections.abc import Iterator
 
 import pytest
+import structlog
 from fastapi.testclient import TestClient
 
 import app.main as main_module
@@ -11,6 +12,11 @@ from app.container import get_cached_quote_service, get_daily_history_service
 from app.main import app
 from app.models import DailyPoint, ListedIdentityOut, QuotePoint, QuoteResponse
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
+
+
+# Der Text ist der, den `CompositeResolver` zusammensetzt: Er nennt die
+# ausgefallenen Quellen, und genau das muss beim Client ankommen.
+_UNAVAILABLE = "{identifier}: keine Quelle konnte nachsehen — openfigi: HTTP 503; yahoo: timeout"
 
 
 class FakeDaily:
@@ -48,12 +54,7 @@ class FakeService:
         if isin.startswith("XX"):
             raise InstrumentNotFoundError(isin)
         if isin.startswith("ZZ"):
-            # Der Text ist der, den `CompositeResolver` zusammensetzt: Er nennt
-            # die ausgefallenen Quellen, und genau das muss beim Client ankommen.
-            raise QuoteUnavailableError(
-                f"{isin}: keine Quelle konnte nachsehen — "
-                "openfigi: HTTP 503; yahoo: timeout"
-            )
+            raise QuoteUnavailableError(_UNAVAILABLE.format(identifier=isin))
         return QuoteResponse(
             symbol="VGWL.DE",
             name="VGWL.DE Testpapier",
@@ -71,6 +72,8 @@ class FakeService:
     def get_by_symbol(self, symbol: str) -> QuoteResponse:
         if symbol == "NOPE":
             raise QuoteUnavailableError(symbol)
+        if symbol.startswith("ZZ"):
+            raise QuoteUnavailableError(_UNAVAILABLE.format(identifier=symbol))
         return QuoteResponse(
             symbol=symbol,
             name="Testpapier",
@@ -91,10 +94,18 @@ class FakeService:
     ) -> list[QuotePoint]:
         if isin.startswith("XX"):
             raise InstrumentNotFoundError(isin)
+        if isin.startswith("ZZ"):
+            raise QuoteUnavailableError(_UNAVAILABLE.format(identifier=isin))
         return [
             QuotePoint(price=160.0, quote_time="t1", fetched_at="t1", currency="EUR"),
             QuotePoint(price=161.0, quote_time="t2", fetched_at="t2", currency="EUR"),
         ]
+
+    def refresh_one(self, isin: str) -> QuoteResponse:
+        return self.get_by_isin(isin)
+
+    def refresh_one_by_symbol(self, symbol: str) -> QuoteResponse:
+        return self.get_by_symbol(symbol)
 
     def get_history_by_symbol(
         self,
@@ -103,6 +114,8 @@ class FakeService:
         date_to: str | None = None,
         limit: int = 100,
     ) -> list[QuotePoint]:
+        if symbol.startswith("ZZ"):
+            raise QuoteUnavailableError(_UNAVAILABLE.format(identifier=symbol))
         return [
             QuotePoint(price=430.0, quote_time="t1", fetched_at="t1", currency="EUR")
         ]
@@ -363,24 +376,57 @@ def test_unbekanntes_symbol_bleibt_ein_502(client: TestClient) -> None:
     assert client.get("/quote/by-symbol/ZZTEST/daily").status_code == 502
 
 
-def test_ausgefallene_quellen_nennen_sich_im_antwortkoerper(
+def test_ausgefallene_quellen_nennen_sich_im_protokoll_nicht_in_der_antwort(
     client: TestClient,
 ) -> None:
-    """T-20 `#3`: Der 502 soll sagen, wer nicht erreichbar war.
+    """T-20 `#3`: Wer die App betreibt, soll sehen, wer nicht erreichbar war.
 
-    Ohne die Namen steht dort nur „ging nicht" — und wer die App betreibt,
-    weiß nicht, ob er auf OpenFIGI, Yahoo oder sein eigenes Netz schauen soll.
+    **Seit T-139 im Protokoll, nicht mehr im Antwortkörper.** Der Text kommt
+    ungefiltert aus Plugin-Ausnahmen und kann enthalten, was ein Anbieter in
+    seine Meldung schreibt. Der Aufrufer bekommt die Kennung und seine Eingabe.
     """
-    response = client.get("/quote/ZZ0000000000")
+    with structlog.testing.capture_logs() as logs:
+        response = client.get("/quote/ZZ0000000000")
 
     assert response.status_code == 502
-    # **Seit T-31 als `{code, params}`.** Die Anleihe braucht den
-    # `quote_unavailable`-Zustand strukturiert — sie ist der Normalfall ohne
-    # Kursquelle, keine Störung —, und zwei Rumpfformen an einem Endpunkt
-    # wären schlimmer als der alte Freitext. Die Namen reisen als Diagnose in
-    # `params.detail` mit; die geprüfte Aussage bleibt Wort für Wort dieselbe.
-    body = response.json()
-    assert body["code"] == "quote_unavailable"
-    detail = body["params"]["detail"]
-    assert "ZZ0000000000" in detail
-    assert "openfigi" in detail and "yahoo" in detail
+    assert response.json() == {"code": "quote_unavailable", "params": {"identifier": "ZZ0000000000"}}
+    logged = [entry for entry in logs if entry["event"] == "quote_unavailable_reason"]
+    assert logged and "openfigi" in logged[0]["error"] and "yahoo" in logged[0]["error"]
+
+
+@pytest.mark.parametrize(
+    ("identifier", "requests"),
+    [
+        (
+            "ZZ0000000000",
+            [
+                ("get", "/quote/ZZ0000000000"),
+                ("get", "/quote/ZZ0000000000/history"),
+                ("post", "/refresh/ZZ0000000000"),
+            ],
+        ),
+        (
+            "ZZTEST.DE",
+            [
+                ("get", "/quote?symbol=ZZTEST.DE"),
+                ("get", "/quote/by-symbol/ZZTEST.DE/history"),
+                ("post", "/refresh/by-symbol/ZZTEST.DE"),
+            ],
+        ),
+    ],
+    ids=["isin", "symbol"],
+)
+def test_kein_kurs_hat_auf_kurs_historie_und_refresh_dieselbe_form(
+    client: TestClient, identifier: str, requests: list[tuple[str, str]]
+) -> None:
+    """T-139: Derselbe `QuoteUnavailableError`, dieselbe Antwort — gleich über welche Tür.
+
+    Bis T-139 antworteten die Historien- und Refresh-Wege mit dem deutschen
+    Satz „Kein Kurs für …", der Kursweg mit `quote_unavailable`.
+    """
+    expected = {"code": "quote_unavailable", "params": {"identifier": identifier}}
+
+    for method, url in requests:
+        response = client.request(method, url)
+        assert response.status_code == 502, f"{method.upper()} {url}: {response.text}"
+        assert response.json() == expected, f"{method.upper()} {url}"

@@ -57,7 +57,10 @@ describe('Offene Detailfelder', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('Risiko')
     wrapper.getComponent(DetailEditor).vm.$emit('commit', { value: 0, currency: null })
-    expect(wrapper.emitted('commit')?.[0]).toEqual([{ details: { 'sample.risk': { value: 0, currency: null } } }])
+    // `labels` nennt die angezeigte Beschriftung für eine Fehlermeldung (T-139).
+    expect(wrapper.emitted('commit')?.[0]).toEqual([
+      { details: { 'sample.risk': { value: 0, currency: null } }, labels: { 'sample.risk': 'Risiko' } },
+    ])
   })
 
   it('zeigt BTC-EUR keine Fondsfelder aus dem globalen Katalog', async () => {

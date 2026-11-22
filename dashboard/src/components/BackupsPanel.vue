@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton, NCheckbox, NModal } from 'naive-ui'
 
+import { errorDetailText } from '../api/reason'
 import { useBackups } from '../composables/useBackups'
 import { formatDateTime } from '../utils/datetime'
 import type { BackupEntry, BackupReason } from '../types'
@@ -86,7 +87,7 @@ function humanSize(bytes: number): string {
     <p v-if="data" class="hint">{{ t('backups.hint', { keep: data.keep }) }}</p>
 
     <p v-if="data?.restore_error" class="backups__state backups__state--error">
-      {{ t('backups.failed', { reason: data.restore_error }) }}
+      {{ t('backups.failed', { reason: errorDetailText(data.restore_error) }) }}
     </p>
     <p v-else-if="data?.pending_restore" class="backups__state backups__state--pending">
       {{ t('backups.pending', { name: data.pending_restore }) }}

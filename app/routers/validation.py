@@ -10,35 +10,21 @@ import re
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Query
+from fastapi import Depends, Query
 
 from app.exchanges import ISIN_PATTERN, REASON_INVALID_ISIN
+from app.routers.api_error import ApiError
 
 __all__ = ["REASON_INVALID_ISIN"]
 
+# Das Symbol hat nicht die Form eines Yahoo-Symbols (`params.symbol`).
+REASON_INVALID_SYMBOL = "invalid_symbol_format"
 
-class InvalidIsinError(Exception):
-    """Die Eingabe hat nicht das Format einer ISIN.
+# Eine Zeitgrenze ist kein ISO-8601-Zeitpunkt (`params.name`, `params.value`).
+REASON_INVALID_TIMESTAMP = "invalid_timestamp"
 
-    **Eine eigene Ausnahme statt `HTTPException`**, und der Grund ist die Form
-    der Antwort: FastAPI verpackt `HTTPException.detail` in
-    ``{"detail": …}``. Ein `ErrorDetail` dort hinein zu legen ergäbe
-    ``{"detail": {"code": …}}`` — genau die Verschachtelung, die `ErrorDetail`
-    ausdrücklich ausschließt, und die kein Konsument erwartet.
-
-    Der zentrale Handler in `app.main` macht daraus die zugesagte Form. Er
-    steht dort und nicht in den Routern, weil diese Validierung als
-    Abhängigkeit an jedem ISIN-Weg hängt: Ein Handler je Router wäre dieselbe
-    Regel viermal, und beim fünften Weg fehlte sie.
-    """
-
-    def __init__(self, isin: str) -> None:
-        """
-        Args:
-            isin: Die Eingabe, so wie sie ankam — ungetrimmt und ungekürzt.
-        """
-        super().__init__(isin)
-        self.isin = isin
+# Die untere Zeitgrenze liegt nach der oberen (`params.from`, `params.to`).
+REASON_TIME_RANGE_REVERSED = "time_range_reversed"
 
 # Yahoo-Symbole: Kennung plus optionales Börsensuffix (VGWL.DE), dazu die
 # Sonderformen für Indizes (^GDAXI) und Devisen (EURUSD=X).
@@ -59,14 +45,12 @@ def normalize_isin(isin: str) -> str:
         Die normalisierte ISIN.
 
     Raises:
-        InvalidIsinError: Bei ungültigem Format. Der zentrale Handler macht
-            daraus einen `422` mit **Kennung** statt deutschem Fließtext: Der
-            Satz entsteht im UI, und ein anderer Client als das Dashboard
-            erreicht diese Stelle ebenfalls.
+        ApiError: `422 invalid_isin_format` bei ungültigem Format; `params.isin`
+            nennt die Eingabe, so wie sie ankam — ungetrimmt und ungekürzt.
     """
     normalized = isin.strip().upper()
     if not ISIN_PATTERN.fullmatch(normalized):
-        raise InvalidIsinError(isin)
+        raise ApiError(422, REASON_INVALID_ISIN, {"isin": isin})
     return normalized
 
 
@@ -80,13 +64,12 @@ def normalize_symbol(symbol: str) -> str:
         Das normalisierte Symbol.
 
     Raises:
-        HTTPException: 422 bei ungültigem Format oder zu großer Länge.
+        ApiError: `422 invalid_symbol_format` bei ungültigem Format oder zu
+            großer Länge.
     """
     normalized = symbol.strip().upper()
     if not SYMBOL_PATTERN.fullmatch(normalized):
-        raise HTTPException(
-            status_code=422, detail=f"Ungültiges Symbol-Format: {symbol}"
-        )
+        raise ApiError(422, REASON_INVALID_SYMBOL, {"symbol": symbol})
     return normalized
 
 
@@ -106,17 +89,15 @@ def _parse_boundary(value: str | None, name: str) -> str | None:
         Normalisierter ISO-Zeitstempel in UTC, oder ``None``.
 
     Raises:
-        HTTPException: 422 wenn der Wert kein ISO-8601-Zeitpunkt ist.
+        ApiError: `422 invalid_timestamp`, wenn der Wert kein
+            ISO-8601-Zeitpunkt ist.
     """
     if value is None:
         return None
     try:
         parsed = datetime.fromisoformat(value)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=422,
-            detail=f"'{name}' ist kein ISO-8601-Zeitpunkt: {value}",
-        ) from exc
+        raise ApiError(422, REASON_INVALID_TIMESTAMP, {"name": name, "value": value}) from exc
     if parsed.tzinfo is None:
         parsed = parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc).isoformat()
@@ -136,13 +117,14 @@ def time_range(
         Beide Grenzen als UTC-ISO-Strings (oder ``None``).
 
     Raises:
-        HTTPException: 422 bei ungültigem Format oder verdrehtem Fenster.
+        ApiError: `422 invalid_timestamp` bei ungültigem Format,
+            `422 time_range_reversed` bei verdrehtem Fenster.
     """
     start = _parse_boundary(date_from, "from")
     end = _parse_boundary(date_to, "to")
     if start is not None and end is not None and start > end:
-        raise HTTPException(
-            status_code=422, detail=f"'from' ({date_from}) liegt nach 'to' ({date_to})"
+        raise ApiError(
+            422, REASON_TIME_RANGE_REVERSED, {"from": str(date_from), "to": str(date_to)}
         )
     return start, end
 

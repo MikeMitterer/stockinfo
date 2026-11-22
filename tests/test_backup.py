@@ -25,6 +25,7 @@ from fastapi.testclient import TestClient
 from app.config import get_settings
 from app.container import get_backup_service, get_sources_config
 from app.main import app
+from app.models import ErrorDetail
 from app.persistence.backup_store import DatabaseInUseError, snapshot_read_only, table_contents
 from app.persistence.db import SCHEMA_VERSION, get_connection, init_db
 from app.persistence.repository import QuoteRepository
@@ -563,7 +564,9 @@ def test_ein_restore_antwortet_mit_202_und_nennt_den_neustart(
 
     assert accepted.status_code == 202, accepted.text
     assert accepted.json()["restart_required"] is True
-    assert "Neustart" in accepted.json()["detail"]
+    # Seit T-148 ohne Satz: `restart_required` ist die Aussage, den Satz
+    # bildet das UI.
+    assert "detail" not in accepted.json()
     assert (tmp_path / PENDING_FILENAME).is_file()
     assert client.get("/backups").json()["pending_restore"] == name
 
@@ -688,7 +691,7 @@ def test_eine_neue_anforderung_loest_den_fehlerzustand_ab(volume: Path) -> None:
 
     pending, error = restore_state(str(volume / "stockinfo.db"))
     assert pending == intact.name
-    assert error == ""
+    assert error is None
     assert apply_pending(str(volume / "stockinfo.db"), _ONLINE) == intact.name
 
 
@@ -706,7 +709,7 @@ def test_ein_profilwechsel_bleibt_kompatibel_und_herkunft_sichtbar(
     with TestClient(app) as first:
         name = first.post("/backups").json()["name"]
         provenance = first.get("/backups").json()["fingerprint"]
-        assert first.get("/sources").json()["provenance_warning"] == ""
+        assert first.get("/sources").json()["provenance_warning"] is None
 
         (tmp_path / "sources.yaml").write_text(
             "\n".join(f"{role}: [yaml-file]" for role in ROLES) + "\n", encoding="utf-8"
@@ -722,28 +725,36 @@ def test_ein_profilwechsel_bleibt_kompatibel_und_herkunft_sichtbar(
     _reload()
 
     assert backups["pending_restore"] is None, "die Absicht blieb liegen"
-    assert backups["restore_error"] == "", backups["restore_error"]
+    assert backups["restore_error"] is None, backups["restore_error"]
     # Die Zahl, die das Dashboard nennt, kommt von hier (T-141).
     assert backups["keep"] == KEEP_BACKUPS
-    assert provenance in sources["provenance_warning"], sources["provenance_warning"]
-    assert backups["fingerprint"] in sources["provenance_warning"]
+    # Seit T-148 als Kennung mit beiden Quellenkennungen, nicht als Satz.
+    assert sources["provenance_warning"] == {
+        "code": "provenance_mismatch",
+        "params": {"stamped": provenance, "running": backups["fingerprint"]},
+    }
     assert backups["fingerprint"] != provenance
 
 
 @pytest.mark.parametrize(
     ("content", "expected"),
     [
-        pytest.param('{"backup": null, "failed": "kaputt"}', (None, "kaputt"), id="ohne-namen"),
-        pytest.param("{kein json", (None, ""), id="unlesbar"),
-        pytest.param("[]", (None, ""), id="falsche-form"),
+        pytest.param(
+            '{"backup": null, "failed": "kaputt"}',
+            (None, ErrorDetail(code="restore_failed", params={"name": ""})),
+            id="ohne-namen",
+        ),
+        pytest.param("{kein json", (None, None), id="unlesbar"),
+        pytest.param("[]", (None, None), id="falsche-form"),
     ],
 )
 def test_ein_unlesbarer_eintrag_erzeugt_keinen_namen(
-    volume: Path, content: str, expected: tuple[str | None, str]
+    volume: Path, content: str, expected: tuple[str | None, ErrorDetail | None]
 ) -> None:
     """`None` ist kein Dateiname: `str(...)` machte aus einem fehlenden Eintrag
     den Text `"None"`, und die Liste kündigte eine Sicherung an, die es nie
-    gab."""
+    gab. Ein Grund ohne lesbare Kennung, etwa ein Text aus der Zeit vor T-148,
+    wird zu `restore_failed`; sein Text erreicht die Antwort nicht."""
     (volume / PENDING_FILENAME).write_text(content, encoding="utf-8")
 
     assert restore_state(str(volume / "stockinfo.db")) == expected
@@ -776,8 +787,9 @@ def test_der_fehlerzustand_ist_ueber_backups_sichtbar(
 
     for body in seen:
         assert body["pending_restore"] is None
-        assert name in body["restore_error"]
-        assert "Zielmedium voll" in body["restore_error"]
+        # Seit T-148 Kennung und Name; der Ausnahmetext bleibt im Protokoll.
+        assert body["restore_error"] == {"code": "restore_failed", "params": {"name": name}}
+        assert "Zielmedium voll" not in json.dumps(body)
     assert not (tmp_path / "stockinfo.db.incoming").exists()
     assert seen[0]["backups"] == seen[1]["backups"], "der zweite Start hat es erneut versucht"
 

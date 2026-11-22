@@ -823,13 +823,15 @@ class SourcesResponse(BaseModel):
     profile: str | None = Field(
         default=None, description="Eingetragenes Profilpaket, sofern eines gilt"
     )
-    provenance_warning: str = Field(
-        default="",
+    provenance_warning: "ErrorDetail | None" = Field(
+        default=None,
         description=(
             "Der Bestand stammt aus einer **anderen** Quellenlage als der "
             "laufenden — etwa nach einem erzwungenen Wiederherstellen. Die "
             "Papiere darin können in einer Form vorliegen, die die laufende "
-            "Kette nicht bedient; leer, solange beides zusammenpasst"
+            "Kette nicht bedient. Kennung `provenance_mismatch` mit "
+            "`params.stamped` und `params.running`; `null`, solange beides "
+            "zusammenpasst"
         ),
     )
     sources: list[SourceEntry]
@@ -1027,57 +1029,66 @@ IDENTITY_CONFLICT_RESPONSE: dict[int | str, dict[str, object]] = {
 
 _INVALID_ISIN_SCHEMA = {"$ref": "#/components/schemas/ErrorDetail"}
 _VALIDATION_SCHEMA = {"$ref": "#/components/schemas/HTTPValidationError"}
-_DETAIL_TEXT_SCHEMA = {
-    "title": "DetailText",
-    "type": "object",
-    # **Pflicht, nicht nur beschrieben.** Ohne `required` erlaubt der Vertrag
-    # `{}` — und sagt damit gerade nicht zu, was diese Variante ausmacht.
-    "required": ["detail"],
-    "properties": {"detail": {"type": "string"}},
-}
 
 
-def invalid_isin_response(
-    *, validation: bool = False, detail_text: bool = False
-) -> dict[int | str, dict[str, object]]:
+def invalid_isin_response(*, validation: bool = False) -> dict[int | str, dict[str, object]]:
     """Die `422`-Zusage eines Weges, der eine ISIN entgegennimmt.
 
     **Ein `422` hat an mehreren Routen mehr als eine gültige Form**, und die
-    Zusage muss alle nennen, die dort wirklich vorkommen. Eine einzelne
-    `ErrorDetail`-Zusage verschwiege die beiden anderen und wäre damit
-    genauso falsch wie die frühere Lage, in der `ErrorDetail` fehlte.
+    Zusage muss alle nennen, die dort wirklich vorkommen:
 
-    Die drei Formen und woher sie kommen:
-
-    * `ErrorDetail` — die ungültige ISIN, aus der gemeinsamen Prüfung. **An
-      jedem dieser Wege möglich**, denn sie ist der Grund, warum diese Zusage
-      überhaupt hier steht.
+    * `ErrorDetail` — die ungültige ISIN aus der gemeinsamen Prüfung, an
+      jedem dieser Wege möglich; dazu jede andere Ablehnung der Route
+      (Zeitfenster, Symbolformat, fehlende Kennung), die seit T-139 dieselbe
+      Form hat.
     * `HTTPValidationError` — FastAPIs eigene Prüfung, wo die Route weitere
       Parameter oder einen Rumpf validiert.
-    * `{"detail": "…"}` — die verbliebenen Fließtext-Ablehnungen der Route
-      (Zeitfenster, Symbolformat, fehlende Kennung). Sie werden hier **nicht**
-      umgebaut, aber auch nicht verschwiegen.
 
     Args:
         validation: Ob die Route zusätzlich FastAPI-Validierung auslösen kann.
-        detail_text: Ob sie eine eigene Fließtext-Ablehnung kennt.
 
     Returns:
         Ein `responses`-Eintrag für genau diese Route.
     """
+    return _rejection_422(
+        "Die Eingabe hat nicht das Format einer ISIN "
+        "(`code: invalid_isin_format`, `params.isin` nennt sie) — der "
+        "Rumpf steht **nicht** unter `detail`. Andere Ablehnungen der "
+        "Route haben dieselbe Form mit eigener Kennung. Wo FastAPI "
+        "zusätzlich prüft, nennt `anyOf` dessen Form mit.",
+        validation=validation,
+    )
+
+
+def invalid_input_response(*, validation: bool = False) -> dict[int | str, dict[str, object]]:
+    """Die `422`-Zusage eines Weges ohne ISIN, etwa mit Symbol oder Zeitfenster.
+
+    Dieselben zwei Formen wie bei `invalid_isin_response`; nur der Anlass ist
+    ein anderer (`invalid_symbol_format`, `invalid_timestamp`,
+    `time_range_reversed`).
+
+    Args:
+        validation: Ob die Route zusätzlich FastAPI-Validierung auslösen kann.
+
+    Returns:
+        Ein `responses`-Eintrag für genau diese Route.
+    """
+    return _rejection_422(
+        "Die Eingabe ist formal falsch; `code` nennt den Grund, etwa "
+        "`invalid_symbol_format` oder `invalid_timestamp`. Wo FastAPI "
+        "zusätzlich prüft, nennt `anyOf` dessen Form mit.",
+        validation=validation,
+    )
+
+
+def _rejection_422(description: str, *, validation: bool) -> dict[int | str, dict[str, object]]:
+    """Der `422`-Eintrag: `ErrorDetail`, mit FastAPI-Prüfung als `anyOf`."""
     schemas: list[dict[str, object]] = [_INVALID_ISIN_SCHEMA]
     if validation:
         schemas.append(_VALIDATION_SCHEMA)
-    if detail_text:
-        schemas.append(_DETAIL_TEXT_SCHEMA)
     return {
         422: {
-            "description": (
-                "Die Eingabe hat nicht das Format einer ISIN "
-                "(`code: invalid_isin_format`, `params.isin` nennt sie) — der "
-                "Rumpf steht **nicht** unter `detail`. Wo weitere Formen "
-                "möglich sind, nennt `anyOf` sie mit."
-            ),
+            "description": description,
             "content": {
                 "application/json": {
                     "schema": schemas[0] if len(schemas) == 1 else {"anyOf": schemas}
@@ -1085,6 +1096,18 @@ def invalid_isin_response(
             },
         }
     }
+
+
+QUOTE_UNAVAILABLE_RESPONSE: dict[int | str, dict[str, object]] = {
+    502: {
+        "model": ErrorDetail,
+        "description": (
+            "Keine Quelle konnte einen Preis feststellen "
+            "(`code: quote_unavailable`, `params.identifier` nennt die Eingabe). "
+            "Auf Kurs-, Historien-, Refresh- und Aufnahmeweg dieselbe Form"
+        ),
+    }
+}
 
 INSTRUMENT_NOT_FOUND_RESPONSE: dict[int | str, dict[str, object]] = {
     404: {
@@ -1201,12 +1224,14 @@ class BackupList(BaseModel):
             "dann ist die laufende Datenbank noch die alte"
         ),
     )
-    restore_error: str = Field(
-        default="",
+    restore_error: ErrorDetail | None = Field(
+        default=None,
         description=(
-            "Warum der Tausch beim letzten Start scheiterte. Steht hier etwas, "
-            "wird **nicht** erneut versucht: Derselbe Grund träfe beim nächsten "
-            "Start wieder zu. Eine neue Anforderung löst den Zustand ab"
+            "Warum der Tausch beim letzten Start scheiterte, als Kennung mit "
+            "`params.name` (`backup_*` oder `restore_failed`; den Text nennt "
+            "das Serverprotokoll). Steht hier etwas, wird **nicht** erneut "
+            "versucht: Derselbe Grund träfe beim nächsten Start wieder zu. "
+            "Eine neue Anforderung löst den Zustand ab"
         ),
     )
     keep: int = Field(
@@ -1221,8 +1246,11 @@ class RestoreAccepted(BaseModel):
     **Der Dienst startet sich nicht selbst neu.** Ein Prozess, der seinen
     Lebenszyklus an der HTTP-Grenze übernimmt, entzieht ihn dem Container, der
     ihn führt. Die Antwort sagt, was noch fehlt, statt es zu tun.
+
+    `restart_required` ist diese Aussage. Bis T-148 stand daneben ein
+    deutscher Satz in `detail`, der dasselbe sagte; den Satz bildet das UI
+    (`backups.pending` mit dem Namen aus `GET /backups`).
     """
 
     backup: BackupEntry
     restart_required: bool = True
-    detail: str = Field(description="Klartext: der Neustart steht noch aus")

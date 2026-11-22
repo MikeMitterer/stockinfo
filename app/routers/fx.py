@@ -4,10 +4,10 @@ import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-from fastapi.responses import JSONResponse
 
 from app.container import get_fx_service
 from app.models import ErrorDetail, FxRate
+from app.routers.api_error import ApiError
 from app.services.fx_service import (
     CachedFxService,
     FxPairNotFoundError,
@@ -24,12 +24,6 @@ REASON_INVALID_CURRENCY = "invalid_currency_code"
 REASON_PAIR_NOT_FOUND = "fx_pair_not_found"
 REASON_FX_UNAVAILABLE = "fx_source_unavailable"
 
-
-def _error(status: int, code: str, **params: str) -> JSONResponse:
-    """Eine Fehlerantwort mit Kennung statt Fließtext."""
-    return JSONResponse(
-        status_code=status, content=ErrorDetail(code=code, params=params).model_dump()
-    )
 
 FxDep = Annotated[CachedFxService, Depends(get_fx_service)]
 _CURRENCY = re.compile(r"^[A-Za-z]{3}$")
@@ -56,14 +50,11 @@ def fx(service: FxDep, base: str, quote: str):
     gemacht hat.
     """
     if not _CURRENCY.match(base) or not _CURRENCY.match(quote):
-        return _error(422, REASON_INVALID_CURRENCY, base=base, quote=quote)
+        raise ApiError(422, REASON_INVALID_CURRENCY, {"base": base, "quote": quote})
+    pair = {"base": base.upper(), "quote": quote.upper()}
     try:
         return service.get_rate(base, quote)
-    except FxPairNotFoundError:
-        return _error(
-            404, REASON_PAIR_NOT_FOUND, base=base.upper(), quote=quote.upper()
-        )
-    except FxUnavailableError:
-        return _error(
-            502, REASON_FX_UNAVAILABLE, base=base.upper(), quote=quote.upper()
-        )
+    except FxPairNotFoundError as exc:
+        raise ApiError(404, REASON_PAIR_NOT_FOUND, pair) from exc
+    except FxUnavailableError as exc:
+        raise ApiError(502, REASON_FX_UNAVAILABLE, pair) from exc
