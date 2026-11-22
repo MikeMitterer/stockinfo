@@ -77,8 +77,9 @@ installed commit differs from the pin, even if the package version stayed
 the same. Test targets do not set anything up themselves: after such a change
 they stop and ask for `make setup`. `make info` shows whether the tools are
 current. `make clean` removes what setup, tests and builds created in the
-checkout (`.venv`, dashboard packages, `.tools/`, caches); `.env`, `data/`
-and the build record in `docker/` stay.
+checkout (`.venv`, dashboard packages, `.tools/`, caches, and `__pycache__`
+and `*.egg-info` in `app/`, `tests/`, `scripts/` and `plugin_api/`); `.env`,
+everything in `data/` and the build record in `docker/` stay.
 
 `make dev-up` runs both in the background via
 [overmind](https://github.com/DarthSim/overmind) (needs overmind and tmux).
@@ -302,11 +303,13 @@ make down          # stop & remove
 make docker-logs   # follow logs
 ```
 
-`make build-check` starts the last built image the way a user without a clone
-does: a throwaway container on a free port on `127.0.0.1`, data in an
+`make build-check` starts the image recorded by the last `make build` (by its
+image ID, so a tag moved since then does not count) the way a user without a
+clone does: a throwaway container on a free port on `127.0.0.1`, data in an
 anonymous volume, no refresh on start. It passes when `GET /health` reports
-`ok` within 30 seconds and `/` serves the dashboard, and it removes the
-container either way. It never pulls an image from a registry. Nothing is
+`ok` within 30 seconds in total and `/` serves the dashboard. The container
+is removed when the check ends, also when a step fails. It never pulls an
+image from a registry. Nothing is
 installed on the host: the image is the package, started with `docker run`,
 Compose or the Unraid template.
 

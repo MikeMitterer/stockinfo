@@ -369,38 +369,49 @@ build() {
 
 # check — Das zuletzt gebaute Image starten, wie es ein User ohne Klon tut, und prüfen
 #
-#   Nur das lokal gebaute Image, nie eines aus der Registry (--pull never).
+#   Geprüft wird das Image mit der beim Build aufgezeichneten ID (Zeile 3 von TAGFILE),
+#   nicht der Tag-Name: Ein später neu belegter Tag bestünde sonst die Prüfung für ein
+#   anderes Image. Nur lokal, nie aus der Registry (--pull never).
 #   Wegwerf-Container: Daten in einem anonymen Volume, das mit dem Container verschwindet,
 #   ohne Aktualisierung beim Start (kein Netz nötig), Port nur an 127.0.0.1 und frei
 #   gewählt. Geprüft wird, dass GET /health "ok" meldet und / das Dashboard ausliefert.
-#   Der Container wird in jedem Fall entfernt.
+#   Der Container wird beim Verlassen des Skripts entfernt (EXIT-Trap), auch wenn ein
+#   Schritt unter set -e abbricht.
 #
 check() {
-    local LAST_TAG CONTAINER_ID HOST_PORT HEALTH PAGE _ATTEMPT
+    local LAST_TAG SAVED_IMAGE_ID CONTAINER_ID HOST_PORT HEALTH="" PAGE
     LAST_TAG=$(loadLastBuildTag) || exit 1
-    local -r CHECK_IMAGE="${NAMESPACE}/${NAME}:${LAST_TAG}"
+    SAVED_IMAGE_ID=$(sed -n '3p' "${TAGFILE}")
+    if [[ ! "${SAVED_IMAGE_ID}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+        echo -e "${RED}✗ Prüfung abgebrochen:${NC} Build-Nachweis ohne Image-ID." >&2
+        echo -e "${YELLOW}Neu bauen:${NC} make build" >&2
+        return 1
+    fi
+    local -r CHECK_IMAGE="${NAMESPACE}/${NAME}:${LAST_TAG} (${SAVED_IMAGE_ID:7:12})"
     CONTAINER_ID=$(docker run -d --rm --pull never -p 127.0.0.1::8000 --mount type=volume,target=/data \
-        -e REFRESH_ON_START=false "${CHECK_IMAGE}") || {
+        -e REFRESH_ON_START=false "${SAVED_IMAGE_ID}") || {
         echo -e "${RED}✗ Prüfung fehlgeschlagen:${NC} ${CHECK_IMAGE} startet nicht." >&2
+        echo -e "${YELLOW}Neu bauen:${NC} make build" >&2
         return 1
     }
     # shellcheck disable=SC2064  # CONTAINER_ID jetzt einsetzen, nicht beim Auslösen
-    trap "docker rm -f '${CONTAINER_ID}' >/dev/null 2>&1" RETURN
+    trap "docker rm -f '${CONTAINER_ID}' >/dev/null 2>&1" EXIT
     HOST_PORT=$(docker port "${CONTAINER_ID}" 8000/tcp | head -n 1)
     HOST_PORT="${HOST_PORT##*:}"
-    for _ATTEMPT in $(seq 1 30); do
-        HEALTH=$(curl -s --max-time 2 "http://127.0.0.1:${HOST_PORT}/health") &&
-            [[ "${HEALTH}" == *'"status":"ok"'* ]] && break
+    # Wartegrenze 30 s insgesamt, auch wenn ein Abruf hängt (je höchstens 2 s).
+    local -r DEADLINE=$((SECONDS + 30))
+    while (( SECONDS < DEADLINE )); do
+        HEALTH=$(curl -s --max-time 2 "http://127.0.0.1:${HOST_PORT}/health") || HEALTH=""
+        [[ "${HEALTH}" == *'"status":"ok"'* ]] && break
         HEALTH=""
         sleep 1
     done
     if [[ -z "${HEALTH}" ]]; then
-        echo -e "${RED}✗ Prüfung fehlgeschlagen:${NC} ${CHECK_IMAGE} meldet nach 30 s kein /health ok." >&2
-        echo -e "${YELLOW}Log ansehen:${NC} docker logs ${CONTAINER_ID}" >&2
-        docker logs --tail 20 "${CONTAINER_ID}" >&2
+        echo -e "${RED}✗ Prüfung fehlgeschlagen:${NC} ${CHECK_IMAGE} meldet nach 30 s kein /health ok. Letzte Logzeilen:" >&2
+        docker logs --tail 20 "${CONTAINER_ID}" >&2 || true
         return 1
     fi
-    PAGE=$(curl -s --max-time 5 "http://127.0.0.1:${HOST_PORT}/")
+    PAGE=$(curl -s --max-time 5 "http://127.0.0.1:${HOST_PORT}/") || PAGE=""
     if [[ "${PAGE}" != *'<div id="app"'* ]]; then
         echo -e "${RED}✗ Prüfung fehlgeschlagen:${NC} ${CHECK_IMAGE} liefert unter / kein Dashboard." >&2
         return 1

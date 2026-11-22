@@ -245,16 +245,17 @@ $(TOOLS_STAMP): .dev-tools.conf.sh
 require-setup: precheck
 	@source "$${BASH_LIBS}/make.lib.sh" && requireMakeSetup --hooks .githooks --make "$(MAKE)" $(SETUP_STAMPS)
 
-# Entfernt nur, was setup, Tests und Builds im Checkout erzeugen. .env, data/ und der
-# Build-Nachweis docker/.last-build-tag bleiben: Sie sind Arbeitsstand, kein Erzeugnis.
-# __pycache__ und *.egg-info ohne .worktrees/ und _tickets/, die eigene Checkouts sind.
-CLEAN_PATHS := $(VENV) $(TOOLS_DIR) dashboard/node_modules dashboard/tsconfig.tsbuildinfo \
-	.pytest_cache .ruff_cache plugin_api/.pytest_cache .tmp build dist
+# Entfernt nur, was setup, Tests und Builds im Checkout erzeugen. Die Pfade stehen fest im
+# Rezept, nicht in einer Variable, die ein Make-Argument überschreiben könnte (VENV,
+# TOOLS_DIR). __pycache__ und *.egg-info nur in den Code-Ordnern, nie im Projekt-Root:
+# Umgebungsdatei, data/ samt Plugin-Daten und der Build-Nachweis docker/.last-build-tag sind
+# Arbeitsstand, kein Erzeugnis; .worktrees/ und _tickets/ sind eigene Checkouts.
 .PHONY: clean
 clean: ## Checkout zurückgesetzt: .venv, Dashboard-Pakete, .tools/, Caches weg
-	@rm -rf -- $(CLEAN_PATHS)
-	@find . \( -path ./.worktrees -o -path ./_tickets -o -path ./.git \) -prune -o \
-		-type d \( -name __pycache__ -o -name '*.egg-info' \) -prune -exec rm -rf -- {} +
+	@rm -rf -- .venv .tools dashboard/node_modules dashboard/tsconfig.tsbuildinfo \
+		.pytest_cache .ruff_cache plugin_api/.pytest_cache .tmp build dist
+	@find app tests scripts plugin_api -type d \( -name __pycache__ -o -name '*.egg-info' \) \
+		-prune -exec rm -rf -- {} +
 	@echo "  ✓ Checkout zurückgesetzt; weiter mit make setup"
 
 # ─── Status ───────────────────────────────────────────────────────────────────
