@@ -18,6 +18,8 @@ from plugin_api.examples.yaml_file import YamlFileSource
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/sources-profile.sh"
 VOLUME_HELPER = ROOT / "scripts/sources-profile-volume.py"
+# dev-ports aus .tools/ dieses Checkouts (make setup); es nennt den lokalen Port.
+DEV_PORTS_DIR = ROOT / ".tools/bin"
 
 
 def test_docker_vorgaben_passen_zu_make_up(tmp_path):
@@ -41,6 +43,10 @@ def test_docker_vorgaben_passen_zu_make_up(tmp_path):
     assert f"{image_name.group(1)}:latest" in result.stdout
 
 
+@pytest.mark.skipif(
+    not (DEV_PORTS_DIR / "dev-ports").exists(),
+    reason="dev-ports (ProjectTools) nicht in .tools/: make setup",
+)
 @pytest.mark.parametrize(
     ("target", "expected_port"),
     [("local", "18766"), ("docker", "8123")],
@@ -49,16 +55,17 @@ def test_docker_vorgaben_passen_zu_make_up(tmp_path):
 def test_show_fragt_den_server_auf_dem_port_seines_ziels(
     tmp_path: Path, target: str, expected_port: str
 ) -> None:
-    """Lokal gilt BACKEND_PORT aus `.dev-ports.conf.sh`, im Container PORT.
+    """Lokal gilt der Port von `backend` in Procfile.dev (über dev-ports), im Container PORT.
 
     Beide Werte weichen absichtlich von 8000 und voneinander ab: Mit der
     Vorgabe stimmten zwei Quellen zufällig überein, und der Test bewiese nichts.
+    Das echte dev-ports liest das Procfile, kein Nachbau.
     """
     project = tmp_path / "project"
     (project / "scripts").mkdir(parents=True)
     shutil.copy(SCRIPT, project / "scripts" / SCRIPT.name)
-    (project / ".dev-ports.conf.sh").write_text(
-        'DASHBOARD_PORT=15174\nBACKEND_PORT=18766\nPORTS=("$DASHBOARD_PORT" "$BACKEND_PORT")\n'
+    (project / "Procfile.dev").write_text(
+        "backend: env PORT=18766 uvicorn app.main:app --port 18766\n"
     )
     executable_dir = tmp_path / "bin"
     executable_dir.mkdir()
@@ -77,7 +84,7 @@ def test_show_fragt_den_server_auf_dem_port_seines_ziels(
 
     environment = {
         **os.environ,
-        "PATH": f"{executable_dir}{os.pathsep}{os.environ['PATH']}",
+        "PATH": os.pathsep.join([str(executable_dir), str(DEV_PORTS_DIR), os.environ["PATH"]]),
         "PORT": "8123",
         "DATABASE_PATH": str(tmp_path / "data" / "stockinfo.db"),
     }

@@ -193,7 +193,7 @@ showInfo() {
         echo -e "    ${YELLOW}Mount ${NC} = ${BLUE}${DOCKER_DATA_DIR}${NC} → ${BLUE}${CONTAINER_DATA_DIR}${NC}"
     fi
     [[ "${TARGET}" != "docker" ]] || echo -e "    ${YELLOW}Cont. ${NC} = ${BLUE}${CONTAINER_NAME}${NC}"
-    echo -e "    ${YELLOW}Port  ${NC} = ${BLUE}${SERVER_PORT}${NC}"
+    echo -e "    ${YELLOW}Port  ${NC} = ${BLUE}${SERVER_PORT:-${NO_SERVER_PORT}}${NC}"
     echo
 }
 
@@ -457,6 +457,10 @@ showFileProfile() {
 # längst umgeschaltet sein — gelesen wird sie beim Start.
 showLiveProfile() {
     local _ANSWER
+    if [[ -z "${BASE_URL}" ]]; then
+        echo -e "      Server: ${YELLOW}Port ${NO_SERVER_PORT}${NC}"
+        return 0
+    fi
     _ANSWER="$(curl -s --max-time 3 "${BASE_URL}/sources" 2>/dev/null)"
     if [[ -z "${_ANSWER}" ]]; then
         echo -e "      Server: ${YELLOW}antwortet nicht auf ${BASE_URL}${NC}"
@@ -623,16 +627,19 @@ LOCAL_DATA_DIR="$(absolutePath "${LOCAL_DATA_DIR}")"
 DOCKER_DATA_DIR="$(absolutePath "${DOCKER_DATA_DIR}")"
 
 # Der Port des laufenden Servers, nur für die Lebendabfrage; auch er hängt an
-# `--target`. Lokal ist es der Dev-Server von `make dev-up` auf BACKEND_PORT
-# aus `.dev-ports.conf.sh`, im Container der Host-Port PORT von `make up`.
+# `--target`. Im Container ist es der Host-Port PORT von `make up`. Lokal ist es
+# der Dev-Server von `make dev-up`; seinen Port nennt dev-ports aus ProjectTools
+# (`backend` in Procfile.dev), zuerst das aus .tools/ dieses Checkouts. Ohne
+# dev-ports bleibt er unbekannt, und die Lebendabfrage nennt den Grund.
+readonly NO_SERVER_PORT="unbekannt (dev-ports fehlt: make setup)"
 if [[ "${TARGET}" == "docker" ]]; then
     SERVER_PORT="${PORT:-8000}"
 else
-    # shellcheck source=/dev/null
-    SERVER_PORT="$(. "${PROJECT_ROOT}/.dev-ports.conf.sh" && printf '%s' "${BACKEND_PORT}")" || exit 1
+    SERVER_PORT="$(cd "${PROJECT_ROOT}" && PATH="${PROJECT_ROOT}/.tools/bin:${PATH}" \
+        dev-ports --port-of backend 2>/dev/null | grep -xE '[0-9]+')" || SERVER_PORT=""
 fi
 readonly SERVER_PORT
-readonly BASE_URL="http://127.0.0.1:${SERVER_PORT}"
+readonly BASE_URL="${SERVER_PORT:+http://127.0.0.1:${SERVER_PORT}}"
 case "${ACTION}" in
     online) ASSETS_NAME="assets-fallback.yaml"; SAMPLE_SOURCES="${PROJECT_ROOT}/examples/sources-fallback.yaml" ;;
     yaml) ASSETS_NAME="assets-standalone.yaml"; SAMPLE_SOURCES="${PROJECT_ROOT}/examples/sources-standalone.yaml" ;;
