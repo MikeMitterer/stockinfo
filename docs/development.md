@@ -38,8 +38,10 @@ Installing and running the finished container is described in the
 worktree has its own copy. `make help`, `make info`, `make hints` and the
 status lines of the other targets come from BashLib and use your CLITheme
 theme (`clitheme use NAME`). `make test`, `make check`, `make docs-check`,
-`make status`, `make hints` and `make changelog` need ProjectTools in
-`.tools/`; without it they stop and name the next step. `make setup`
+`make status` and `make changelog` need ProjectTools in `.tools/`; without
+it they stop and name the next step. Without ProjectTools, `make hints`
+shows `repo-info fehlt` instead of the repository and the last release and
+takes the ports from `.dev-ports.conf.sh`. `make setup`
 installs BashLib; `help`, `info`, `hints`, `dev-up`, `dev-down`, `up`,
 `down`, `build`, `push`, `version`, `tags` and `tag-*` need it.
 All of them except `help`, `info` and `hints` stop with `make setup` before
