@@ -24,12 +24,13 @@ def _bash_libs() -> str:
 
 BASH_LIBS = _bash_libs()
 
-# Ein Release braucht BashLib und changelog aus ProjectTools, beides
-# Maintainer-Werkzeuge. Ohne sie gilt der Test als übersprungen statt als Fehler.
+# Ein Release braucht BashLib sowie tag-version und changelog aus ProjectTools
+# (make setup). Ohne sie gilt der Test als übersprungen statt als Fehler.
 requires_release_tools = pytest.mark.skipif(
     not (BASH_LIBS and (Path(BASH_LIBS) / "version.lib.sh").is_file())
-    or shutil.which("changelog") is None,
-    reason="BashLib oder changelog (ProjectTools) nicht installiert",
+    or shutil.which("changelog") is None
+    or shutil.which("tag-version") is None,
+    reason="BashLib, tag-version oder changelog (ProjectTools) nicht installiert",
 )
 
 
@@ -43,7 +44,9 @@ def _git(repository: Path, *arguments: str) -> str:
 
 
 def _release_sandbox(tmp_path: Path) -> tuple[Path, Path]:
-    """Repo mit dem echten Makefile, erstem Release und einem Bare-Remote als origin.
+    """Repo mit dem echten Makefile, erstem Release, Stufe develop und Bare-Remote als origin.
+
+    develop steht wie nach einer Abnahme auf demselben Commit wie master.
 
     Returns:
         Arbeitskopie und Remote.
@@ -70,12 +73,13 @@ def _release_sandbox(tmp_path: Path) -> tuple[Path, Path]:
     _git(repository, "remote", "add", "origin", str(remote))
     _git(repository, "push", "-q", "-u", "origin", "master", "--follow-tags")
     _git(repository, "commit", "-q", "--allow-empty", "-m", "fix: kleine Korrektur")
+    _git(repository, "branch", "develop")
     return repository, remote
 
 
 @requires_release_tools
 def test_tag_patch_committet_und_taggt_nur_lokal(tmp_path: Path) -> None:
-    """Versions-Commit, Tag und Changelog-Commit entstehen, der Remote bleibt gleich."""
+    """Versions-Commit, Tag und Changelog-Commit über tag-version; develop folgt, Remote bleibt."""
     repository, remote = _release_sandbox(tmp_path)
     remote_before = _git(remote, "show-ref")
 
@@ -99,3 +103,4 @@ def test_tag_patch_committet_und_taggt_nur_lokal(tmp_path: Path) -> None:
     assert new_tag.startswith("v0.1.1+"), new_tag
     assert 'version = "0.1.1"' in (repository / "pyproject.toml").read_text()
     assert f"## {new_tag} " in (repository / "CHANGELOG.md").read_text()
+    assert _git(repository, "rev-parse", "develop") == _git(repository, "rev-parse", "HEAD")

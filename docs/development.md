@@ -38,13 +38,13 @@ Installing and running the finished container is described in the
 worktree has its own copy. `make help`, `make info`, `make hints` and the
 status lines of the other targets come from BashLib and use your CLITheme
 theme (`clitheme use NAME`). `make test`, `make check`, `make docs-check`,
-`make status`, `make changelog`, `make dev-up` and `make dev-down` need
-ProjectTools in `.tools/`; without it they stop and name the next step
-before they start or stop anything. Without ProjectTools, `make hints` shows
+`make status`, `make changelog`, `make dev-up`, `make dev-down`, `make push`
+and `make tag-*` need ProjectTools in `.tools/`; without it they stop and
+name the next step before they start or stop anything. Without ProjectTools, `make hints` shows
 `repo-info fehlt` instead of the repository and the last release, and
 `dev-ports fehlt` instead of the local addresses. `make setup`
 installs BashLib; `help`, `info`, `hints`, `dev-up`, `dev-down`, `up`,
-`down`, `build`, `push`, `version`, `tags` and `tag-*` need it.
+`down`, `build`, `build-check`, `push`, `version`, `tags` and `tag-*` need it.
 All of them except `help`, `info` and `hints` stop with `make setup` before
 they start or stop anything. To build the
 image without these tools, run this instead of `make build`:
@@ -77,7 +77,10 @@ pinned to a Git commit in `requirements.txt` is then reinstalled when the
 installed commit differs from the pin, even if the package version stayed
 the same. Test targets do not set anything up themselves: after such a change
 they stop and ask for `make setup`. `make info` shows whether the tools are
-current.
+current. `make clean` removes what setup, tests and builds created in the
+checkout (`.venv`, dashboard packages, `.tools/`, caches, and `__pycache__`
+and `*.egg-info` in `app/`, `tests/`, `scripts/` and `plugin_api/`); `.env`,
+everything in `data/` and the build record in `docker/` stay.
 
 `make dev-up` runs both in the background via
 [overmind](https://github.com/DarthSim/overmind) (needs overmind and tmux).
@@ -304,11 +307,22 @@ Backend **and** dashboard run in a single image on one port. Built with
 `docker/build.sh` (ecosystem convention, versioned via `gitDockerTag`):
 
 ```bash
-make build     # build the image (docker/build.sh --build)
-make up        # start the container → http://localhost:8000/
-make down      # stop & remove
+make build         # build the image (docker/build.sh --build)
+make build-check   # start the built image once and check it (docker/build.sh --check)
+make up            # start the container → http://localhost:8000/
+make down          # stop & remove
 make docker-logs   # follow logs
 ```
+
+`make build-check` starts the image recorded by the last `make build` (by its
+image ID, so a tag moved since then does not count) the way a user without a
+clone does: a throwaway container on a free port on `127.0.0.1`, data in an
+anonymous volume, no refresh on start. It passes when `GET /health` reports
+`ok` within 30 seconds in total and `/` serves the dashboard. The container
+is removed when the check ends, also when a step fails. It never pulls an
+image from a registry. Nothing is
+installed on the host: the image is the package, started with `docker run`,
+Compose or the Unraid template.
 
 On ARM Macs, the dashboard build runs natively; the final image still uses the
 platform selected by `PLATFORM` (`linux/amd64` by default for Unraid;
@@ -379,12 +393,13 @@ Set `DOCKER_PW_FILE` to a Docker Hub token file outside the repository
 Read, Write, Delete permissions. The script checks README and token-file
 readability first; only Docker Hub receives the credentials.
 
-The upload script comes from a ProjectTools checkout: `PROJECT_TOOLS` points
-to its `src` folder. Preview without Docker Hub credentials (initial setup may
+The upload is the `dockerhub-readme` command from ProjectTools, which
+`make setup` installs into `.tools/bin`. Without it, `make push` stops before
+pushing the image. Preview without Docker Hub credentials (initial setup may
 download packages):
 
 ```bash
-"$PROJECT_TOOLS/bash/dockerhub-readme.sh" --preview
+.tools/bin/dockerhub-readme --preview
 # Output: docker/preview/README.md
 ```
 
@@ -395,7 +410,7 @@ If the README upload fails, `make push` fails too, but the image is already
 published. Retry only the description with:
 
 ```bash
-"$PROJECT_TOOLS/bash/dockerhub-readme.sh" --publish
+.tools/bin/dockerhub-readme --publish
 ```
 
 Defaults: repository from project settings, branch `master`. Override with
@@ -461,19 +476,24 @@ tags and Conventional Commits. It does not commit or push. The generated file
 is replaced on the next run; its content comes from commit and release tag
 messages.
 
-`make tag-major`, `make tag-minor` and `make tag-patch` bump the version,
-commit and tag it, then generate and commit the changelog. Everything stays
-local; publish the branch and the release tag yourself with
-`git push --follow-tags`. Pass `MSG="Release summary"` for the release tag
-message. A release needs a clean working tree, BashLib and ProjectTools
-(`make setup`).
+`make tag-major`, `make tag-minor` and `make tag-patch` run `tag-version`
+from ProjectTools: it bumps the version, commits and tags it; then the
+changelog is generated and committed, and `develop` is fast-forwarded to
+`master`. Everything stays local; publish with
+`git push --follow-tags origin master develop`. Pass `MSG="Release summary"`
+for the release tag message.
 
-If the changelog step fails after the tag, fix the cause and retry without
+A release runs on `master` with no uncommitted changes to tracked files, and
+stops before changing anything if `develop` has commits that are not on
+`master` yet (tickets not accepted); it names them. It needs BashLib and
+ProjectTools (`make setup`).
+
+If the changelog step fails after the tag, fix the cause and finish without
 bumping the version again:
 
 ```bash
-make changelog
-git commit -m "docs(changelog): update release history" -- CHANGELOG.md
+LANGUAGE=en .tools/bin/changelog --commit
+.tools/bin/tag-version --fast-forward
 ```
 
 [↑ Contents](#contents)

@@ -152,7 +152,6 @@ info: ## Projektpfade, Ports und Werkzeugstand anzeigen
 	@printMakeValue WORKSPACE        "$${WORKSPACE}"
 	@printMakeValue VENV             '$(VENV)'
 	@printMakeValue BASH_LIBS        "$${BASH_LIBS:-nicht gefunden (make setup)}"
-	@printMakeValue PROJECT_TOOLS    "$${PROJECT_TOOLS:-nicht gesetzt (nur make push)}"
 	@printMakeValue "Dev-Ports"      '$(if $(BACKEND_PORT),$(DASHBOARD_PORT) (Dashboard) · $(BACKEND_PORT) (Backend),$(NO_DEV_PORTS))'
 	@printMakeValue "PORT (make up)" "$${PORT}"
 	@printMakeHeading "Werkzeuge (.dev-tools.conf.sh)"
@@ -249,6 +248,19 @@ $(TOOLS_STAMP): .dev-tools.conf.sh
 require-setup: precheck
 	@source "$${BASH_LIBS}/make.lib.sh" && requireMakeSetup --hooks .githooks --make "$(MAKE)" $(SETUP_STAMPS)
 
+# Entfernt nur, was setup, Tests und Builds im Checkout erzeugen. Die Pfade stehen fest im
+# Rezept, nicht in einer Variable, die ein Make-Argument überschreiben könnte (VENV,
+# TOOLS_DIR). __pycache__ und *.egg-info nur in den Code-Ordnern, nie im Projekt-Root:
+# Umgebungsdatei, data/ samt Plugin-Daten und der Build-Nachweis docker/.last-build-tag sind
+# Arbeitsstand, kein Erzeugnis; .worktrees/ und _tickets/ sind eigene Checkouts.
+.PHONY: clean
+clean: ## Checkout zurückgesetzt: .venv, Dashboard-Pakete, .tools/, Caches weg
+	@rm -rf -- .venv .tools dashboard/node_modules dashboard/tsconfig.tsbuildinfo \
+		.pytest_cache .ruff_cache plugin_api/.pytest_cache .tmp build dist
+	@find app tests scripts plugin_api -type d \( -name __pycache__ -o -name '*.egg-info' \) \
+		-prune -exec rm -rf -- {} +
+	@echo "  ✓ Checkout zurückgesetzt; weiter mit make setup"
+
 # ─── Status ───────────────────────────────────────────────────────────────────
 
 ##@ Status
@@ -307,7 +319,7 @@ docs-check: require-tools ## Nutzerdoku gegen das Projekt geprüft (Links, Befeh
 # echte Online-Anbieter und bleiben bei `test`. Dazu Ruff und die Typprüfung
 # des Dashboards, die `test` nicht enthält.
 .PHONY: check
-check: docs-check test-plugin-api test-example test-dashboard quality ## Alles ohne Netz geprüft: Doku, Tests ohne Online-Tests, Grenzen, Typen
+check: docs-check test-plugin-api test-example test-dashboard quality ## Alles ohne Netz geprüft: Doku, Tests (ohne Online), Grenzen, Typen
 	$(PYTEST) -q -m "not integration"
 	cd dashboard && npx vue-tsc -b
 
@@ -397,8 +409,14 @@ docker-logs: ## Container-Logs live verfolgen
 build: precheck ## Geprüftes Image für PLATFORM=x86|arm (Vorgabe x86)
 	docker/build.sh --build "$${PLATFORM}"
 
+# Startet das zuletzt gebaute Image wie ein User ohne Klon (Wegwerf-Container, freier Port an
+# 127.0.0.1) und prüft /health und das Dashboard; Ablauf in docker/build.sh --check.
+.PHONY: build-check
+build-check: precheck ## Gebautes Image startet, /health ok, Dashboard unter /
+	docker/build.sh --check
+
 .PHONY: push
-push: precheck ## Image und docker/README.md veröffentlicht (TARGET=ghcr|dockerhub|ecr)
+push: require-tools ## Image und docker/README.md veröffentlicht (TARGET=ghcr|dockerhub|ecr)
 	docker/build.sh --push
 
 # ─── Versionierung ────────────────────────────────────────────────────────────
@@ -417,35 +435,34 @@ tags: precheck ## Letzte 10 Release-Tags mit Nachricht anzeigen
 	@source "$${BASH_LIBS}/make.lib.sh" && showReleaseTags 10
 	@echo
 
-# Der Changelog ist englisch wie die übrige Doku; LANGUAGE=en gilt auch auf deutschem Locale.
-CHANGELOG_GENERATE := LANGUAGE=en changelog --generate
+# Sprache von CHANGELOG.md, unabhängig von der Locale der Shell (changelog folgt sonst LANG).
+# Englisch wie die übrige Doku. Überschreiben: make … CHANGELOG_LANGUAGE=de
+CHANGELOG_LANGUAGE ?= en
+export CHANGELOG_LANGUAGE
 
 .PHONY: changelog
 changelog: require-tools ## CHANGELOG.md aus Release-Tags erstellen (ohne Commit)
-	@$(CHANGELOG_GENERATE)
+	@LANGUAGE="$${CHANGELOG_LANGUAGE}" changelog --generate
 
-# $(call release,major|minor|patch): bumpen, taggen und CHANGELOG.md committen, alles
-# nur lokal; veröffentlicht wird mit git push --follow-tags. changelog --publish pusht
-# selbst, darum --generate und ein eigener Commit (bis ProjectTools T-20).
-define release
-	@test -z "$$(git status --porcelain)" || { \
-		$(STATUS) "✗" "Release abgebrochen: Arbeitsbaum nicht sauber (git status)" ERR >&2; exit 1; }
-	@source "$${BASH_LIBS}/version.lib.sh" && semVerBump $(1) auto "" "$${MSG:-}"
-	@$(CHANGELOG_GENERATE)
-	@git add -- CHANGELOG.md
-	@git diff --cached --quiet -- CHANGELOG.md || git commit -q -m "docs(changelog): update release history" -- CHANGELOG.md
-endef
+# MSG von der Kommandozeile unausgewertet; sonst macht Make aus $HOME oder $(…) schon beim
+# Export an das Rezept etwas anderes. Im Rezept nur als "$${MSG:-}".
+override MSG := $(value MSG)
+export MSG
 
-# require-tools (mit precheck): ohne ProjectTools oder BashLib bricht ein Release vor dem
-# Bump ab, nicht erst nach dem Tag.
-.PHONY: tag-major
-tag-major: require-tools ## Major-Release {major}, inkompatible Änderung  [MSG="..."]
-	$(call release,major)
+# Je Target eine Hilfezeile; showMakeTargets liest nur Zeilen mit einem Target.
+.PHONY: tag-major tag-minor tag-patch
+tag-major: ## Major-Release {major}, inkompatible Änderung  [MSG="..."]
+tag-minor: ## Minor-Release {minor}, neue Funktion  [MSG="..."]
+tag-patch: ## Patch-Release {patch}, Fehlerbehebung  [MSG="..."]
 
-.PHONY: tag-minor
-tag-minor: require-tools ## Minor-Release {minor}, neue Funktion  [MSG="..."]
-	$(call release,minor)
-
-.PHONY: tag-patch
-tag-patch: require-tools ## Patch-Release {patch}, Fehlerbehebung  [MSG="..."]
-	$(call release,patch)
+# Version heben und lokal taggen, CHANGELOG.md committen, die Stufe develop auf master
+# vorspulen; alles nur lokal, veröffentlicht wird mit git push --follow-tags. Prüfung und
+# Ablauf stehen nur in tag-version (ProjectTools): Es bricht ab, solange develop Commits hat,
+# die noch nicht auf master sind (nicht abgenommene Tickets). changelog nennt bei Erfolg den
+# Pfad der Datei, darum ohne stdout; Fehler kommen über stderr.
+# require-tools vor precheck: ohne ProjectTools bricht ein Release vor dem Bump ab, nicht erst
+# nach dem Tag.
+tag-major tag-minor tag-patch: require-tools precheck
+	@tag-version "$(patsubst tag-%,%,$@)" --message "$${MSG:-}"
+	@LANGUAGE="$${CHANGELOG_LANGUAGE}" changelog --commit >/dev/null
+	@tag-version --fast-forward
