@@ -132,6 +132,7 @@ CODE_VARIABLES=(
 # CONTRACT_PATH (app/contract.py), Pfad des Vertragsartefakts, nur nötig,
 # wenn die App nicht neben contract/ liegt.
 INTERNAL_VARIABLES=(
+    "STATIC_DIR|Ort des gebauten Dashboards im Image (/app/web); Vorgabe und docker/Dockerfile setzen denselben Wert, kein Betreiber stellt ihn ein"
 )
 
 # ─── Dateien, die es geben muss ────────────────────────────────────────────────

@@ -84,8 +84,10 @@ in `.env` apply to the backend.
 
 The ports of the dev stack stand in `.dev-ports.conf.sh`: `DASHBOARD_PORT`
 (default 5173) and `BACKEND_PORT` (default 8000). `Procfile.dev`, the Vite
-proxy, `make hints`, `make dev-down` and `scripts/sources-profile.sh --show`
-all read them from there; to change a port, change it only in that file.
+proxy, `dev-ports` and `scripts/sources-profile.sh --show` read them from
+there; to change a port, change it only in that file. `make info`,
+`make hints` and the address after `make dev-up` ask `dev-ports --port-of`
+for them; without `dev-ports` they read the file themselves.
 `PORT` in `.env` is the host port of `make up`; for the dev backend
 `Procfile.dev` sets it to `BACKEND_PORT`, so `GET /env` shows the port in
 use. If the dashboard port is taken, Vite stops instead of moving to another

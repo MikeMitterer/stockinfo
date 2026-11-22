@@ -60,11 +60,17 @@ PYTEST  := $(VENV)/bin/pytest
 TOOLS_STAMP  := $(TOOLS_DIR)/.installed
 SETUP_STAMPS := $(VENV)/.installed dashboard/node_modules/.installed $(TOOLS_STAMP)
 
-# Ports des Dev-Stacks aus .dev-ports.conf.sh, dieselbe Quelle wie dev-ports. Nur
-# Ziffern werden übernommen; die Werte stehen danach als Zahlen in den Rezepten.
-DEV_PORTS      := $(shell bash -c 'source ./.dev-ports.conf.sh && printf "%s %s" "$$DASHBOARD_PORT" "$$BACKEND_PORT"' 2>/dev/null | grep -xE '[0-9]+ [0-9]+')
-DASHBOARD_PORT := $(word 1,$(DEV_PORTS))
-BACKEND_PORT   := $(word 2,$(DEV_PORTS))
+# Ports des Dev-Stacks nennt dev-ports (--port-of NAME), damit das Makefile weder Procfile.dev
+# noch .dev-ports.conf.sh selbst auslegt. Ohne dev-ports, oder wenn es den Namen nicht kennt,
+# gilt der Wert aus .dev-ports.conf.sh: info, hints und dev-up laufen so auch auf einem
+# frischen Klon. Nur Ziffern werden übernommen; die Werte stehen danach als Zahlen in den
+# Rezepten. Ermittelt erst beim ersten Gebrauch und dann gemerkt, damit die übrigen Targets
+# dev-ports nicht starten. Der erste Gebrauch liegt in info oder hints; deren BASH_ENV gehört
+# nicht in dev-ports und die Config.
+dev_port = $(shell unset BASH_ENV; { command -v dev-ports >/dev/null && dev-ports --port-of $(1) 2>/dev/null || \
+	bash -c 'source ./.dev-ports.conf.sh && printf "%s\n" "$$$(2)"' 2>/dev/null; } | grep -xE '[0-9]+')
+DASHBOARD_PORT = $(eval DASHBOARD_PORT := $$(call dev_port,dashboard,DASHBOARD_PORT))$(DASHBOARD_PORT)
+BACKEND_PORT   = $(eval BACKEND_PORT := $$(call dev_port,backend,BACKEND_PORT))$(BACKEND_PORT)
 
 # Host-Port des Containers bei `make up`, aus .env oder der Umgebung.
 PORT    ?= 8000

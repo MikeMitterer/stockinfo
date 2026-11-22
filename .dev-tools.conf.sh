@@ -18,7 +18,7 @@ DEVTOOLS_SOURCE=git+https://github.com/MikeMitterer/python-devtools.git
 # ProjectTools (docs-check, repo-status, changelog, repo-info, dev-ports).
 PROJECTTOOLS_PACKAGE=mmit-projecttools
 PROJECTTOOLS_LABEL=ProjectTools
-PROJECTTOOLS_TAG=v0.11.0+261118.1922.975db
+PROJECTTOOLS_TAG=v0.12.0+261121.2308.3755c
 PROJECTTOOLS_SOURCE=git+https://github.com/MikeMitterer/bash-ProjectTools.git
 
 # BashLib (make.lib.sh für help, info, hints und Statuszeilen; version, tag-*,
