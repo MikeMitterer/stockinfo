@@ -232,7 +232,7 @@ $(VENV_STAMP): requirements.txt requirements-dev.txt
 	@command -v '$(PYTHON_BOOTSTRAP)' >/dev/null || { echo '  ✗ $(PYTHON_BOOTSTRAP) nicht gefunden: Python $(PYTHON_MIN) installieren oder PYTHON_BOOTSTRAP=<Interpreter> make setup' >&2; exit 1; }
 	@'$(PYTHON_BOOTSTRAP)' -c '$(PYTHON_MIN_CHECK)' || { echo '  ✗ PYTHON_BOOTSTRAP ist zu alt: PYTHON_BOOTSTRAP=python$(PYTHON_MIN) make setup' >&2; exit 1; }
 	@if test -x $(VENV)/bin/python && ! $(VENV)/bin/python -c '$(PYTHON_MIN_CHECK)' 2>/dev/null; then \
-		echo '  ↻ .venv mit Python vor $(PYTHON_MIN) wird neu angelegt'; \
+		echo '  ⚠ .venv mit Python vor $(PYTHON_MIN) wird neu angelegt'; \
 		'$(PYTHON_BOOTSTRAP)' -m venv --clear $(VENV); \
 	fi
 	@test -x $(VENV)/bin/python || '$(PYTHON_BOOTSTRAP)' -m venv $(VENV)
