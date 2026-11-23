@@ -2,6 +2,19 @@
 
 Generated from release tags and Conventional Commits.
 
+## v1.7.1+261123.1146.c5855 — 2026-11-23
+
+Python 3.14 for the development environment, linting and the container image
+
+### Fixes
+
+- Hinweis beim Ersetzen der .venv mit ⚠ wie im Qualitätsprofil (T-152) (`e4268c0`)
+- Interpreter für die .venv liest die Shell, Doku zum Ersetzen (T-152 R1) (`b0b7bdc`)
+
+### Other changes
+
+- Python 3.14 für .venv, requires-python, ruff und Image (T-152) (`c049a5f`)
+
 ## v1.7.0+261122.1139.2f40c — 2026-11-22
 
 Error and diagnostic codes instead of German sentences, background refresh in minutes, quality gates in make check, dev stack ports via dev-ports
