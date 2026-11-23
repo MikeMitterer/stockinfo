@@ -7,7 +7,7 @@ name = "stockinfo-source-us-example"
 version = "0.1.0"
 description = "Example StockInfo source plugin for a single US market"
 license = "MIT"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 
 # The contract package, and nothing else. A plugin that reaches for the host's
 # internals is not a plugin — it is a fork that happens to install.

@@ -10,7 +10,7 @@ name = "stockinfo-plugin-api"
 version = "0.3.0"
 description = "Vertrag für StockInfo-Datenquellen-Plugins"
 license = "MIT"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 # PyYAML traegt das Beispiel-Plugin `yaml-file`. Ein Paket, das eine
 # Bibliothek benutzt und nicht nennt, ist bei einer Fremdinstallation
 # kaputt — und zwar erst beim ersten Laden, nicht beim Installieren.

@@ -19,8 +19,9 @@ Installing and running the finished container is described in the
 
 ## Requirements
 
-- **Python 3.11+** (`make setup` creates the project `.venv`; override the
-  interpreter with `PYTHON_BOOTSTRAP=python3.12 make setup`)
+- **Python 3.14 or newer** (`make setup` creates the project `.venv` with
+  `python3.14` and replaces an existing `.venv` built with an older Python;
+  choose another interpreter with `PYTHON_BOOTSTRAP=python3.15 make setup`)
 - **make** (drives setup and start/stop of the services)
 - **overmind** and **tmux** for `make dev-up` (backend and dashboard together)
 - optional **Docker** (to run the container)
@@ -383,7 +384,7 @@ and stops otherwise; publish it first with `git push --follow-tags`.
 **Docker Hub description.** After a successful Docker Hub image push,
 `make push` uploads [`docker/README.md`](../docker/README.md), the
 container-specific description, with absolute GitHub links for documents and
-images. Other registries skip this step. Install Python 3.11+ and
+images. Other registries skip this step. Install Python 3.14 or newer and
 [Pandoc](https://pandoc.org/installing.html). The Bash entry point installs its
 dependencies in its own user-cache environment, leaving the project `.venv`
 untouched. Links use the published `master` branch.

@@ -18,7 +18,8 @@ ENV VITE_API_BASE_URL=""
 RUN npm run build
 
 # ─── Stage 2: Backend + statisches Dashboard ──────────────────────────────────
-FROM python:3.12-slim
+# Die Python-Version folgt `requires-python` in pyproject.toml; ein Test vergleicht beide.
+FROM python:3.14-slim
 
 LABEL org.opencontainers.image.source="https://github.com/MikeMitterer/stockinfo" \
     org.opencontainers.image.licenses="EUPL-1.2"
@@ -62,7 +63,7 @@ COPY contract ./contract
 COPY --from=dashboard /dashboard/dist ./web
 
 # UTF-8 erzwingen (statt C/ASCII) — explizit für Nicht-Python-Prozesse (Shell,
-# git, curl) und locale-unabhängige Zahlenformate. Python 3.12 ist im Container
+# git, curl) und locale-unabhängige Zahlenformate. Python selbst ist im Container
 # ohnehin UTF-8 (PEP 540). Region-Locales wie de_AT.UTF-8 sind im slim-Image NICHT
 # generiert und würden auf C zurückfallen — daher C.UTF-8 (immer vorhanden).
 # Cache liegt im Volume /data (überlebt Container-Neustarts)

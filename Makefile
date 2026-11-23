@@ -53,16 +53,23 @@ TOOL_ENV = unset BASH_ENV; PATH=$(WORKSPACE_SQ)/$(TOOLS_DIR)/bin:"$$PATH"
 STATUS  = source "$${BASH_LIBS}/make.lib.sh" && printThemeStatus
 HEADING = source "$${BASH_LIBS}/make.lib.sh" && printMakeHeading
 
-# Interpreter, mit dem `make setup` die .venv anlegt (mindestens 3.11).
-PYTHON_BOOTSTRAP ?= python3.11
+# Mindestversion von Python, gelesen aus `requires-python = ">=X.Y"` in pyproject.toml, der
+# einzigen Quelle. Leer, wenn die Zeile anders aussieht; setup bricht dann mit Meldung ab.
+PYTHON_MIN := $(shell sed -n 's/^requires-python = ">=\([0-9][0-9.]*\)"$$/\1/p' pyproject.toml)
+# Interpreter, mit dem `make setup` die .venv anlegt; ein Aufrufer kann ihn überschreiben.
+PYTHON_BOOTSTRAP ?= python$(PYTHON_MIN)
+# Python-Ausdruck für `-c`: Exit 0 ab PYTHON_MIN, sonst Abbruch mit der gefundenen Version.
+PYTHON_MIN_CHECK = import sys; sys.exit(0 if sys.version_info >= tuple(map(int, "$(PYTHON_MIN)".split("."))) else "Python $(PYTHON_MIN) oder neuer erforderlich, gefunden " + sys.version.split()[0])
 
 VENV    := .venv
 PYTEST  := $(VENV)/bin/pytest
 # Was setup herstellt und require-setup prüft: Python-Pakete in der .venv, die
 # Dashboard-Pakete und die Werkzeuge in .tools/. Eine geänderte Abhängigkeitsdatei macht den
-# Stempel veraltet.
+# Stempel veraltet. Der Stempel der .venv trägt die Mindestversion im Namen: Steigt sie, fehlt
+# er, require-setup verlangt make setup, und setup ersetzt eine .venv mit älterem Python.
+VENV_STAMP   := $(VENV)/.installed-python$(PYTHON_MIN)
 TOOLS_STAMP  := $(TOOLS_DIR)/.installed
-SETUP_STAMPS := $(VENV)/.installed dashboard/node_modules/.installed $(TOOLS_STAMP)
+SETUP_STAMPS := $(VENV_STAMP) dashboard/node_modules/.installed $(TOOLS_STAMP)
 
 # Ports des Dev-Stacks nennt dev-ports (--port-of NAME) aus ProjectTools; sie stehen dort, wo sie
 # beim Start wirken: das Backend mit --port in Procfile.dev, das Dashboard als server.port in
@@ -219,10 +226,17 @@ setup: ## Bereit zum Entwickeln: .venv, Dashboard-Pakete, .tools/, Git-Hooks
 	@$(MAKE) -s --no-print-directory $(SETUP_STAMPS)
 
 # Stempelregeln: nur setup erreicht sie; neu, sobald eine Abhängigkeitsdatei neuer ist.
-$(VENV)/.installed: requirements.txt requirements-dev.txt
-	@$(PYTHON_BOOTSTRAP) -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "Python 3.11 oder neuer erforderlich")'
-	@test -x $(VENV)/bin/python || $(PYTHON_BOOTSTRAP) -m venv $(VENV)
-	@$(VENV)/bin/python -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "Bestehende .venv benötigt Python 3.11 oder neuer")'
+# Eine .venv mit älterem Python wird mit --clear neu angelegt; sie ist ein Erzeugnis von setup.
+$(VENV_STAMP): requirements.txt requirements-dev.txt
+	@test -n '$(PYTHON_MIN)' || { echo '  ✗ requires-python in pyproject.toml ist nicht als ">=X.Y" lesbar' >&2; exit 1; }
+	@command -v '$(PYTHON_BOOTSTRAP)' >/dev/null || { echo '  ✗ $(PYTHON_BOOTSTRAP) nicht gefunden: Python $(PYTHON_MIN) installieren oder PYTHON_BOOTSTRAP=<Interpreter> make setup' >&2; exit 1; }
+	@'$(PYTHON_BOOTSTRAP)' -c '$(PYTHON_MIN_CHECK)' || { echo '  ✗ PYTHON_BOOTSTRAP ist zu alt: PYTHON_BOOTSTRAP=python$(PYTHON_MIN) make setup' >&2; exit 1; }
+	@if test -x $(VENV)/bin/python && ! $(VENV)/bin/python -c '$(PYTHON_MIN_CHECK)' 2>/dev/null; then \
+		echo '  ↻ .venv mit Python vor $(PYTHON_MIN) wird neu angelegt'; \
+		'$(PYTHON_BOOTSTRAP)' -m venv --clear $(VENV); \
+	fi
+	@test -x $(VENV)/bin/python || '$(PYTHON_BOOTSTRAP)' -m venv $(VENV)
+	@rm -f $(VENV)/.installed $(VENV)/.installed-python*
 	@$(VENV)/bin/python -m pip install -q -r requirements-dev.txt
 	@# Git-gepinnte Pakete behalten bei einem neuen Commit oft ihre Version;
 	@# pip hält den alten Stand dann für erfüllt. Weicht der installierte Stand
