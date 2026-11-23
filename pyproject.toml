@@ -3,7 +3,7 @@ name = "stockinfo"
 version = "1.7.0"
 description = "REST-Kursabfrage für Aktien und ETFs mit SQLite-Cache"
 license = "EUPL-1.2"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 
 # Nur die Tests der App. `plugin_api/` ist ein eigenständiges Paket mit eigener
 # Suite und eigenem Import-Pfad — ohne diese Grenze zieht pytest es mit ein und
@@ -20,8 +20,7 @@ markers = [
 # Messbare Grenzen (T-144, Entscheidung q-11): Sie brechen `make check` über
 # `make quality`. Die Zahlen stehen nur hier; ruff und pylint lesen sie beide.
 # Gilt auch für `plugin_api/`, dessen pyproject.toml keinen ruff-Abschnitt hat.
-[tool.ruff]
-target-version = "py311"
+# Die Zielversion liest ruff aus `requires-python`; eine eigene steht hier nicht.
 
 [tool.ruff.lint]
 # Zu den Vorgaben (E4, E7, E9, F): Komplexität (C901), Rückgaben, Zweige,

@@ -5,7 +5,8 @@ schließt sie wieder, genau wie vorher jeder Repository-Aufruf. Ein Pool hielte
 Verbindungen offen, während beim Start eine Sicherung die Datei ersetzt, und
 die Tests legen je Test eine neue Datei an.
 
-**Transaktionen setzt die Engine selbst.** pysqlite beginnt unter Python 3.11
+**Transaktionen setzt die Engine selbst.** pysqlite beginnt in seinem
+Vorgabemodus (`autocommit=LEGACY_TRANSACTION_CONTROL`, auch unter Python 3.14)
 eine Transaktion erst beim ersten Schreibbefehl und lässt keine Wahl der Art.
 Das SQLAlchemy-Rezept für den SQLite-Dialekt schaltet das Eigenverhalten ab
 und setzt `BEGIN` selbst — erst damit kann ein Schreiber `BEGIN IMMEDIATE`

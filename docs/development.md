@@ -19,8 +19,9 @@ Installing and running the finished container is described in the
 
 ## Requirements
 
-- **Python 3.11+** (`make setup` creates the project `.venv`; override the
-  interpreter with `PYTHON_BOOTSTRAP=python3.12 make setup`)
+- **Python 3.14 or newer** (`make setup` creates the project `.venv` with
+  `python3.14` and replaces an existing `.venv` built with an older Python;
+  choose another interpreter with `PYTHON_BOOTSTRAP=python3.15 make setup`)
 - **make** (drives setup and start/stop of the services)
 - **overmind** and **tmux** for `make dev-up` (backend and dashboard together)
 - optional **Docker** (to run the container)
@@ -70,9 +71,12 @@ make setup
 make dev-up         # stop with make dev-down · logs with make dev-logs
 ```
 
-`make setup` can be run again at any time. It keeps an existing `.venv` and
-only installs again when `requirements.txt`, `requirements-dev.txt`,
-`dashboard/package-lock.json` or `.dev-tools.conf.sh` changed. A package
+`make setup` can be run again at any time. It keeps an existing `.venv` built
+with the required Python version and only installs again when
+`requirements.txt`, `requirements-dev.txt`, `dashboard/package-lock.json` or
+`.dev-tools.conf.sh` changed. When the minimum version in `requires-python`
+rises, test targets ask for `make setup`, which then replaces a `.venv` built
+with an older Python. A package
 pinned to a Git commit in `requirements.txt` is then reinstalled when the
 installed commit differs from the pin, even if the package version stayed
 the same. Test targets do not set anything up themselves: after such a change
@@ -383,7 +387,7 @@ and stops otherwise; publish it first with `git push --follow-tags`.
 **Docker Hub description.** After a successful Docker Hub image push,
 `make push` uploads [`docker/README.md`](../docker/README.md), the
 container-specific description, with absolute GitHub links for documents and
-images. Other registries skip this step. Install Python 3.11+ and
+images. Other registries skip this step. Install Python 3.14 or newer and
 [Pandoc](https://pandoc.org/installing.html). The Bash entry point installs its
 dependencies in its own user-cache environment, leaving the project `.venv`
 untouched. Links use the published `master` branch.
