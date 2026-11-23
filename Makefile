@@ -56,8 +56,10 @@ HEADING = source "$${BASH_LIBS}/make.lib.sh" && printMakeHeading
 # Mindestversion von Python, gelesen aus `requires-python = ">=X.Y"` in pyproject.toml, der
 # einzigen Quelle. Leer, wenn die Zeile anders aussieht; setup bricht dann mit Meldung ab.
 PYTHON_MIN := $(shell sed -n 's/^requires-python = ">=\([0-9][0-9.]*\)"$$/\1/p' pyproject.toml)
-# Interpreter, mit dem `make setup` die .venv anlegt; ein Aufrufer kann ihn überschreiben.
-PYTHON_BOOTSTRAP ?= python$(PYTHON_MIN)
+# Interpreter, mit dem `make setup` die .venv anlegt: PYTHON_BOOTSTRAP aus der Umgebung, sonst
+# python$(PYTHON_MIN). Als Wert von außen liest ihn die Shell im Rezept, nicht Make: Ein Pfad mit
+# Apostroph, Leerzeichen oder $(…) bliebe als $(PYTHON_BOOTSTRAP) im Rezepttext nicht heil.
+BOOTSTRAP = "$${PYTHON_BOOTSTRAP:-python$(PYTHON_MIN)}"
 # Python-Ausdruck für `-c`: Exit 0 ab PYTHON_MIN, sonst Abbruch mit der gefundenen Version.
 PYTHON_MIN_CHECK = import sys; sys.exit(0 if sys.version_info >= tuple(map(int, "$(PYTHON_MIN)".split("."))) else "Python $(PYTHON_MIN) oder neuer erforderlich, gefunden " + sys.version.split()[0])
 
@@ -229,13 +231,13 @@ setup: ## Bereit zum Entwickeln: .venv, Dashboard-Pakete, .tools/, Git-Hooks
 # Eine .venv mit älterem Python wird mit --clear neu angelegt; sie ist ein Erzeugnis von setup.
 $(VENV_STAMP): requirements.txt requirements-dev.txt
 	@test -n '$(PYTHON_MIN)' || { echo '  ✗ requires-python in pyproject.toml ist nicht als ">=X.Y" lesbar' >&2; exit 1; }
-	@command -v '$(PYTHON_BOOTSTRAP)' >/dev/null || { echo '  ✗ $(PYTHON_BOOTSTRAP) nicht gefunden: Python $(PYTHON_MIN) installieren oder PYTHON_BOOTSTRAP=<Interpreter> make setup' >&2; exit 1; }
-	@'$(PYTHON_BOOTSTRAP)' -c '$(PYTHON_MIN_CHECK)' || { echo '  ✗ PYTHON_BOOTSTRAP ist zu alt: PYTHON_BOOTSTRAP=python$(PYTHON_MIN) make setup' >&2; exit 1; }
+	@command -v $(BOOTSTRAP) >/dev/null || { echo "  ✗ "$(BOOTSTRAP)" nicht gefunden: Python $(PYTHON_MIN) installieren oder PYTHON_BOOTSTRAP=<Interpreter> make setup" >&2; exit 1; }
+	@$(BOOTSTRAP) -c '$(PYTHON_MIN_CHECK)' || { echo '  ✗ PYTHON_BOOTSTRAP ist zu alt: PYTHON_BOOTSTRAP=python$(PYTHON_MIN) make setup' >&2; exit 1; }
 	@if test -x $(VENV)/bin/python && ! $(VENV)/bin/python -c '$(PYTHON_MIN_CHECK)' 2>/dev/null; then \
 		echo '  ⚠ .venv mit Python vor $(PYTHON_MIN) wird neu angelegt'; \
-		'$(PYTHON_BOOTSTRAP)' -m venv --clear $(VENV); \
+		$(BOOTSTRAP) -m venv --clear $(VENV); \
 	fi
-	@test -x $(VENV)/bin/python || '$(PYTHON_BOOTSTRAP)' -m venv $(VENV)
+	@test -x $(VENV)/bin/python || $(BOOTSTRAP) -m venv $(VENV)
 	@rm -f $(VENV)/.installed $(VENV)/.installed-python*
 	@$(VENV)/bin/python -m pip install -q -r requirements-dev.txt
 	@# Git-gepinnte Pakete behalten bei einem neuen Commit oft ihre Version;

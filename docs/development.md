@@ -71,9 +71,12 @@ make setup
 make dev-up         # stop with make dev-down · logs with make dev-logs
 ```
 
-`make setup` can be run again at any time. It keeps an existing `.venv` and
-only installs again when `requirements.txt`, `requirements-dev.txt`,
-`dashboard/package-lock.json` or `.dev-tools.conf.sh` changed. A package
+`make setup` can be run again at any time. It keeps an existing `.venv` built
+with the required Python version and only installs again when
+`requirements.txt`, `requirements-dev.txt`, `dashboard/package-lock.json` or
+`.dev-tools.conf.sh` changed. When the minimum version in `requires-python`
+rises, test targets ask for `make setup`, which then replaces a `.venv` built
+with an older Python. A package
 pinned to a Git commit in `requirements.txt` is then reinstalled when the
 installed commit differs from the pin, even if the package version stayed
 the same. Test targets do not set anything up themselves: after such a change
