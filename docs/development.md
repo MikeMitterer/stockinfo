@@ -75,8 +75,9 @@ make dev-up         # stop with make dev-down · logs with make dev-logs
 
 `make setup` can be run again at any time. It keeps an existing `.venv` built
 with the required Python version and only installs again when
-`requirements.txt`, `requirements-dev.txt`, `dashboard/package-lock.json` or
-`.dev-tools.conf.sh` changed. It creates the `.venv` again when its Python
+`requirements.txt`, `requirements-dev.txt`, `plugin_api/pyproject.toml`
+(dependencies and entry points of the plugin package, installed in editable
+mode), `dashboard/package-lock.json` or `.dev-tools.conf.sh` changed. It creates the `.venv` again when its Python
 no longer runs, for example after Homebrew removed the Python it was built
 with, or when the minimum version in `requires-python` rises. A package
 pinned to a Git commit in `requirements.txt` is then reinstalled when the

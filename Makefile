@@ -250,8 +250,11 @@ setup: ## Bereit zum Entwickeln: .venv, Dashboard-Pakete, .tools/, Git-Hooks
 # Eine .venv ohne lauffähiges Python ab PYTHON_MIN wird mit --clear neu angelegt; sie ist ein
 # Erzeugnis von setup. Ein Zweig für fehlende .venv, ins Leere zeigenden Interpreter-Link (etwa
 # nachdem Homebrew das alte Python entfernt hat) und zu altes Python: venv ohne --clear
-# scheiterte an den toten Links mit Errno 2.
-$(VENV_STAMP): requirements.txt requirements-dev.txt
+# scheiterte an den toten Links mit Errno 2. requirements.txt installiert plugin_api editierbar;
+# dessen Abhängigkeiten und Entry-Points kommen nur beim Installieren in die .venv, darum hängt
+# der Stempel auch an plugin_api/pyproject.toml. Ein Versionssprung dort installiert mit neu
+# (selten, von Hand gehoben); devtools tstamp lohnt dafür nicht (T-154).
+$(VENV_STAMP): requirements.txt requirements-dev.txt plugin_api/pyproject.toml
 	@test -n '$(PYTHON_MIN)' || { echo '  ✗ requires-python in pyproject.toml ist nicht als ">=X.Y" lesbar' >&2; exit 1; }
 	@command -v $(BOOTSTRAP) >/dev/null || { echo "  ✗ "$(BOOTSTRAP)" nicht gefunden: Python $(PYTHON_MIN) installieren oder PYTHON_BOOTSTRAP=<Interpreter> make setup" >&2; exit 1; }
 	@$(BOOTSTRAP) -c '$(PYTHON_MIN_CHECK)' || { echo '  ✗ PYTHON_BOOTSTRAP ist zu alt: PYTHON_BOOTSTRAP=python$(PYTHON_MIN) make setup' >&2; exit 1; }
