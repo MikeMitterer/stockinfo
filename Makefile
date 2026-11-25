@@ -70,10 +70,14 @@ PYTHON_MIN_CHECK = import sys; sys.exit(0 if sys.version_info >= tuple(map(int, 
 
 VENV    := .venv
 PYTEST  := $(VENV)/bin/pytest
+# Läuft das Python der .venv in der Mindestversion? Falsch auch, wenn der Interpreter-Link ins
+# Leere zeigt, etwa nachdem Homebrew das Python entfernt hat, mit dem die .venv angelegt wurde.
+# Ein aktueller Stempel sagt darüber nichts; setup und require-setup fragen deshalb beides.
+VENV_RUNS = $(VENV)/bin/python -c '$(PYTHON_MIN_CHECK)' 2>/dev/null
 # Was setup herstellt und require-setup prüft: Python-Pakete in der .venv, die
 # Dashboard-Pakete und die Werkzeuge in .tools/. Eine geänderte Abhängigkeitsdatei macht den
 # Stempel veraltet. Der Stempel der .venv trägt die Mindestversion im Namen: Steigt sie, fehlt
-# er, require-setup verlangt make setup, und setup ersetzt eine .venv mit älterem Python.
+# er, require-setup ruft make setup auf, und setup ersetzt eine .venv mit älterem Python.
 VENV_STAMP   := $(VENV)/.installed-python$(PYTHON_MIN)
 TOOLS_STAMP  := $(TOOLS_DIR)/.installed
 SETUP_STAMPS := $(VENV_STAMP) dashboard/node_modules/.installed $(TOOLS_STAMP)
@@ -81,8 +85,8 @@ SETUP_STAMPS := $(VENV_STAMP) dashboard/node_modules/.installed $(TOOLS_STAMP)
 # Ports des Dev-Stacks nennt dev-ports (--port-of NAME) aus ProjectTools; sie stehen dort, wo sie
 # beim Start wirken: das Backend mit --port in Procfile.dev, das Dashboard als server.port in
 # dashboard/vite.config.ts. Das Makefile legt keine der Dateien selbst aus. Ohne dev-ports
-# (vor make setup) nennen info und hints statt der Adresse NO_DEV_PORTS; dev-up bricht dann
-# schon in require-tools ab. Nur Ziffern werden übernommen; die Werte stehen danach als Zahlen in
+# (vor make setup) nennen info und hints statt der Adresse NO_DEV_PORTS; dev-up holt es dann
+# in require-tools über make setup nach. Nur Ziffern werden übernommen; die Werte stehen danach als Zahlen in
 # den Rezepten. Ermittelt erst beim ersten Gebrauch und dann gemerkt, damit die übrigen Targets
 # dev-ports nicht starten.
 NO_DEV_PORTS := ? (dev-ports fehlt: make setup)
@@ -238,6 +242,8 @@ require-tools: precheck
 .PHONY: setup
 setup: ## Bereit zum Entwickeln: .venv, Dashboard-Pakete, .tools/, Git-Hooks
 	@git config core.hooksPath .githooks
+	@# Ohne lauffähiges Python gilt die .venv als nicht eingerichtet, auch mit aktuellem Stempel.
+	@$(VENV_RUNS) || rm -f -- '$(VENV_STAMP)'
 	@$(MAKE) -s --no-print-directory $(SETUP_STAMPS)
 
 # Stempelregeln: nur setup erreicht sie; neu, sobald eine Abhängigkeitsdatei neuer ist.
@@ -249,7 +255,7 @@ $(VENV_STAMP): requirements.txt requirements-dev.txt
 	@test -n '$(PYTHON_MIN)' || { echo '  ✗ requires-python in pyproject.toml ist nicht als ">=X.Y" lesbar' >&2; exit 1; }
 	@command -v $(BOOTSTRAP) >/dev/null || { echo "  ✗ "$(BOOTSTRAP)" nicht gefunden: Python $(PYTHON_MIN) installieren oder PYTHON_BOOTSTRAP=<Interpreter> make setup" >&2; exit 1; }
 	@$(BOOTSTRAP) -c '$(PYTHON_MIN_CHECK)' || { echo '  ✗ PYTHON_BOOTSTRAP ist zu alt: PYTHON_BOOTSTRAP=python$(PYTHON_MIN) make setup' >&2; exit 1; }
-	@if ! $(VENV)/bin/python -c '$(PYTHON_MIN_CHECK)' 2>/dev/null; then \
+	@if ! $(VENV_RUNS); then \
 		test -e $(VENV) && echo '  ⚠ .venv ohne lauffähiges Python ab $(PYTHON_MIN) wird neu angelegt'; \
 		$(BOOTSTRAP) -m venv --clear $(VENV); \
 	fi
@@ -275,14 +281,14 @@ $(TOOLS_STAMP): .dev-tools.conf.sh
 	@touch "$@"
 
 # Ohne Hilfeeintrag: Fehlt die Einrichtung oder ist sie veraltet (ein Stempel fehlt oder ist
-# älter als seine Abhängigkeit, Git-Hooks nicht aktiv), läuft make setup; sonst nichts.
-# Eingerichtet wird nur über setup. Braucht kein BashLib, das erst mit setup kommt. Der
-# pre-commit-Hook ruft es im Checkout, nicht in seiner Kopie des Index: Dort wäre jede Datei
-# neuer als die Stempel.
+# älter als seine Abhängigkeit, Git-Hooks nicht aktiv, Python der .venv läuft nicht), läuft
+# make setup; sonst nichts. Eingerichtet wird nur über setup. Braucht kein BashLib, das erst
+# mit setup kommt. Der pre-commit-Hook ruft es im Checkout, nicht in seiner Kopie des Index:
+# Dort wäre jede Datei neuer als die Stempel.
 .PHONY: require-setup
 require-setup:
 	@{ $(MAKE) --no-print-directory --question $(SETUP_STAMPS) && \
-		[[ "$$(git config core.hooksPath)" == .githooks ]]; } 2>/dev/null || \
+		[[ "$$(git config core.hooksPath)" == .githooks ]] && $(VENV_RUNS); } 2>/dev/null || \
 		$(MAKE) --no-print-directory setup
 
 # Entfernt nur, was setup, Tests und Builds im Checkout erzeugen. Die Pfade stehen fest im
@@ -311,8 +317,9 @@ status: require-tools ## Git-Status aller Workspace-Repos anzeigen
 ##@ Entwicklung
 
 # Ein belegter Port bricht den Start ab, statt dass eine App still ausweicht. dev-ports
-# (ProjectTools) ist Voraussetzung, auch in Procfile.dev: require-tools bricht ohne es ab und
-# nennt den Installationsbefehl, bevor overmind startet oder beendet wird (makefile-conventions).
+# (ProjectTools) ist Voraussetzung, auch in Procfile.dev: require-tools holt es über make setup
+# nach, bevor overmind startet oder beendet wird, und bricht ab, wenn das nicht reicht
+# (makefile-conventions).
 # Anders als StockPortfolio und Darwin+Finanzen ohne OVERMIND_SKIP_ENV: HOST aus .env erreicht
 # uvicorn in Procfile.dev nur, weil overmind .env lädt; das Makefile exportiert HOST nicht.
 .PHONY: dev-up
