@@ -3,9 +3,12 @@
 # pre-commit — Nutzerdoku vor jedem Commit prüfen
 #
 # Aktiv über `git config core.hooksPath .githooks` (macht `make setup`).
-# Ruft `make docs-check` auf und bricht den Commit ab, wenn die Prüfung
-# Probleme meldet; Hinweise lassen ihn durch. Ohne Probleme erscheint nur die
-# Ergebniszeile, sonst die vollständige Ausgabe. Ohne ProjectTools warnt er nur.
+# Richtet eine fehlende oder veraltete Einrichtung zuerst mit `make setup` ein
+# (require-setup, require-tools). Prüft dann wie `make docs-check` und bricht
+# den Commit ab, wenn die Prüfung Probleme meldet; Hinweise lassen ihn durch.
+# Ohne Probleme erscheint nur die Ergebniszeile, sonst die vollständige
+# Ausgabe. Scheitert die Einrichtung, bricht der Commit ab: Die Doku wird nie
+# still übersprungen.
 #
 # Geprüft wird der vorgemerkte Stand, also genau das, was der Commit enthält:
 # Der Hook schreibt den Index in ein temporäres Verzeichnis und lässt die
@@ -36,14 +39,13 @@ without_git() {
         -u GIT_COMMON_DIR "$@"
 }
 
-# Ohne ProjectTools in .tools/ nur warnen, mit dem Grund von devtools und dem nächsten
-# Schritt: make check bleibt die harte Grenze, ein Commit soll nicht daran scheitern.
-if ! REASON="$(without_git make --no-print-directory -s require-tools 2>&1)"; then
-    echo "  ⚠ Doku nicht geprüft: ProjectTools fehlt oder ist zu alt" >&2
-    # Die Meldung von devtools ohne die Abschlusszeile von make („make: *** …“).
-    printf '%s\n' "${REASON}" | grep -v '^make: \*\*\*' >&2 || true
-    echo "    make setup" >&2
-    exit 0
+# Einrichtung und Werkzeuge im Checkout, nicht in der Kopie unten: Dort wäre jede Datei neuer
+# als die Stempel, und .tools/ ist nur verlinkt. Fehlt etwas, läuft make setup; scheitert das,
+# bricht der Commit mit dessen Meldung ab.
+if ! without_git make --no-print-directory -s -C "${ROOT}" require-setup require-tools; then
+    echo "Commit abgebrochen: Einrichtung fehlt, Doku nicht geprüft (siehe oben)." >&2
+    echo "Im Notfall: git commit --no-verify" >&2
+    exit 1
 fi
 
 SNAPSHOT="$(mktemp -d "${TMPDIR:-/tmp}/docs-check-index.XXXXXX")"
@@ -54,15 +56,15 @@ trap 'command rm -rf -- "${SNAPSHOT}" "${OUTPUT}"' EXIT
 
 git checkout-index --all --prefix="${SNAPSHOT}/"
 
-# Die Werkzeuge aus make setup liegen unversioniert in .tools/ des Checkouts; make docs-check
-# verlangt und findet sie im Snapshot nur über diesen Link.
-[[ -d "${ROOT}/.tools" ]] && ln -s "${ROOT}/.tools" "${SNAPSHOT}/.tools"
+# Die Werkzeuge aus make setup liegen unversioniert in .tools/ des Checkouts; docs-check findet
+# sie im Snapshot nur über diesen Link.
+ln -s "${ROOT}/.tools" "${SNAPSHOT}/.tools"
 
 GIT_DIR="$(git rev-parse --absolute-git-dir)"
 export GIT_DIR
 export GIT_WORK_TREE="${SNAPSHOT}"
 
-if make --no-print-directory -C "${SNAPSHOT}" docs-check >"${OUTPUT}" 2>&1; then
+if make --no-print-directory -C "${SNAPSHOT}" docs-check-only >"${OUTPUT}" 2>&1; then
     # Ergebniszeile und Warnungen; vor dem ⚠ kann ein Farbcode stehen.
     grep -E '^Ergebnis|⚠' "${OUTPUT}" || true
     exit 0

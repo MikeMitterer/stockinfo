@@ -36,11 +36,16 @@ REQUIRE_STARTER = command -v devtools >/dev/null || { \
 # .tools/.
 TOOLS_DIR := .tools
 export PATH := $(WORKSPACE)/$(TOOLS_DIR)/bin:$(PATH)
+BASHLIB_FROM_OUTSIDE := $(if $(BASH_LIBS),yes)
 ifndef BASH_LIBS
 BASH_LIBS := $(shell $(WORKSPACE_SQ)/$(TOOLS_DIR)/bin/bashlib-path 2>/dev/null)
-BASHLIB_FROM_TOOLS := $(if $(BASH_LIBS),yes)
 endif
 export BASH_LIBS
+# BashLib zur Laufzeit eines Rezepts. Make ermittelt BASH_LIBS beim Lesen des Makefiles; hat
+# erst precheck oder require-setup im selben Lauf eingerichtet, ist es noch leer, und
+# bashlib-path aus .tools/ nennt den Ort. Exportiert, weil make.lib.sh die übrigen
+# Bibliotheken über BASH_LIBS lädt. Im Rezept vor BashLib: @$(BASHLIB_ENV); …
+BASHLIB_ENV = export BASH_LIBS="$${BASH_LIBS:-$$(bashlib-path 2>/dev/null)}"
 # Vorspann für $(shell) mit einem Werkzeug aus .tools/: $(shell $(TOOL_ENV); befehl). GNU Make
 # vor 4.4 (macOS: 3.81) gibt das exportierte PATH nicht an $(shell) weiter, und das BASH_ENV
 # von help, info und hints gehört nicht in die Werkzeuge.
@@ -50,8 +55,8 @@ TOOL_ENV = unset BASH_ENV; PATH=$(WORKSPACE_SQ)/$(TOOLS_DIR)/bin:"$$PATH"
 # BashLib. Im Rezept: @$(STATUS) "✓" "Text" OK  (Rollen OK, WARN, ERR) bzw.
 # @$(HEADING) "Text". Bewusst kein BASH_ENV für diese Targets: Es ginge an overmind, docker
 # und die Skripte weiter.
-STATUS  = source "$${BASH_LIBS}/make.lib.sh" && printThemeStatus
-HEADING = source "$${BASH_LIBS}/make.lib.sh" && printMakeHeading
+STATUS  = $(BASHLIB_ENV); source "$${BASH_LIBS}/make.lib.sh" && printThemeStatus
+HEADING = $(BASHLIB_ENV); source "$${BASH_LIBS}/make.lib.sh" && printMakeHeading
 
 # Mindestversion von Python, gelesen aus `requires-python = ">=X.Y"` in pyproject.toml, der
 # einzigen Quelle. Leer, wenn die Zeile anders aussieht; setup bricht dann mit Meldung ab.
@@ -65,10 +70,14 @@ PYTHON_MIN_CHECK = import sys; sys.exit(0 if sys.version_info >= tuple(map(int, 
 
 VENV    := .venv
 PYTEST  := $(VENV)/bin/pytest
+# Läuft das Python der .venv in der Mindestversion? Falsch auch, wenn der Interpreter-Link ins
+# Leere zeigt, etwa nachdem Homebrew das Python entfernt hat, mit dem die .venv angelegt wurde.
+# Ein aktueller Stempel sagt darüber nichts; setup und require-setup fragen deshalb beides.
+VENV_RUNS = $(VENV)/bin/python -c '$(PYTHON_MIN_CHECK)' 2>/dev/null
 # Was setup herstellt und require-setup prüft: Python-Pakete in der .venv, die
 # Dashboard-Pakete und die Werkzeuge in .tools/. Eine geänderte Abhängigkeitsdatei macht den
 # Stempel veraltet. Der Stempel der .venv trägt die Mindestversion im Namen: Steigt sie, fehlt
-# er, require-setup verlangt make setup, und setup ersetzt eine .venv mit älterem Python.
+# er, require-setup ruft make setup auf, und setup ersetzt eine .venv mit älterem Python.
 VENV_STAMP   := $(VENV)/.installed-python$(PYTHON_MIN)
 TOOLS_STAMP  := $(TOOLS_DIR)/.installed
 SETUP_STAMPS := $(VENV_STAMP) dashboard/node_modules/.installed $(TOOLS_STAMP)
@@ -76,8 +85,8 @@ SETUP_STAMPS := $(VENV_STAMP) dashboard/node_modules/.installed $(TOOLS_STAMP)
 # Ports des Dev-Stacks nennt dev-ports (--port-of NAME) aus ProjectTools; sie stehen dort, wo sie
 # beim Start wirken: das Backend mit --port in Procfile.dev, das Dashboard als server.port in
 # dashboard/vite.config.ts. Das Makefile legt keine der Dateien selbst aus. Ohne dev-ports
-# (vor make setup) nennen info und hints statt der Adresse NO_DEV_PORTS; dev-up bricht dann
-# schon in require-tools ab. Nur Ziffern werden übernommen; die Werte stehen danach als Zahlen in
+# (vor make setup) nennen info und hints statt der Adresse NO_DEV_PORTS; dev-up holt es dann
+# in require-tools über make setup nach. Nur Ziffern werden übernommen; die Werte stehen danach als Zahlen in
 # den Rezepten. Ermittelt erst beim ersten Gebrauch und dann gemerkt, damit die übrigen Targets
 # dev-ports nicht starten.
 NO_DEV_PORTS := ? (dev-ports fehlt: make setup)
@@ -198,46 +207,58 @@ hints: ## Links, URLs und Tipps für die tägliche Arbeit
 
 # ─── Precheck ─────────────────────────────────────────────────────────────────
 
-# Ohne `##`: läuft vor dev-up, dev-down, up, down, version, tags, build, push, require-tools
-# und require-setup. Verlangt BashLib, aus .tools/ in der Mindestversion aus
-# .dev-tools.conf.sh; ein von außen gesetztes BASH_LIBS prüft es nur auf die Bibliotheken, die
-# das Makefile lädt (version.lib.sh für Releases, make.lib.sh für Statuszeilen und Ausgabe).
-# Bewusst ohne BashLib-Ausgabe: precheck meldet gerade, dass sie fehlt.
+# BashLib bereit: die Bibliotheken, die das Makefile lädt (version.lib.sh für Releases,
+# make.lib.sh für Statuszeilen und Ausgabe), lesbar; aus .tools/ zudem in der Mindestversion
+# aus .dev-tools.conf.sh. Ein von außen gesetztes BASH_LIBS prüft es nur auf Lesbarkeit.
+BASHLIB_READY = $(BASHLIB_ENV); [[ -r "$$BASH_LIBS/version.lib.sh" && -r "$$BASH_LIBS/make.lib.sh" ]] && \
+	{ [[ -n '$(BASHLIB_FROM_OUTSIDE)' ]] || $(DEV_TOOLS) check bashlib >/dev/null 2>&1; }
+
+# Ohne `##`: läuft vor dev-up, dev-down, up, down, version, tags, build, push und
+# require-tools. Fehlt BashLib oder ist sie zu alt, läuft einmal make setup; reicht das nicht,
+# bricht es mit dem Grund ab. Bewusst ohne BashLib-Ausgabe: precheck meldet gerade, dass sie fehlt.
 .PHONY: precheck
 precheck:
-	@if [[ ! -r "$${BASH_LIBS:-}/version.lib.sh" || ! -r "$${BASH_LIBS:-}/make.lib.sh" ]]; then \
-		echo "  ✗ BashLib fehlt oder ist unvollständig (BASH_LIBS oder .tools/): make setup" >&2; \
-		exit 1; \
-	elif [[ -n '$(BASHLIB_FROM_TOOLS)' ]]; then $(REQUIRE_STARTER); $(DEV_TOOLS) check bashlib; fi
+	@$(BASHLIB_READY) || $(MAKE) --no-print-directory setup
+	@$(BASHLIB_READY) || { echo "  ✗ BashLib fehlt oder ist unvollständig, auch nach make setup" >&2; \
+		if [[ -n '$(BASHLIB_FROM_OUTSIDE)' ]]; then \
+			echo "    BASH_LIBS zeigt nicht auf BashLib; ohne gilt die aus .tools/: unset BASH_LIBS" >&2; \
+		else $(DEV_TOOLS) check bashlib; fi; exit 1; }
 
-# Ohne `##`: verlangt ProjectTools in .tools/ in Mindestversion; devtools nennt sonst den Grund.
+# Ohne `##`: verlangt ProjectTools in .tools/ in Mindestversion. Fehlt es oder ist es zu alt,
+# läuft einmal make setup; reicht das nicht (etwa ein zu alter Tag in .dev-tools.conf.sh),
+# nennt devtools den Grund.
 .PHONY: require-tools
 require-tools: precheck
-	@$(REQUIRE_STARTER); $(DEV_TOOLS) check projecttools
+	@$(REQUIRE_STARTER); $(DEV_TOOLS) check projecttools >/dev/null 2>&1 || \
+		{ $(MAKE) --no-print-directory setup && $(DEV_TOOLS) check projecttools; }
 
 # ─── Setup ────────────────────────────────────────────────────────────────────
 
 ##@ Setup
 
 # setup ist der einzige Weg, das Projekt einzurichten, auch als worktree_setup in Workspaces
-# und im Prüf-Worktree. Prüf-Targets richten nichts selbst ein, sie hängen an require-setup.
-# Wiederholbar: Die Stempel machen einen eingerichteten Stand zum Nulllauf.
+# und im Prüf-Worktree. Prüf-Targets hängen an require-setup, das bei Bedarf make setup
+# aufruft. Wiederholbar: Die Stempel machen einen eingerichteten Stand zum Nulllauf.
 .PHONY: setup
 setup: ## Bereit zum Entwickeln: .venv, Dashboard-Pakete, .tools/, Git-Hooks
 	@git config core.hooksPath .githooks
+	@# Ohne lauffähiges Python gilt die .venv als nicht eingerichtet, auch mit aktuellem Stempel.
+	@$(VENV_RUNS) || rm -f -- '$(VENV_STAMP)'
 	@$(MAKE) -s --no-print-directory $(SETUP_STAMPS)
 
 # Stempelregeln: nur setup erreicht sie; neu, sobald eine Abhängigkeitsdatei neuer ist.
-# Eine .venv mit älterem Python wird mit --clear neu angelegt; sie ist ein Erzeugnis von setup.
+# Eine .venv ohne lauffähiges Python ab PYTHON_MIN wird mit --clear neu angelegt; sie ist ein
+# Erzeugnis von setup. Ein Zweig für fehlende .venv, ins Leere zeigenden Interpreter-Link (etwa
+# nachdem Homebrew das alte Python entfernt hat) und zu altes Python: venv ohne --clear
+# scheiterte an den toten Links mit Errno 2.
 $(VENV_STAMP): requirements.txt requirements-dev.txt
 	@test -n '$(PYTHON_MIN)' || { echo '  ✗ requires-python in pyproject.toml ist nicht als ">=X.Y" lesbar' >&2; exit 1; }
 	@command -v $(BOOTSTRAP) >/dev/null || { echo "  ✗ "$(BOOTSTRAP)" nicht gefunden: Python $(PYTHON_MIN) installieren oder PYTHON_BOOTSTRAP=<Interpreter> make setup" >&2; exit 1; }
 	@$(BOOTSTRAP) -c '$(PYTHON_MIN_CHECK)' || { echo '  ✗ PYTHON_BOOTSTRAP ist zu alt: PYTHON_BOOTSTRAP=python$(PYTHON_MIN) make setup' >&2; exit 1; }
-	@if test -x $(VENV)/bin/python && ! $(VENV)/bin/python -c '$(PYTHON_MIN_CHECK)' 2>/dev/null; then \
-		echo '  ⚠ .venv mit Python vor $(PYTHON_MIN) wird neu angelegt'; \
+	@if ! $(VENV_RUNS); then \
+		test -e $(VENV) && echo '  ⚠ .venv ohne lauffähiges Python ab $(PYTHON_MIN) wird neu angelegt'; \
 		$(BOOTSTRAP) -m venv --clear $(VENV); \
 	fi
-	@test -x $(VENV)/bin/python || $(BOOTSTRAP) -m venv $(VENV)
 	@rm -f $(VENV)/.installed $(VENV)/.installed-python*
 	@$(VENV)/bin/python -m pip install -q -r requirements-dev.txt
 	@# Git-gepinnte Pakete behalten bei einem neuen Commit oft ihre Version;
@@ -259,10 +280,16 @@ $(TOOLS_STAMP): .dev-tools.conf.sh
 	@$(REQUIRE_STARTER); $(DEV_TOOLS) install
 	@touch "$@"
 
-# Ohne Hilfeeintrag: meldet eine fehlende oder veraltete Einrichtung, statt sie nachzuholen.
+# Ohne Hilfeeintrag: Fehlt die Einrichtung oder ist sie veraltet (ein Stempel fehlt oder ist
+# älter als seine Abhängigkeit, Git-Hooks nicht aktiv, Python der .venv läuft nicht), läuft
+# make setup; sonst nichts. Eingerichtet wird nur über setup. Braucht kein BashLib, das erst
+# mit setup kommt. Der pre-commit-Hook ruft es im Checkout, nicht in seiner Kopie des Index:
+# Dort wäre jede Datei neuer als die Stempel.
 .PHONY: require-setup
-require-setup: precheck
-	@source "$${BASH_LIBS}/make.lib.sh" && requireMakeSetup --hooks .githooks --make "$(MAKE)" $(SETUP_STAMPS)
+require-setup:
+	@{ $(MAKE) --no-print-directory --question $(SETUP_STAMPS) && \
+		[[ "$$(git config core.hooksPath)" == .githooks ]] && $(VENV_RUNS); } 2>/dev/null || \
+		$(MAKE) --no-print-directory setup
 
 # Entfernt nur, was setup, Tests und Builds im Checkout erzeugen. Die Pfade stehen fest im
 # Rezept, nicht in einer Variable, die ein Make-Argument überschreiben könnte (VENV,
@@ -290,8 +317,9 @@ status: require-tools ## Git-Status aller Workspace-Repos anzeigen
 ##@ Entwicklung
 
 # Ein belegter Port bricht den Start ab, statt dass eine App still ausweicht. dev-ports
-# (ProjectTools) ist Voraussetzung, auch in Procfile.dev: require-tools bricht ohne es ab und
-# nennt den Installationsbefehl, bevor overmind startet oder beendet wird (makefile-conventions).
+# (ProjectTools) ist Voraussetzung, auch in Procfile.dev: require-tools holt es über make setup
+# nach, bevor overmind startet oder beendet wird, und bricht ab, wenn das nicht reicht
+# (makefile-conventions).
 # Anders als StockPortfolio und Darwin+Finanzen ohne OVERMIND_SKIP_ENV: HOST aus .env erreicht
 # uvicorn in Procfile.dev nur, weil overmind .env lädt; das Makefile exportiert HOST nicht.
 .PHONY: dev-up
@@ -322,20 +350,28 @@ dev-logs: ## Logs des Dev-Stacks live verfolgen
 
 ##@ Tests
 
+# require-setup zuerst: Es richtet bei Bedarf ein, bevor etwas anläuft.
 .PHONY: test
-test: docs-check test-backend test-plugin-api test-example test-dashboard ## Alle Tests — Doku, Backend, Plugin-API, Beispielpaket, Dashboard
+test: require-setup docs-check test-backend test-plugin-api test-example test-dashboard ## Alle Tests — Doku, Backend, Plugin-API, Beispielpaket, Dashboard
 
-# Teil von test und check: Ohne ProjectTools scheitert es laut, statt die Doku still zu
+# Teil von test und check: Ohne ProjectTools richtet es ein, statt die Doku still zu
 # überspringen. Regeln in .docs-check.conf.sh.
-.PHONY: docs-check
-docs-check: require-tools ## Nutzerdoku gegen das Projekt geprüft (Links, Befehle, Variablen)
-	@docs-check --run
+DOCS_CHECK_RUN = docs-check --run
+
+.PHONY: docs-check docs-check-only
+docs-check: require-setup require-tools ## Nutzerdoku gegen das Projekt geprüft (Links, Befehle, Variablen)
+	@$(DOCS_CHECK_RUN)
+
+# Ohne Hilfeeintrag: die Prüfung ohne require-setup, für die Kopie des Index im pre-commit-Hook;
+# der Hook ruft vorher require-setup und require-tools im Checkout.
+docs-check-only:
+	@$(DOCS_CHECK_RUN)
 
 # Wie `test`, aber ohne Netz: Die mit `integration` markierten Tests fragen
 # echte Online-Anbieter und bleiben bei `test`. Dazu Ruff und die Typprüfung
 # des Dashboards, die `test` nicht enthält.
 .PHONY: check
-check: docs-check test-plugin-api test-example test-dashboard quality ## Alles ohne Netz geprüft: Doku, Tests (ohne Online), Grenzen, Typen
+check: require-setup docs-check test-plugin-api test-example test-dashboard quality ## Alles ohne Netz geprüft: Doku, Tests (ohne Online), Grenzen, Typen
 	$(PYTEST) -q -m "not integration"
 	cd dashboard && npx vue-tsc -b
 
@@ -420,20 +456,20 @@ docker-logs: ## Container-Logs live verfolgen
 	docker logs -f "$${CONTAINER}"
 
 # docker/build.sh braucht BashLib; ohne sie baut docs/development.md das Image direkt mit
-# docker build.
+# docker build. BASH_LIBS zur Laufzeit, falls precheck erst eingerichtet hat.
 .PHONY: build
 build: precheck ## Geprüftes Image für PLATFORM=x86|arm (Vorgabe x86)
-	docker/build.sh --build "$${PLATFORM}"
+	@$(BASHLIB_ENV); docker/build.sh --build "$${PLATFORM}"
 
 # Startet das zuletzt gebaute Image wie ein User ohne Klon (Wegwerf-Container, freier Port an
 # 127.0.0.1) und prüft /health und das Dashboard; Ablauf in docker/build.sh --check.
 .PHONY: build-check
 build-check: precheck ## Gebautes Image startet, /health ok, Dashboard unter /
-	docker/build.sh --check
+	@$(BASHLIB_ENV); docker/build.sh --check
 
 .PHONY: push
 push: require-tools ## Image und docker/README.md veröffentlicht (TARGET=ghcr|dockerhub|ecr)
-	docker/build.sh --push
+	@$(BASHLIB_ENV); docker/build.sh --push
 
 # ─── Versionierung ────────────────────────────────────────────────────────────
 
@@ -442,13 +478,13 @@ push: require-tools ## Image und docker/README.md veröffentlicht (TARGET=ghcr|d
 .PHONY: version
 version: precheck ## Version aus pyproject.toml und letzter Release-Tag
 	@echo
-	@source "$${BASH_LIBS}/make.lib.sh" && showProjectVersion
+	@$(BASHLIB_ENV); source "$${BASH_LIBS}/make.lib.sh" && showProjectVersion
 	@echo
 
 .PHONY: tags
 tags: precheck ## Letzte 10 Release-Tags mit Nachricht anzeigen
 	@echo
-	@source "$${BASH_LIBS}/make.lib.sh" && showReleaseTags 10
+	@$(BASHLIB_ENV); source "$${BASH_LIBS}/make.lib.sh" && showReleaseTags 10
 	@echo
 
 # Sprache von CHANGELOG.md, unabhängig von der Locale der Shell (changelog folgt sonst LANG).
