@@ -33,19 +33,16 @@ REQUIRE_STARTER = command -v devtools >/dev/null || { \
 # Werkzeuge aus .tools/ dieses Checkouts vorn im PATH; ein global installiertes ProjectTools
 # zählt für require-tools nicht. BashLib für help, info, hints, Statuszeilen, version, tag-*,
 # docker/build.sh und scripts/: Ein von außen gesetztes BASH_LIBS geht vor, sonst die aus
-# .tools/.
+# .tools/. Mit = statt :=: make ermittelt den Wert je Target neu, so sieht ein Target nach
+# require-bash-libs (make setup) BashLib aus .tools/ im selben Lauf. Exportiert, weil
+# make.lib.sh die übrigen Bibliotheken über BASH_LIBS lädt.
 TOOLS_DIR := .tools
 export PATH := $(WORKSPACE)/$(TOOLS_DIR)/bin:$(PATH)
 BASHLIB_FROM_OUTSIDE := $(if $(BASH_LIBS),yes)
 ifndef BASH_LIBS
-BASH_LIBS := $(shell $(WORKSPACE_SQ)/$(TOOLS_DIR)/bin/bashlib-path 2>/dev/null)
+BASH_LIBS = $(shell $(WORKSPACE_SQ)/$(TOOLS_DIR)/bin/bashlib-path 2>/dev/null)
 endif
 export BASH_LIBS
-# BashLib zur Laufzeit eines Rezepts. Make ermittelt BASH_LIBS beim Lesen des Makefiles; hat
-# erst precheck oder require-setup im selben Lauf eingerichtet, ist es noch leer, und
-# bashlib-path aus .tools/ nennt den Ort. Exportiert, weil make.lib.sh die übrigen
-# Bibliotheken über BASH_LIBS lädt. Im Rezept vor BashLib: @$(BASHLIB_ENV); …
-BASHLIB_ENV = export BASH_LIBS="$${BASH_LIBS:-$$(bashlib-path 2>/dev/null)}"
 # Vorspann für $(shell) mit einem Werkzeug aus .tools/: $(shell $(TOOL_ENV); befehl). GNU Make
 # vor 4.4 (macOS: 3.81) gibt das exportierte PATH nicht an $(shell) weiter, und das BASH_ENV
 # von help, info und hints gehört nicht in die Werkzeuge.
@@ -55,8 +52,8 @@ TOOL_ENV = unset BASH_ENV; PATH=$(WORKSPACE_SQ)/$(TOOLS_DIR)/bin:"$$PATH"
 # BashLib. Im Rezept: @$(STATUS) "✓" "Text" OK  (Rollen OK, WARN, ERR) bzw.
 # @$(HEADING) "Text". Bewusst kein BASH_ENV für diese Targets: Es ginge an overmind, docker
 # und die Skripte weiter.
-STATUS  = $(BASHLIB_ENV); source "$${BASH_LIBS}/make.lib.sh" && printThemeStatus
-HEADING = $(BASHLIB_ENV); source "$${BASH_LIBS}/make.lib.sh" && printMakeHeading
+STATUS  = source "$${BASH_LIBS}/make.lib.sh" && printThemeStatus
+HEADING = source "$${BASH_LIBS}/make.lib.sh" && printMakeHeading
 
 # Mindestversion von Python, gelesen aus `requires-python = ">=X.Y"` in pyproject.toml, der
 # einzigen Quelle. Leer, wenn die Zeile anders aussieht; setup bricht dann mit Meldung ab.
@@ -205,19 +202,23 @@ hints: ## Links, URLs und Tipps für die tägliche Arbeit
 	@printMakeValue "Auf Stand bringen" "make setup"
 	@echo
 
-# ─── Precheck ─────────────────────────────────────────────────────────────────
+# ─── Voraussetzungen ──────────────────────────────────────────────────────────
 
 # BashLib bereit: die Bibliotheken, die das Makefile lädt (version.lib.sh für Releases,
 # make.lib.sh für Statuszeilen und Ausgabe), lesbar; aus .tools/ zudem in der Mindestversion
-# aus .dev-tools.conf.sh. Ein von außen gesetztes BASH_LIBS prüft es nur auf Lesbarkeit.
-BASHLIB_READY = $(BASHLIB_ENV); [[ -r "$$BASH_LIBS/version.lib.sh" && -r "$$BASH_LIBS/make.lib.sh" ]] && \
+# aus .dev-tools.conf.sh. Ein von außen gesetztes BASH_LIBS prüft es nur auf Lesbarkeit. Das
+# Verzeichnis fragt es wie der Kopf bei bashlib-path aus .tools/ selbst: Das BASH_LIBS von
+# require-bash-libs steht vor dessen make setup schon fest.
+BASHLIB_DIR   = $(if $(BASHLIB_FROM_OUTSIDE),"$${BASH_LIBS}","$$("$${WORKSPACE}"/$(TOOLS_DIR)/bin/bashlib-path 2>/dev/null)")
+BASHLIB_READY = LIBS=$(BASHLIB_DIR); [[ -r "$$LIBS/version.lib.sh" && -r "$$LIBS/make.lib.sh" ]] && \
 	{ [[ -n '$(BASHLIB_FROM_OUTSIDE)' ]] || $(DEV_TOOLS) check bashlib >/dev/null 2>&1; }
 
-# Ohne `##`: läuft vor dev-up, dev-down, up, down, version, tags, build, push und
-# require-tools. Fehlt BashLib oder ist sie zu alt, läuft einmal make setup; reicht das nicht,
-# bricht es mit dem Grund ab. Bewusst ohne BashLib-Ausgabe: precheck meldet gerade, dass sie fehlt.
-.PHONY: precheck
-precheck:
+# Ohne `##`: Vorbedingung jedes Targets, das BashLib braucht. Fehlt BashLib oder ist sie zu alt,
+# läuft einmal make setup; reicht das nicht, bricht es mit dem Grund ab. Als Vorbedingung, nicht
+# als Rezeptzeile: Das Target danach ermittelt BASH_LIBS neu (Kopf). Bewusst ohne
+# BashLib-Ausgabe: Es meldet gerade, dass sie fehlt.
+.PHONY: require-bash-libs
+require-bash-libs:
 	@$(BASHLIB_READY) || $(MAKE) --no-print-directory setup
 	@$(BASHLIB_READY) || { echo "  ✗ BashLib fehlt oder ist unvollständig, auch nach make setup" >&2; \
 		if [[ -n '$(BASHLIB_FROM_OUTSIDE)' ]]; then \
@@ -226,9 +227,10 @@ precheck:
 
 # Ohne `##`: verlangt ProjectTools in .tools/ in Mindestversion. Fehlt es oder ist es zu alt,
 # läuft einmal make setup; reicht das nicht (etwa ein zu alter Tag in .dev-tools.conf.sh),
-# nennt devtools den Grund.
+# nennt devtools den Grund. Mit require-bash-libs, weil die Targets dahinter (dev-up, dev-down,
+# push) auch BashLib brauchen.
 .PHONY: require-tools
-require-tools: precheck
+require-tools: require-bash-libs
 	@$(REQUIRE_STARTER); $(DEV_TOOLS) check projecttools >/dev/null 2>&1 || \
 		{ $(MAKE) --no-print-directory setup && $(DEV_TOOLS) check projecttools; }
 
@@ -382,7 +384,7 @@ check: require-setup docs-check test-plugin-api test-example test-dashboard qual
 # Komplexität und Vereinfachungen sowie Modulgröße und doppelter Code in App,
 # Skripten und Plugin-API brechen `check`; doppelter Code in Tests ist nur Bericht.
 .PHONY: quality
-quality: require-setup ## Messbare Grenzen geprüft: Ruff, Modulgröße, doppelter Code
+quality: require-setup require-bash-libs ## Messbare Grenzen geprüft: Ruff, Modulgröße, doppelter Code
 	@$(HEADING) "Ruff: Fehler, Komplexität, Vereinfachungen"
 	$(VENV)/bin/ruff check app tests scripts plugin_api
 	@$(HEADING) "Pylint: Modulgröße und doppelter Code"
@@ -395,7 +397,7 @@ quality: require-setup ## Messbare Grenzen geprüft: Ruff, Modulgröße, doppelt
 # Braucht Netz und gehört deshalb nicht zu `check`. Ein Fund bricht den Lauf
 # nicht ab (Entscheidung q-11); beide Prüfungen laufen immer.
 .PHONY: audit
-audit: require-setup ## Bericht zu Lücken in Abhängigkeiten: pip-audit, npm audit (Netz)
+audit: require-setup require-bash-libs ## Bericht zu Lücken in Abhängigkeiten: pip-audit, npm audit (Netz)
 	@$(HEADING) "Python (pip-audit, requirements.txt)"
 	-$(VENV)/bin/pip-audit -r requirements.txt
 	@$(HEADING) "Dashboard (npm audit, ohne Entwicklungspakete)"
@@ -436,9 +438,10 @@ test-dashboard: lint-dashboard ## Dashboard prüfen und testen (ESLint + Vitest)
 
 ##@ Docker
 
-# precheck vorab wie bei dev-up: ohne BashLib scheitern up und down vor docker, nicht danach.
+# require-bash-libs vorab wie bei dev-up: ohne BashLib scheitern up und down vor docker, nicht
+# danach.
 .PHONY: up
-up: precheck ## Container mit Dashboard und API läuft auf PORT (Image aus make build)
+up: require-bash-libs ## Container mit Dashboard und API läuft auf PORT (Image aus make build)
 	-@docker rm -f "$${CONTAINER}" 2>/dev/null || true
 	docker run -d --name "$${CONTAINER}" \
 		-p "$${PORT}":8000 \
@@ -450,7 +453,7 @@ up: precheck ## Container mit Dashboard und API läuft auf PORT (Image aus make 
 	@$(STATUS) "✓" "Läuft — App http://localhost:$${PORT}/  (zuvor: make build)" OK
 
 .PHONY: down
-down: precheck ## Container gestoppt und entfernt
+down: require-bash-libs ## Container gestoppt und entfernt
 	-@if docker rm -f "$${CONTAINER}" 2>/dev/null; then $(STATUS) "✓" "Gestoppt" OK; \
 	else $(STATUS) "⚠" "Kein Container $${CONTAINER}" WARN; fi
 
@@ -459,35 +462,35 @@ docker-logs: ## Container-Logs live verfolgen
 	docker logs -f "$${CONTAINER}"
 
 # docker/build.sh braucht BashLib; ohne sie baut docs/development.md das Image direkt mit
-# docker build. BASH_LIBS zur Laufzeit, falls precheck erst eingerichtet hat.
+# docker build.
 .PHONY: build
-build: precheck ## Geprüftes Image für PLATFORM=x86|arm (Vorgabe x86)
-	@$(BASHLIB_ENV); docker/build.sh --build "$${PLATFORM}"
+build: require-bash-libs ## Geprüftes Image für PLATFORM=x86|arm (Vorgabe x86)
+	@docker/build.sh --build "$${PLATFORM}"
 
 # Startet das zuletzt gebaute Image wie ein User ohne Klon (Wegwerf-Container, freier Port an
 # 127.0.0.1) und prüft /health und das Dashboard; Ablauf in docker/build.sh --check.
 .PHONY: build-check
-build-check: precheck ## Gebautes Image startet, /health ok, Dashboard unter /
-	@$(BASHLIB_ENV); docker/build.sh --check
+build-check: require-bash-libs ## Gebautes Image startet, /health ok, Dashboard unter /
+	@docker/build.sh --check
 
 .PHONY: push
 push: require-tools ## Image und docker/README.md veröffentlicht (TARGET=ghcr|dockerhub|ecr)
-	@$(BASHLIB_ENV); docker/build.sh --push
+	@docker/build.sh --push
 
 # ─── Versionierung ────────────────────────────────────────────────────────────
 
 ##@ Versionierung
 
 .PHONY: version
-version: precheck ## Version aus pyproject.toml und letzter Release-Tag
+version: require-bash-libs ## Version aus pyproject.toml und letzter Release-Tag
 	@echo
-	@$(BASHLIB_ENV); source "$${BASH_LIBS}/make.lib.sh" && showProjectVersion
+	@source "$${BASH_LIBS}/make.lib.sh" && showProjectVersion
 	@echo
 
 .PHONY: tags
-tags: precheck ## Letzte 10 Release-Tags mit Nachricht anzeigen
+tags: require-bash-libs ## Letzte 10 Release-Tags mit Nachricht anzeigen
 	@echo
-	@$(BASHLIB_ENV); source "$${BASH_LIBS}/make.lib.sh" && showReleaseTags 10
+	@source "$${BASH_LIBS}/make.lib.sh" && showReleaseTags 10
 	@echo
 
 # Sprache von CHANGELOG.md, unabhängig von der Locale der Shell (changelog folgt sonst LANG).
@@ -515,9 +518,9 @@ tag-patch: ## Patch-Release {patch}, Fehlerbehebung  [MSG="..."]
 # Ablauf stehen nur in tag-version (ProjectTools): Es bricht ab, solange develop Commits hat,
 # die noch nicht auf master sind (nicht abgenommene Tickets). changelog nennt bei Erfolg den
 # Pfad der Datei, darum ohne stdout; Fehler kommen über stderr.
-# require-tools vor precheck: ohne ProjectTools bricht ein Release vor dem Bump ab, nicht erst
-# nach dem Tag.
-tag-major tag-minor tag-patch: require-tools precheck
+# require-tools vor require-bash-libs: ohne ProjectTools bricht ein Release vor dem Bump ab,
+# nicht erst nach dem Tag.
+tag-major tag-minor tag-patch: require-tools require-bash-libs
 	@tag-version "$(patsubst tag-%,%,$@)" --message "$${MSG:-}"
 	@LANGUAGE="$${CHANGELOG_LANGUAGE}" changelog --commit >/dev/null
 	@tag-version --fast-forward

@@ -1,8 +1,8 @@
-"""`make setup` stellt die .venv her, Prüf-Targets richten bei Bedarf selbst ein.
+"""`make setup` stellt die .venv her, Prüf-Targets und BashLib-Targets richten bei Bedarf selbst ein.
 
-Beide Tests laufen mit dem echten Makefile in einer Sandbox unter `tmp_path`,
+Die Tests laufen mit dem echten Makefile in einer Sandbox unter `tmp_path`,
 ohne Netz: Die Abhängigkeitsdateien sind leer, und `devtools` ist ein Ersatz,
-der nur seine Aufrufe mitschreibt.
+der seine Aufrufe mitschreibt.
 """
 
 import os
@@ -41,8 +41,8 @@ def _sandbox(tmp_path: Path) -> Path:
     return workspace
 
 
-def _fake_devtools(tmp_path: Path) -> tuple[str, Path]:
-    """Ersatz für devtools, der nur seine Aufrufe mitschreibt.
+def _fake_devtools(tmp_path: Path, behaviour: str = "") -> tuple[str, Path]:
+    """Ersatz für devtools, der seine Aufrufe mitschreibt und danach `behaviour` ausführt.
 
     Returns:
         PATH mit dem Ersatz vorn und die Datei mit den Aufrufen.
@@ -51,7 +51,7 @@ def _fake_devtools(tmp_path: Path) -> tuple[str, Path]:
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
     devtools = fake_bin / "devtools"
-    devtools.write_text(f'#!/usr/bin/env bash\necho "$*" >> "{calls}"\n')
+    devtools.write_text(f'#!/usr/bin/env bash\necho "$*" >> "{calls}"\n{behaviour}')
     devtools.chmod(0o755)
     return f"{fake_bin}{os.pathsep}{os.environ['PATH']}", calls
 
@@ -209,3 +209,37 @@ def test_pruef_targets_richten_nur_eine_veraltete_einrichtung_ein(tmp_path: Path
     assert plugin_changed.returncode == 0, plugin_changed.stdout + plugin_changed.stderr
     assert venv_stamp.stat().st_mtime > installed
     assert calls.read_text().splitlines() == ["--project install"]
+
+
+@requires_bootstrap
+def test_bashlib_target_richtet_im_frischen_checkout_ein_und_laeuft_weiter(tmp_path: Path) -> None:
+    """`make version` ohne .tools/ ruft einmal `make setup` auf und zeigt danach die Version.
+
+    Fehlt BashLib, richtet require-bash-libs als Vorbedingung ein. Das Target
+    danach sieht BashLib im selben Lauf nur, weil BASH_LIBS im Kopf des
+    Makefiles mit `=` steht; mit `:=` bliebe es leer (T-155).
+    """
+    workspace = _sandbox(tmp_path)
+    bashlib = tmp_path / "bashlib"
+    bashlib.mkdir()
+    (bashlib / "version.lib.sh").write_text("")
+    (bashlib / "make.lib.sh").write_text('showProjectVersion() { echo "Version aus BashLib"; }\n')
+    # install legt bashlib-path in .tools/ an; check bashlib besteht erst danach.
+    path, calls = _fake_devtools(
+        tmp_path,
+        'case "$*" in\n'
+        '  "--project install") mkdir -p .tools/bin\n'
+        f"    printf '#!/usr/bin/env bash\\necho %s\\n' '{bashlib}' > .tools/bin/bashlib-path\n"
+        "    chmod +x .tools/bin/bashlib-path ;;\n"
+        '  "--project check bashlib") test -x .tools/bin/bashlib-path ;;\n'
+        "esac\n",
+    )
+    _venv(workspace)
+    _set_up(workspace)
+    shutil.rmtree(workspace / ".tools")
+
+    result = _make(workspace, "version", path=path)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Version aus BashLib" in result.stdout
+    assert calls.read_text().splitlines() == ["--project install", "--project check bashlib"]
