@@ -46,8 +46,9 @@ old, they run `make setup` first, and only stop with the reason if that does
 not help, before they start or stop anything. Without ProjectTools, `make hints` shows
 `repo-info fehlt` instead of the repository and the last release, and
 `dev-ports fehlt` instead of the local addresses. `make setup`
-installs BashLib; `help`, `info`, `hints`, `dev-up`, `dev-down`, `up`,
-`down`, `build`, `build-check`, `push`, `version`, `tags` and `tag-*` need it.
+installs BashLib; `help`, `info`, `hints`, `quality`, `audit`, `dev-up`,
+`dev-down`, `up`, `down`, `build`, `build-check`, `push`, `version`, `tags`
+and `tag-*` need it.
 All of them except `help`, `info` and `hints` run `make setup` first when
 BashLib is missing or too old. To build the
 image without these tools, run this instead of `make build`:
