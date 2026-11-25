@@ -34,6 +34,8 @@ def _sandbox(tmp_path: Path) -> Path:
     )
     for name in ("requirements.txt", "requirements-dev.txt"):
         (workspace / name).write_text("")
+    (workspace / "plugin_api").mkdir()
+    (workspace / "plugin_api" / "pyproject.toml").write_text('[project]\nname = "plugin-test"\n')
     (workspace / "dashboard" / "package-lock.json").write_text("{}\n")
     subprocess.run(["git", "init", "-q", str(workspace)], check=True)
     return workspace
@@ -182,7 +184,28 @@ def test_pruef_targets_richten_nur_eine_veraltete_einrichtung_ein(tmp_path: Path
     assert outdated.returncode == 0, outdated.stdout + outdated.stderr
     assert calls.read_text().splitlines() == ["--project install"]
 
+    # Wieder eingerichtet: Der Ersatz-devtools stempelt mit der echten Zeit, die Config lag in
+    # der Zukunft. Jede weitere Phase hat so genau einen Grund für make setup, und kein
+    # zweiter devtools-Aufruf zeigt, dass der Werkzeugstempel ihn nicht geliefert hat.
+    past = time.time() - 100
+    os.utime(workspace / ".dev-tools.conf.sh", (past, past))
+    settled = _make(workspace, "require-setup", path=path)
+    assert settled.returncode == 0, settled.stdout + settled.stderr
+    assert calls.read_text().splitlines() == ["--project install"]
+
     _break_interpreter(workspace, tmp_path)
     broken = _make(workspace, "require-setup", path=path)
     assert broken.returncode == 0, broken.stdout + broken.stderr
     assert _python_version(workspace) == str(tuple(int(part) for part in PYTHON_MIN.split(".")))
+    assert calls.read_text().splitlines() == ["--project install"]
+
+    # requirements.txt installiert das Plugin-Paket editierbar; dessen Abhängigkeiten und
+    # Entry-Points landen nur beim Installieren in der .venv (T-154).
+    venv_stamp = workspace / ".venv" / f".installed-python{PYTHON_MIN}"
+    installed = venv_stamp.stat().st_mtime
+    changed = newer + 10
+    os.utime(workspace / "plugin_api" / "pyproject.toml", (changed, changed))
+    plugin_changed = _make(workspace, "require-setup", path=path)
+    assert plugin_changed.returncode == 0, plugin_changed.stdout + plugin_changed.stderr
+    assert venv_stamp.stat().st_mtime > installed
+    assert calls.read_text().splitlines() == ["--project install"]
