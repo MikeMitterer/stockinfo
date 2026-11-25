@@ -43,8 +43,9 @@ endif
 export BASH_LIBS
 # BashLib zur Laufzeit eines Rezepts. Make ermittelt BASH_LIBS beim Lesen des Makefiles; hat
 # erst precheck oder require-setup im selben Lauf eingerichtet, ist es noch leer, und
-# bashlib-path aus .tools/ nennt den Ort.
-BASHLIB = "$${BASH_LIBS:-$$(bashlib-path 2>/dev/null)}"
+# bashlib-path aus .tools/ nennt den Ort. Exportiert, weil make.lib.sh die übrigen
+# Bibliotheken über BASH_LIBS lädt. Im Rezept vor BashLib: @$(BASHLIB_ENV); …
+BASHLIB_ENV = export BASH_LIBS="$${BASH_LIBS:-$$(bashlib-path 2>/dev/null)}"
 # Vorspann für $(shell) mit einem Werkzeug aus .tools/: $(shell $(TOOL_ENV); befehl). GNU Make
 # vor 4.4 (macOS: 3.81) gibt das exportierte PATH nicht an $(shell) weiter, und das BASH_ENV
 # von help, info und hints gehört nicht in die Werkzeuge.
@@ -54,8 +55,8 @@ TOOL_ENV = unset BASH_ENV; PATH=$(WORKSPACE_SQ)/$(TOOLS_DIR)/bin:"$$PATH"
 # BashLib. Im Rezept: @$(STATUS) "✓" "Text" OK  (Rollen OK, WARN, ERR) bzw.
 # @$(HEADING) "Text". Bewusst kein BASH_ENV für diese Targets: Es ginge an overmind, docker
 # und die Skripte weiter.
-STATUS  = source $(BASHLIB)/make.lib.sh && printThemeStatus
-HEADING = source $(BASHLIB)/make.lib.sh && printMakeHeading
+STATUS  = $(BASHLIB_ENV); source "$${BASH_LIBS}/make.lib.sh" && printThemeStatus
+HEADING = $(BASHLIB_ENV); source "$${BASH_LIBS}/make.lib.sh" && printMakeHeading
 
 # Mindestversion von Python, gelesen aus `requires-python = ">=X.Y"` in pyproject.toml, der
 # einzigen Quelle. Leer, wenn die Zeile anders aussieht; setup bricht dann mit Meldung ab.
@@ -205,7 +206,7 @@ hints: ## Links, URLs und Tipps für die tägliche Arbeit
 # BashLib bereit: die Bibliotheken, die das Makefile lädt (version.lib.sh für Releases,
 # make.lib.sh für Statuszeilen und Ausgabe), lesbar; aus .tools/ zudem in der Mindestversion
 # aus .dev-tools.conf.sh. Ein von außen gesetztes BASH_LIBS prüft es nur auf Lesbarkeit.
-BASHLIB_READY = LIB_DIR=$(BASHLIB); [[ -r "$$LIB_DIR/version.lib.sh" && -r "$$LIB_DIR/make.lib.sh" ]] && \
+BASHLIB_READY = $(BASHLIB_ENV); [[ -r "$$BASH_LIBS/version.lib.sh" && -r "$$BASH_LIBS/make.lib.sh" ]] && \
 	{ [[ -n '$(BASHLIB_FROM_OUTSIDE)' ]] || $(DEV_TOOLS) check bashlib >/dev/null 2>&1; }
 
 # Ohne `##`: läuft vor dev-up, dev-down, up, down, version, tags, build, push und
@@ -449,17 +450,17 @@ docker-logs: ## Container-Logs live verfolgen
 # docker build. BASH_LIBS zur Laufzeit, falls precheck erst eingerichtet hat.
 .PHONY: build
 build: precheck ## Geprüftes Image für PLATFORM=x86|arm (Vorgabe x86)
-	BASH_LIBS=$(BASHLIB) docker/build.sh --build "$${PLATFORM}"
+	@$(BASHLIB_ENV); docker/build.sh --build "$${PLATFORM}"
 
 # Startet das zuletzt gebaute Image wie ein User ohne Klon (Wegwerf-Container, freier Port an
 # 127.0.0.1) und prüft /health und das Dashboard; Ablauf in docker/build.sh --check.
 .PHONY: build-check
 build-check: precheck ## Gebautes Image startet, /health ok, Dashboard unter /
-	BASH_LIBS=$(BASHLIB) docker/build.sh --check
+	@$(BASHLIB_ENV); docker/build.sh --check
 
 .PHONY: push
 push: require-tools ## Image und docker/README.md veröffentlicht (TARGET=ghcr|dockerhub|ecr)
-	BASH_LIBS=$(BASHLIB) docker/build.sh --push
+	@$(BASHLIB_ENV); docker/build.sh --push
 
 # ─── Versionierung ────────────────────────────────────────────────────────────
 
@@ -468,13 +469,13 @@ push: require-tools ## Image und docker/README.md veröffentlicht (TARGET=ghcr|d
 .PHONY: version
 version: precheck ## Version aus pyproject.toml und letzter Release-Tag
 	@echo
-	@source $(BASHLIB)/make.lib.sh && showProjectVersion
+	@$(BASHLIB_ENV); source "$${BASH_LIBS}/make.lib.sh" && showProjectVersion
 	@echo
 
 .PHONY: tags
 tags: precheck ## Letzte 10 Release-Tags mit Nachricht anzeigen
 	@echo
-	@source $(BASHLIB)/make.lib.sh && showReleaseTags 10
+	@$(BASHLIB_ENV); source "$${BASH_LIBS}/make.lib.sh" && showReleaseTags 10
 	@echo
 
 # Sprache von CHANGELOG.md, unabhängig von der Locale der Shell (changelog folgt sonst LANG).
