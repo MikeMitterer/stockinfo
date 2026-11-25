@@ -215,8 +215,10 @@ BASHLIB_READY = $(BASHLIB_ENV); [[ -r "$$BASH_LIBS/version.lib.sh" && -r "$$BASH
 .PHONY: precheck
 precheck:
 	@$(BASHLIB_READY) || $(MAKE) --no-print-directory setup
-	@$(BASHLIB_READY) || { echo "  ✗ BashLib fehlt oder ist unvollständig (BASH_LIBS oder .tools/)" >&2; \
-		[[ -n '$(BASHLIB_FROM_OUTSIDE)' ]] || $(DEV_TOOLS) check bashlib; exit 1; }
+	@$(BASHLIB_READY) || { echo "  ✗ BashLib fehlt oder ist unvollständig, auch nach make setup" >&2; \
+		if [[ -n '$(BASHLIB_FROM_OUTSIDE)' ]]; then \
+			echo "    BASH_LIBS zeigt nicht auf BashLib; ohne gilt die aus .tools/: unset BASH_LIBS" >&2; \
+		else $(DEV_TOOLS) check bashlib; fi; exit 1; }
 
 # Ohne `##`: verlangt ProjectTools in .tools/ in Mindestversion. Fehlt es oder ist es zu alt,
 # läuft einmal make setup; reicht das nicht (etwa ein zu alter Tag in .dev-tools.conf.sh),
