@@ -20,7 +20,8 @@ Installing and running the finished container is described in the
 ## Requirements
 
 - **Python 3.14 or newer** (`make setup` creates the project `.venv` with
-  `python3.14` and replaces an existing `.venv` built with an older Python;
+  `python3.14` and replaces an existing `.venv` without a working Python 3.14
+  or newer;
   choose another interpreter with `PYTHON_BOOTSTRAP=python3.15 make setup`)
 - **make** (drives setup and start/stop of the services)
 - **overmind** and **tmux** for `make dev-up` (backend and dashboard together)
@@ -40,14 +41,15 @@ worktree has its own copy. `make help`, `make info`, `make hints` and the
 status lines of the other targets come from BashLib and use your CLITheme
 theme (`clitheme use NAME`). `make test`, `make check`, `make docs-check`,
 `make status`, `make changelog`, `make dev-up`, `make dev-down`, `make push`
-and `make tag-*` need ProjectTools in `.tools/`; without it they stop and
-name the next step before they start or stop anything. Without ProjectTools, `make hints` shows
+and `make tag-*` need ProjectTools in `.tools/`; when it is missing or too
+old, they run `make setup` first, and only stop with the reason if that does
+not help, before they start or stop anything. Without ProjectTools, `make hints` shows
 `repo-info fehlt` instead of the repository and the last release, and
 `dev-ports fehlt` instead of the local addresses. `make setup`
 installs BashLib; `help`, `info`, `hints`, `dev-up`, `dev-down`, `up`,
 `down`, `build`, `build-check`, `push`, `version`, `tags` and `tag-*` need it.
-All of them except `help`, `info` and `hints` stop with `make setup` before
-they start or stop anything. To build the
+All of them except `help`, `info` and `hints` run `make setup` first when
+BashLib is missing or too old. To build the
 image without these tools, run this instead of `make build`:
 
 ```bash
@@ -74,13 +76,14 @@ make dev-up         # stop with make dev-down · logs with make dev-logs
 `make setup` can be run again at any time. It keeps an existing `.venv` built
 with the required Python version and only installs again when
 `requirements.txt`, `requirements-dev.txt`, `dashboard/package-lock.json` or
-`.dev-tools.conf.sh` changed. When the minimum version in `requires-python`
-rises, test targets ask for `make setup`, which then replaces a `.venv` built
-with an older Python. A package
+`.dev-tools.conf.sh` changed. It creates the `.venv` again when its Python
+no longer runs, for example after Homebrew removed the Python it was built
+with, or when the minimum version in `requires-python` rises. A package
 pinned to a Git commit in `requirements.txt` is then reinstalled when the
 installed commit differs from the pin, even if the package version stayed
-the same. Test targets do not set anything up themselves: after such a change
-they stop and ask for `make setup`. `make info` shows whether the tools are
+the same. Test and check targets run `make setup` themselves when the setup
+is missing or outdated after such a change; otherwise they set nothing up.
+`make info` shows whether the tools are
 current. `make clean` removes what setup, tests and builds created in the
 checkout (`.venv`, dashboard packages, `.tools/`, caches, and `__pycache__`
 and `*.egg-info` in `app/`, `tests/`, `scripts/` and `plugin_api/`); `.env`,
@@ -447,11 +450,12 @@ fail the run.
 `make docs-check` checks the documentation against the project; its rules
 are in `.docs-check.conf.sh`. It needs ProjectTools in `.tools/`
 (`make setup`) and Deno 2; without ProjectTools, `make docs-check`,
-`make test` and `make check` stop and name the next step.
+`make test` and `make check` run `make setup` first.
 
 `make setup` also installs a Git pre-commit hook that runs the check on the
-staged files and stops a commit when it reports problems. Without ProjectTools
-the hook only prints a warning.
+staged files and stops a commit when it reports problems. When the setup is
+missing or outdated, the hook runs `make setup` in the checkout first; if
+that fails, the commit stops.
 
 `README.md` and `README.de.md` must keep the same structure (`TRANSLATIONS` in
 `.docs-check.conf.sh`): the same headings and, per section, the same links,
