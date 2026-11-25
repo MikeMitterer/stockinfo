@@ -2,6 +2,26 @@
 
 Generated from release tags and Conventional Commits.
 
+## v1.7.2+261125.1331.0df41 — 2026-11-25
+
+make setup repairs itself: broken .venv interpreter links, changed plugin package dependencies and missing BashLib are set up automatically
+
+### Fixes
+
+- .venv mit totem Interpreter-Link neu anlegen, Prüf-Targets richten selbst ein (T-153) (`59dd08e`)
+- BashLib zur Laufzeit samt BASH\_LIBS exportieren, make.lib.sh lädt darüber (T-153) (`fe3ddf7`)
+- precheck nennt den nächsten Schritt auch bei BASH\_LIBS von außen (T-153) (`b944dbb`)
+- .venv ohne lauffähiges Python gilt trotz Stempel als nicht eingerichtet (T-153 R1) (`4cf89f6`)
+- .venv folgt Abhängigkeiten und Entry-Points des Plugin-Pakets (T-154) (`2cce59f`)
+
+### Other changes
+
+- BASH\_LIBS mit = und require-bash-libs statt BASHLIB\_ENV in jeder Rezeptzeile (T-155) (`ff19ef5`)
+
+### Documentation
+
+- quality und audit brauchen BashLib und richten sie selbst ein (T-155) (`2503ae3`)
+
 ## v1.7.1+261123.1146.c5855 — 2026-11-23
 
 Python 3.14 for the development environment, linting and the container image
