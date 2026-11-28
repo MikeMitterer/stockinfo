@@ -2,6 +2,12 @@ SHELL := bash
 
 .DEFAULT_GOAL := help
 
+# Interpreter für die .venv (unten), unausgewertet übernommen und vor jedem $(shell …): Sonst
+# wertete GNU Make einen Wert wie $(shell …) vom Aufruf schon dort aus.
+ifdef PYTHON_BOOTSTRAP
+override PYTHON_BOOTSTRAP := $(value PYTHON_BOOTSTRAP)
+endif
+
 WORKSPACE    := $(CURDIR)
 WORKSPACE_SQ := '$(subst ','\'',$(WORKSPACE))'
 PROJECT_NAME := $(shell basename -- $(WORKSPACE_SQ))
@@ -55,27 +61,31 @@ TOOL_ENV = unset BASH_ENV; PATH=$(WORKSPACE_SQ)/$(TOOLS_DIR)/bin:"$$PATH"
 STATUS  = source "$${BASH_LIBS}/make.lib.sh" && printThemeStatus
 HEADING = source "$${BASH_LIBS}/make.lib.sh" && printMakeHeading
 
-# Mindestversion von Python, gelesen aus `requires-python = ">=X.Y"` in pyproject.toml, der
-# einzigen Quelle. Leer, wenn die Zeile anders aussieht; setup bricht dann mit Meldung ab.
-PYTHON_MIN := $(shell sed -n 's/^requires-python = ">=\([0-9][0-9.]*\)"$$/\1/p' pyproject.toml)
-# Interpreter, mit dem `make setup` die .venv anlegt: PYTHON_BOOTSTRAP aus der Umgebung, sonst
-# python$(PYTHON_MIN). Als Wert von außen liest ihn die Shell im Rezept, nicht Make: Ein Pfad mit
-# Apostroph, Leerzeichen oder $(…) bliebe als $(PYTHON_BOOTSTRAP) im Rezepttext nicht heil.
-BOOTSTRAP = "$${PYTHON_BOOTSTRAP:-python$(PYTHON_MIN)}"
-# Python-Ausdruck für `-c`: Exit 0 ab PYTHON_MIN, sonst Abbruch mit der gefundenen Version.
-PYTHON_MIN_CHECK = import sys; sys.exit(0 if sys.version_info >= tuple(map(int, "$(PYTHON_MIN)".split("."))) else "Python $(PYTHON_MIN) oder neuer erforderlich, gefunden " + sys.version.split()[0])
+# Python für die .venv: python3 aus dem PATH, ein gesetztes PYTHON_BOOTSTRAP geht vor. Python ist
+# Voraussetzung; das Makefile sucht kein passendes (makefile-conventions, „Python für die .venv“).
+# Interpreter und Mindestversion (requires-python in pyproject.toml) setzt make selbst ein,
+# PYTHON_BOOTSTRAP gequotet. PYTHON_MINIMUM ist leer, wenn die Zeile nicht ">=X.Y" lautet.
+PYTHON_BOOTSTRAP_SQ := '$(subst ','\'',$(or $(PYTHON_BOOTSTRAP),python3))'
+PYTHON_MINIMUM := $(shell sed -nE 's/^requires-python *= *">= *([0-9]+\.[0-9]+)".*/\1/p' pyproject.toml)
+# Argumente für ein Python: gibt X.Y aus und endet mit Exit 1, wenn es älter als PYTHON_MINIMUM ist.
+PYTHON_AT_LEAST = -c 'import sys; v = sys.version_info[:2]; print("%d.%d" % v); \
+	sys.exit(v < tuple(map(int, sys.argv[1].split("."))))' $(PYTHON_MINIMUM)
+# Setzt $$py, in derselben Rezeptzeile zu nutzen; zu alt oder fehlend: Abbruch mit Grund.
+REQUIRE_PYTHON = py=$(PYTHON_BOOTSTRAP_SQ); found=$$("$$py" $(PYTHON_AT_LEAST) 2>/dev/null) || { \
+	echo "  ✗ Python $(PYTHON_MINIMUM) oder neuer nötig, $$py ist $${found:-nicht installiert}$${found:+ ($$(command -v "$$py"))}: neueres Python installieren oder seinen Ordner im PATH vor /usr/bin stellen" >&2; \
+	exit 1; }
 
-VENV    := .venv
+# override: Ein `make VENV=…` lenkte das rm -rf im Stempelrezept sonst auf einen anderen Ordner.
+override VENV := .venv
 PYTEST  := $(VENV)/bin/pytest
-# Läuft das Python der .venv in der Mindestversion? Falsch auch, wenn der Interpreter-Link ins
+# Startet das Python der .venv in der Mindestversion? Falsch auch, wenn der Interpreter-Link ins
 # Leere zeigt, etwa nachdem Homebrew das Python entfernt hat, mit dem die .venv angelegt wurde.
-# Ein aktueller Stempel sagt darüber nichts; setup und require-setup fragen deshalb beides.
-VENV_RUNS = $(VENV)/bin/python -c '$(PYTHON_MIN_CHECK)' 2>/dev/null
+VENV_RUNS = $(VENV)/bin/python $(PYTHON_AT_LEAST) >/dev/null 2>&1
 # Was setup herstellt und require-setup prüft: Python-Pakete in der .venv, die
 # Dashboard-Pakete und die Werkzeuge in .tools/. Eine geänderte Abhängigkeitsdatei macht den
 # Stempel veraltet. Der Stempel der .venv trägt die Mindestversion im Namen: Steigt sie, fehlt
 # er, require-setup ruft make setup auf, und setup ersetzt eine .venv mit älterem Python.
-VENV_STAMP   := $(VENV)/.installed-python$(PYTHON_MIN)
+VENV_STAMP   := $(VENV)/.installed-python$(PYTHON_MINIMUM)
 TOOLS_STAMP  := $(TOOLS_DIR)/.installed
 SETUP_STAMPS := $(VENV_STAMP) dashboard/node_modules/.installed $(TOOLS_STAMP)
 
@@ -244,36 +254,39 @@ require-tools: require-bash-libs
 .PHONY: setup
 setup: ## Bereit zum Entwickeln: .venv, Dashboard-Pakete, .tools/, Git-Hooks
 	@git config core.hooksPath .githooks
-	@# Ohne lauffähiges Python gilt die .venv als nicht eingerichtet, auch mit aktuellem Stempel.
-	@$(VENV_RUNS) || rm -f -- '$(VENV_STAMP)'
 	@$(MAKE) -s --no-print-directory $(SETUP_STAMPS)
 
 # Stempelregeln: nur setup erreicht sie; neu, sobald eine Abhängigkeitsdatei neuer ist.
-# Eine .venv ohne lauffähiges Python ab PYTHON_MIN wird mit --clear neu angelegt; sie ist ein
-# Erzeugnis von setup. Ein Zweig für fehlende .venv, ins Leere zeigenden Interpreter-Link (etwa
-# nachdem Homebrew das alte Python entfernt hat) und zu altes Python: venv ohne --clear
-# scheiterte an den toten Links mit Errno 2. requirements.txt installiert plugin_api editierbar;
-# dessen Abhängigkeiten und Entry-Points kommen nur beim Installieren in die .venv, darum hängt
-# der Stempel auch an plugin_api/pyproject.toml. Ein Versionssprung dort installiert mit neu
-# (selten, von Hand gehoben); devtools tstamp lohnt dafür nicht (T-154).
-$(VENV_STAMP): requirements.txt requirements-dev.txt plugin_api/pyproject.toml
-	@test -n '$(PYTHON_MIN)' || { echo '  ✗ requires-python in pyproject.toml ist nicht als ">=X.Y" lesbar' >&2; exit 1; }
-	@command -v $(BOOTSTRAP) >/dev/null || { echo "  ✗ "$(BOOTSTRAP)" nicht gefunden: Python $(PYTHON_MIN) installieren oder PYTHON_BOOTSTRAP=<Interpreter> make setup" >&2; exit 1; }
-	@$(BOOTSTRAP) -c '$(PYTHON_MIN_CHECK)' || { echo '  ✗ PYTHON_BOOTSTRAP ist zu alt: PYTHON_BOOTSTRAP=python$(PYTHON_MIN) make setup' >&2; exit 1; }
-	@if ! $(VENV_RUNS); then \
-		test -e $(VENV) && echo '  ⚠ .venv ohne lauffähiges Python ab $(PYTHON_MIN) wird neu angelegt'; \
-		$(BOOTSTRAP) -m venv --clear $(VENV); \
-	fi
+# requirements.txt installiert plugin_api editierbar; dessen Abhängigkeiten und Entry-Points
+# kommen nur beim Installieren in die .venv, darum hängt der Stempel auch an
+# plugin_api/pyproject.toml. Ein Versionssprung dort installiert mit neu (selten, von Hand
+# gehoben); devtools tstamp lohnt dafür nicht (T-154). Hängt auch an .venv/bin/python: Fehlt der
+# Link oder zeigt er ins Leere, etwa nachdem Homebrew das alte Python entfernt hat, ist die
+# Einrichtung veraltet, auch mit aktuellem Stempel (T-156). Sein Zeitstempel ist der des Pythons
+# dahinter; nach einem Update installiert setup die Pakete einmal neu.
+$(VENV_STAMP): requirements.txt requirements-dev.txt plugin_api/pyproject.toml $(VENV)/bin/python
+	@test -n '$(PYTHON_MINIMUM)' || { echo '  ✗ requires-python in pyproject.toml ist nicht als ">=X.Y" lesbar' >&2; exit 1; }
+	@# Ist die .venv ein Link oder startet ihr Python nicht in der Mindestversion, neu anlegen: pip
+	@# schriebe sonst ins Ziel des Links. rm -rf entfernt bei einem Link nur den Link, nie sein
+	@# Ziel; venv --clear folgte ihm. Scheitert ein Schritt, scheitert das Rezept.
+	@[[ ! -L $(VENV) ]] && $(VENV_RUNS) || { $(REQUIRE_PYTHON); \
+		[[ ! -e $(VENV) && ! -L $(VENV) ]] || echo '  ⚠ .venv ohne lauffähiges Python ab $(PYTHON_MINIMUM) wird neu angelegt'; \
+		rm -rf $(VENV) && "$$py" -m venv $(VENV); }
 	@rm -f $(VENV)/.installed $(VENV)/.installed-python*
-	@$(VENV)/bin/python -m pip install -q -r requirements-dev.txt
+	@$(VENV)/bin/python -m pip install -q --disable-pip-version-check -r requirements-dev.txt
 	@# Git-gepinnte Pakete behalten bei einem neuen Commit oft ihre Version;
 	@# pip hält den alten Stand dann für erfüllt. Weicht der installierte Stand
 	@# vom Pin ab, wird genau dieses Paket neu installiert.
 	@grep -E '^[A-Za-z0-9_.-]+ @ git\+' requirements.txt | while read -r PIN; do \
 		$(VENV)/bin/python -m pip freeze | grep -qxF "$$PIN" || \
-			$(VENV)/bin/python -m pip install -q --no-deps --force-reinstall "$$PIN"; \
+			$(VENV)/bin/python -m pip install -q --disable-pip-version-check --no-deps --force-reinstall "$$PIN"; \
 	done
 	@touch "$@"
+
+# Leere Regel: Fehlt .venv/bin/python, ist die Einrichtung veraltet, statt dass make mit „keine
+# Regel“ abbricht. Mit Rezept installierte setup erst beim zweiten Aufruf: Der neue Link trüge
+# die alte Zeit des Pythons dahinter.
+$(VENV)/bin/python: ;
 
 dashboard/node_modules/.installed: dashboard/package-lock.json
 	@npm ci --prefix dashboard --no-audit --no-fund
@@ -286,14 +299,14 @@ $(TOOLS_STAMP): .dev-tools.conf.sh
 	@touch "$@"
 
 # Ohne Hilfeeintrag: Fehlt die Einrichtung oder ist sie veraltet (ein Stempel fehlt oder ist
-# älter als seine Abhängigkeit, Git-Hooks nicht aktiv, Python der .venv läuft nicht), läuft
-# make setup; sonst nichts. Eingerichtet wird nur über setup. Braucht kein BashLib, das erst
-# mit setup kommt. Der pre-commit-Hook ruft es im Checkout, nicht in seiner Kopie des Index:
-# Dort wäre jede Datei neuer als die Stempel.
+# älter als seine Abhängigkeit, auch ein toter Interpreter-Link der .venv; Git-Hooks nicht
+# aktiv), läuft make setup; sonst nichts. Eingerichtet wird nur über setup. Braucht kein
+# BashLib, das erst mit setup kommt. Der pre-commit-Hook ruft es im Checkout, nicht in seiner
+# Kopie des Index: Dort wäre jede Datei neuer als die Stempel.
 .PHONY: require-setup
 require-setup:
 	@{ $(MAKE) --no-print-directory --question $(SETUP_STAMPS) && \
-		[[ "$$(git config core.hooksPath)" == .githooks ]] && $(VENV_RUNS); } 2>/dev/null || \
+		[[ "$$(git config core.hooksPath)" == .githooks ]]; } 2>/dev/null || \
 		$(MAKE) --no-print-directory setup
 
 # Entfernt nur, was setup, Tests und Builds im Checkout erzeugen. Die Pfade stehen fest im

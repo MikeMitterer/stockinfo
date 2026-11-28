@@ -19,10 +19,13 @@ Installing and running the finished container is described in the
 
 ## Requirements
 
-- **Python 3.14 or newer** (`make setup` creates the project `.venv` with
-  `python3.14` and replaces an existing `.venv` without a working Python 3.14
-  or newer;
-  choose another interpreter with `PYTHON_BOOTSTRAP=python3.15 make setup`)
+- **Python 3.14 or newer** as `python3` in `PATH` (`make setup` creates the
+  project `.venv` with it; choose another interpreter with
+  `PYTHON_BOOTSTRAP=python3.15 make setup`). If it is older or missing,
+  `make setup` stops before creating a `.venv` and names the minimum version,
+  the version found and its path. On macOS `/usr/bin/python3` (3.9) often
+  comes before Homebrew's; put `/opt/homebrew/bin` before `/usr/bin` in
+  `PATH`, for example with `eval "$(brew shellenv)"`.
 - **make** (drives setup and start/stop of the services)
 - **overmind** and **tmux** for `make dev-up` (backend and dashboard together)
 - optional **Docker** (to run the container)
@@ -78,9 +81,10 @@ make dev-up         # stop with make dev-down · logs with make dev-logs
 with the required Python version and only installs again when
 `requirements.txt`, `requirements-dev.txt`, `plugin_api/pyproject.toml`
 (dependencies and entry points of the plugin package, installed in editable
-mode), `dashboard/package-lock.json` or `.dev-tools.conf.sh` changed. It creates the `.venv` again when its Python
+mode), `dashboard/package-lock.json` or `.dev-tools.conf.sh` changed. It deletes the `.venv` and creates it again when its Python
 no longer runs, for example after Homebrew removed the Python it was built
-with, or when the minimum version in `requires-python` rises. A package
+with, when the minimum version in `requires-python` rises, or when `.venv` is
+a link (only the link is removed, not its target). A package
 pinned to a Git commit in `requirements.txt` is then reinstalled when the
 installed commit differs from the pin, even if the package version stayed
 the same. Test and check targets run `make setup` themselves when the setup
