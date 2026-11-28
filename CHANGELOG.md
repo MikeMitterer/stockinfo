@@ -2,6 +2,18 @@
 
 Generated from release tags and Conventional Commits.
 
+## v1.8.0+261128.1710.f304e — 2026-11-28
+
+make output via CLITheme with the version in the help header (make version and tags removed); make setup rebuilds a dead .venv with python3 from PATH
+
+### Fixes
+
+- tote .venv mit python3 aus dem PATH neu bauen statt mit python3.14 (T-156) (`10993cc`)
+
+### Other changes
+
+- Ausgabe über die Bash-Libs von CLITheme, version und tags entfallen (T-157, T-158) (`0a4b770`)
+
 ## v1.7.2+261125.1331.0df41 — 2026-11-25
 
 make setup repairs itself: broken .venv interpreter links, changed plugin package dependencies and missing BashLib are set up automatically
