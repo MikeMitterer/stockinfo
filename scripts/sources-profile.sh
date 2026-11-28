@@ -45,10 +45,14 @@
 set -uo pipefail
 
 BASH_LIBS="${BASH_LIBS:-$(bashlib-path 2>/dev/null || true)}"
+CLI_LIBS="${CLI_LIBS:-$(BASH_ENV='' clilib-path 2>/dev/null || true)}"
 
-# Das Script steht in der Unraid-Anleitung fuer Nutzer; BashLib haben sie
-# meist nicht installiert. Ohne sie laeuft es mit einfachen Farben weiter.
-if [[ -r "${BASH_LIBS}/colors.lib.sh" && -r "${BASH_LIBS}/tools.lib.sh" ]]; then
+# Das Script steht in der Unraid-Anleitung fuer Nutzer; BashLib und CLITheme
+# haben sie meist nicht installiert. Ohne beide laeuft es mit einfachen Farben
+# weiter. Aus BashLib kommen die Palette (colors.lib.sh) und logFileStatus
+# (tools.lib.sh); tools.lib.sh bindet usageLine aus cli.lib.sh von CLITheme
+# ein und bricht ohne CLITheme ab, deshalb gilt der Weg nur mit beiden.
+if [[ -r "${BASH_LIBS}/colors.lib.sh" && -r "${BASH_LIBS}/tools.lib.sh" && -r "${CLI_LIBS}/cli.lib.sh" ]]; then
     # shellcheck source=/dev/null
     if [[ "${__COLORS_LIB__:=""}" == "" ]]; then . "${BASH_LIBS}/colors.lib.sh"; fi
     # shellcheck source=/dev/null
@@ -57,7 +61,7 @@ else
     RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
     BLUE='\033[0;34m'; LIGHT_BLUE='\033[1;34m'; NC='\033[0m'
 
-    # Ersatz fuer usageLine aus BashLib: Option und Beschreibung in Spalten.
+    # Ersatz fuer usageLine aus CLITheme: Option und Beschreibung in Spalten.
     #
     # Params:
     #   $1 - Option(en), z.B. "-s | --show"

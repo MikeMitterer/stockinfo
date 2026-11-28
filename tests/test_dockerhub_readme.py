@@ -64,7 +64,7 @@ def test_cli_ohne_aktion_zeigt_hilfe_und_vorschau_braucht_keinen_token(
 
 
 def _push_sandbox(tmp_path: Path, target: str) -> dict[str, str]:
-    """Echtes Buildscript in tmp_path; Git, Docker und BashLib sind Attrappen.
+    """Echtes Buildscript in tmp_path; Git, Docker, BashLib und CLITheme sind Attrappen.
 
     Returns:
         Umgebung für den Push-Lauf; dockerhub-readme ist nur im PATH, wenn ein
@@ -119,6 +119,7 @@ def _push_sandbox(tmp_path: Path, target: str) -> dict[str, str]:
         {
             "PATH": f"{tmp_path / 'bin'}{os.pathsep}{system_path}",
             "BASH_LIBS": str(tmp_path / "libs"),
+            "CLI_LIBS": str(tmp_path / "libs"),
             "TARGET": target,
             "AMAZON_REPO_URI": "example.ecr",
             "CALL_LOG": str(tmp_path / "calls"),

@@ -21,16 +21,17 @@ PROJECTTOOLS_LABEL=ProjectTools
 PROJECTTOOLS_TAG=v0.12.0+261121.2308.3755c
 PROJECTTOOLS_SOURCE=git+https://github.com/MikeMitterer/bash-ProjectTools.git
 
-# BashLib (make.lib.sh für help, info, hints und Statuszeilen; version, tag-*,
-# docker/build.sh und scripts/).
+# BashLib (Daten, keine Ausgabe: readProjectVersion für den Kopf von make help, Releases
+# über tag-*; Docker-Build und -Push in docker/build.sh; Palette und logFileStatus in
+# scripts/sources-profile.sh). Ab v0.20 setzt BashLib CLITheme voraus.
 BASHLIB_PACKAGE=mmit-bashlib
 BASHLIB_LABEL=BashLib
-BASHLIB_TAG=v0.14.0+261119.1230.2ace6
+BASHLIB_TAG=v0.21.0+261128.1332.05ce66
 BASHLIB_SOURCE=git+https://github.com/MikeMitterer/bash-lib.git
 
-# CLITheme (clitheme export: Farben und Abstände der Ausgabe über BashLib). Ohne clitheme
-# bleibt die Ausgabe ohne Farben.
+# CLITheme (Ausgabe: cli.lib.sh und make.lib.sh über clilib-path für help, info, hints,
+# Statuszeilen und die Hilfe der Skripte; clitheme export für Farben und Abstände).
 CLITHEME_PACKAGE=mmit-clitheme
 CLITHEME_LABEL=CLITheme
-CLITHEME_TAG=v0.12.0+261119.1304.0816b
+CLITHEME_TAG=v0.14.0+261127.2030.9d8f4
 CLITHEME_SOURCE=git+https://github.com/MikeMitterer/python-clitheme.git

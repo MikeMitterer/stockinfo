@@ -2,8 +2,12 @@ SHELL := bash
 
 .DEFAULT_GOAL := help
 
-# Interpreter für die .venv (unten), unausgewertet übernommen und vor jedem $(shell …): Sonst
-# wertete GNU Make einen Wert wie $(shell …) vom Aufruf schon dort aus.
+# MSG (Nachricht für tag-*) unausgewertet übernehmen, vor dem ersten $(shell …): Make exportiert
+# eine Variable von der Kommandozeile und wertet sie dabei aus; aus „$HOME“ würde „OME“, und ein
+# $(shell …) in der Nachricht liefe. Im Rezept nur als "$${MSG:-}".
+override MSG := $(value MSG)
+export MSG
+# Ebenso den Interpreter für die .venv (unten).
 ifdef PYTHON_BOOTSTRAP
 override PYTHON_BOOTSTRAP := $(value PYTHON_BOOTSTRAP)
 endif
@@ -22,7 +26,8 @@ export WORKSPACE WORKSPACE_SQ PROJECT_NAME
 -include .env
 
 # Prüfungen, Status und Releases laufen über die Befehle von ProjectTools in .tools/ dieses
-# Checkouts (make setup); help, info, hints und die Statuszeilen über BashLib. Tag und Quelle
+# Checkouts (make setup); help, info, hints und die Statuszeilen über die Bash-Libs von
+# CLITheme, die Version im Kopf von help über BashLib. Tag und Quelle
 # der Werkzeuge und von DevTools selbst stehen nur in .dev-tools.conf.sh. Aufgerufen wird das
 # einmal je Rechner installierte devtools (Starter); ist es älter als DEVTOOLS_TAG, gibt es an
 # diesen Tag weiter. Mit --project installiert und prüft es die Werkzeuge in .tools/.
@@ -37,29 +42,41 @@ REQUIRE_STARTER = command -v devtools >/dev/null || { \
 	echo "  ✗ devtools fehlt: einmal je Rechner in der DevTools-Arbeitskopie make install" >&2; exit 1; }
 
 # Werkzeuge aus .tools/ dieses Checkouts vorn im PATH; ein global installiertes ProjectTools
-# zählt für require-tools nicht. BashLib für help, info, hints, Statuszeilen, version, tag-*,
-# docker/build.sh und scripts/: Ein von außen gesetztes BASH_LIBS geht vor, sonst die aus
-# .tools/. Mit = statt :=: make ermittelt den Wert je Target neu, so sieht ein Target nach
-# require-bash-libs (make setup) BashLib aus .tools/ im selben Lauf. Exportiert, weil
-# make.lib.sh die übrigen Bibliotheken über BASH_LIBS lädt.
+# zählt für require-tools nicht. Geerbte Werte (PATH, BASH_LIBS, CLI_LIBS, CLITHEME_EXPORT)
+# unausgewertet mit $(value …): Ein make setup aus einem Target erbt sie, und ein $(…) im
+# Checkout-Pfad liefe sonst als Make-Code.
 TOOLS_DIR := .tools
-export PATH := $(WORKSPACE)/$(TOOLS_DIR)/bin:$(PATH)
-BASHLIB_FROM_OUTSIDE := $(if $(BASH_LIBS),yes)
+export PATH := $(WORKSPACE)/$(TOOLS_DIR)/bin:$(value PATH)
+# BashLib (Version im Kopf von help, tag-*, docker/build.sh, scripts/): ein von außen gesetztes
+# BASH_LIBS geht vor, sonst die aus .tools/. Mit = statt :=: make ermittelt den Wert je Target
+# neu, so sieht ein Target nach require-bash-libs (make setup) BashLib aus .tools/ im selben Lauf.
+BASHLIB_FROM_OUTSIDE := $(if $(value BASH_LIBS),yes)
 ifndef BASH_LIBS
 BASH_LIBS = $(shell $(WORKSPACE_SQ)/$(TOOLS_DIR)/bin/bashlib-path 2>/dev/null)
+else
+override BASH_LIBS := $(value BASH_LIBS)
 endif
 export BASH_LIBS
+# Bash-Libs von CLITheme (cli.lib.sh, make.lib.sh) für help, info, hints, Statuszeilen und die
+# Skripte; ebenso aus .tools/, wenn nicht von außen gesetzt.
+CLILIB_FROM_OUTSIDE := $(if $(value CLI_LIBS),yes)
+ifndef CLI_LIBS
+CLI_LIBS = $(shell $(WORKSPACE_SQ)/$(TOOLS_DIR)/bin/clilib-path 2>/dev/null)
+else
+override CLI_LIBS := $(value CLI_LIBS)
+endif
+export CLI_LIBS
+# Theme einmal je make-Lauf statt je Rezeptzeile; ein geerbter Export gilt.
+ifndef CLITHEME_EXPORT
+CLITHEME_EXPORT := $(shell $(WORKSPACE_SQ)/$(TOOLS_DIR)/bin/clitheme export --bash 2>/dev/null)
+else
+override CLITHEME_EXPORT := $(value CLITHEME_EXPORT)
+endif
+export CLITHEME_EXPORT
 # Vorspann für $(shell) mit einem Werkzeug aus .tools/: $(shell $(TOOL_ENV); befehl). GNU Make
 # vor 4.4 (macOS: 3.81) gibt das exportierte PATH nicht an $(shell) weiter, und das BASH_ENV
 # von help, info und hints gehört nicht in die Werkzeuge.
 TOOL_ENV = unset BASH_ENV; PATH=$(WORKSPACE_SQ)/$(TOOLS_DIR)/bin:"$$PATH"
-
-# Statuszeile und Zwischenüberschrift außerhalb von help, info und hints, im CLI-Theme von
-# BashLib. Im Rezept: @$(STATUS) "✓" "Text" OK  (Rollen OK, WARN, ERR) bzw.
-# @$(HEADING) "Text". Bewusst kein BASH_ENV für diese Targets: Es ginge an overmind, docker
-# und die Skripte weiter.
-STATUS  = source "$${BASH_LIBS}/make.lib.sh" && printThemeStatus
-HEADING = source "$${BASH_LIBS}/make.lib.sh" && printMakeHeading
 
 # Python für die .venv: python3 aus dem PATH, ein gesetztes PYTHON_BOOTSTRAP geht vor. Python ist
 # Voraussetzung; das Makefile sucht kein passendes (makefile-conventions, „Python für die .venv“).
@@ -151,89 +168,87 @@ hints: export RELEASE_TAG = $(release_tag)
 
 # ─── Hilfe ────────────────────────────────────────────────────────────────────
 
-# help, info und hints geben über BashLib make.lib.sh aus, geladen über BASH_ENV in jede
-# Rezeptzeile; eine Rezeptzeile ergibt eine Ausgabezeile. Bash wertet BASH_ENV aus: darum der
-# Verweis auf BASH_LIBS statt des Pfads, ein $(…) im Checkout-Pfad bleibt Text.
-# CLITHEME_EXPORT reicht die Werte von clitheme export einmal je make-Lauf weiter, statt
-# clitheme in jeder Zeile zu starten.
-clitheme_export = $(eval clitheme_export := $$(shell $$(TOOL_ENV); clitheme export --bash 2>/dev/null))$(clitheme_export)
-help info hints: export BASH_ENV := $${BASH_LIBS}/make.lib.sh
-help info hints: export CLITHEME_EXPORT = $(clitheme_export)
-
 # Liste der Makefiles unausgewertet über die Umgebung (siehe Kopf).
 export HELP_FILES = $(value MAKEFILE_LIST)
 
-# Eine Beschreibung sagt, was nach dem Target anders ist; den Ablauf beschreibt
-# docs/development.md. {major}, {minor} und {patch} füllt showMakeTargets mit
-# „<jetzt> → <danach>“.
+# make.lib.sh von CLITheme (samt cli.lib.sh) in jeder Rezeptzeile von help, info und hints; eine
+# Rezeptzeile ergibt eine Ausgabezeile. Bash wertet BASH_ENV aus: darum der Verweis auf CLI_LIBS
+# statt des Pfads, ein $(…) im Checkout-Pfad bleibt Text. Leer, solange CLITheme fehlt.
+help info hints: export BASH_ENV := $${CLI_LIBS:+$${CLI_LIBS}/make.lib.sh}
+
+# Kopf mit Projektname und Version (readProjectVersion aus BashLib), darunter die Targets. Eine
+# Beschreibung sagt, was nach dem Target anders ist; den Ablauf beschreibt docs/development.md.
 .PHONY: help
-help: ## Alle verfügbaren Befehle anzeigen
-	@showMakeHeader "$${PROJECT_NAME}"
-	@showMakeTargets $${HELP_FILES}
+help: require-bash-libs ## Alle verfügbaren Befehle anzeigen
+	@showMakeTargets "$${PROJECT_NAME} $$(source "$${BASH_LIBS}/version.lib.sh" && readProjectVersion)" $${HELP_FILES}
 
 .PHONY: info
-info: ## Projektpfade, Ports und Werkzeugstand anzeigen
-	@printMakeHeading "Umgebung"
-	@printMakeValue WORKSPACE        "$${WORKSPACE}"
-	@printMakeValue VENV             '$(VENV)'
-	@printMakeValue BASH_LIBS        "$${BASH_LIBS:-nicht gefunden (make setup)}"
-	@printMakeValue "Dev-Ports"      '$(if $(BACKEND_PORT),$(DASHBOARD_PORT) (Dashboard) · $(BACKEND_PORT) (Backend),$(NO_DEV_PORTS))'
-	@printMakeValue "PORT (make up)" "$${PORT}"
-	@printMakeHeading "Werkzeuge (.dev-tools.conf.sh)"
+info: require-bash-libs ## Projektpfade, Ports und Werkzeugstand anzeigen
+	@printThemeHeading "Umgebung"
+	@printThemeValue WORKSPACE        "$${WORKSPACE}"
+	@printThemeValue VENV             '$(VENV)'
+	@printThemeValue BASH_LIBS        "$${BASH_LIBS:-nicht gefunden (make setup)}"
+	@printThemeValue CLI_LIBS         "$${CLI_LIBS:-nicht gefunden (make setup)}"
+	@printThemeValue "Dev-Ports"      '$(if $(BACKEND_PORT),$(DASHBOARD_PORT) (Dashboard) · $(BACKEND_PORT) (Backend),$(NO_DEV_PORTS))'
+	@printThemeValue "PORT (make up)" "$${PORT}"
+	@printThemeHeading "Werkzeuge (.dev-tools.conf.sh)"
 	@# devtools status gibt je Werkzeug „  Name  Stand“ aus; Name und Stand gehen einzeln an
-	@# printMakeValue, so stehen sie in denselben Spalten wie die Zeilen darüber.
+	@# printThemeValue, so stehen sie in denselben Spalten wie die Zeilen darüber.
 	@set -o pipefail; $(DEV_TOOLS) status 2>/dev/null | while read -r TOOL_NAME TOOL_STATE; do \
-		[[ -z "$$TOOL_NAME" ]] || printMakeValue "$$TOOL_NAME" "$$TOOL_STATE"; done || \
-		printMakeValue "Stand" "nicht abrufbar: make setup"
+		[[ -z "$$TOOL_NAME" ]] || printThemeValue "$$TOOL_NAME" "$$TOOL_STATE"; done || \
+		printThemeValue "Stand" "nicht abrufbar: make setup"
 	@echo
 
 # Links, URLs und Tipps für den Alltag; das Einrichten beschreibt docs/development.md.
 .PHONY: hints
-hints: ## Links, URLs und Tipps für die tägliche Arbeit
-	@printMakeHeading "Links"
-	@printMakeValue "Repository"      "$${REPO_URL}"
-	@printMakeValue "Entwicklerdoku"  "$(if $(filter https://%,$(REPO_URL)),$${REPO_URL}/blob/master/docs/development.md,docs/development.md)"
-	@printMakeValue "Letzter Release" "$${RELEASE_TAG}"
-	@printMakeValue "Docker Hub"      "https://hub.docker.com/r/$${IMAGE_NAME}"
-	@printMakeHeading "URLs nach make dev-up (http://, nicht https)"
-	@printMakeValue "Dashboard"           '$(call dev_url,DASHBOARD_PORT,/)'
-	@printMakeValue "API"                 '$(call dev_url,BACKEND_PORT,/)'
-	@printMakeValue "Swagger"             '$(call dev_url,BACKEND_PORT,/docs)'
-	@printMakeValue "Health"              '$(call dev_url,BACKEND_PORT,/health)'
-	@printMakeValue "Container (make up)" "http://localhost:$${PORT}/"
-	@printMakeHeading "Im Alltag"
-	@printMakeValue "Vor dem Commit" "make check"
-	@printMakeValue "Einzelne Tests" "make test-backend ARGS='-k name'"
-	@printMakeValue "Stack hängt"    "make dev-down; dann make dev-up"
-	@printMakeValue "Erster Kurs"    '$(if $(BACKEND_PORT),curl )$(call dev_url,BACKEND_PORT,/quote/IE00B4L5Y983)'
-	@printMakeValue "Unraid-Test"    "wget -O /boot/config/plugins/dockerMan/templates-user/stockinfo-test.xml https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml"
-	@printMakeHeading "Werkzeuge (Tag und Quelle in .dev-tools.conf.sh)"
-	@printMakeValue "Stand zeigen"      "make info"
-	@printMakeValue "Auf Stand bringen" "make setup"
+hints: require-bash-libs ## Links, URLs und Tipps für die tägliche Arbeit
+	@printThemeHeading "Links"
+	@printThemeValue "Repository"      "$${REPO_URL}"
+	@printThemeValue "Entwicklerdoku"  "$(if $(filter https://%,$(REPO_URL)),$${REPO_URL}/blob/master/docs/development.md,docs/development.md)"
+	@printThemeValue "Letzter Release" "$${RELEASE_TAG}"
+	@printThemeValue "Docker Hub"      "https://hub.docker.com/r/$${IMAGE_NAME}"
+	@printThemeHeading "URLs nach make dev-up (http://, nicht https)"
+	@printThemeValue "Dashboard"           '$(call dev_url,DASHBOARD_PORT,/)'
+	@printThemeValue "API"                 '$(call dev_url,BACKEND_PORT,/)'
+	@printThemeValue "Swagger"             '$(call dev_url,BACKEND_PORT,/docs)'
+	@printThemeValue "Health"              '$(call dev_url,BACKEND_PORT,/health)'
+	@printThemeValue "Container (make up)" "http://localhost:$${PORT}/"
+	@printThemeHeading "Im Alltag"
+	@printThemeValue "Vor dem Commit" "make check"
+	@printThemeValue "Einzelne Tests" "make test-backend ARGS='-k name'"
+	@printThemeValue "Stack hängt"    "make dev-down; dann make dev-up"
+	@printThemeValue "Erster Kurs"    '$(if $(BACKEND_PORT),curl )$(call dev_url,BACKEND_PORT,/quote/IE00B4L5Y983)'
+	@printThemeValue "Unraid-Test"    "wget -O /boot/config/plugins/dockerMan/templates-user/stockinfo-test.xml https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml"
+	@printThemeHeading "Werkzeuge (Tag und Quelle in .dev-tools.conf.sh)"
+	@printThemeValue "Stand zeigen"      "make info"
+	@printThemeValue "Auf Stand bringen" "make setup"
 	@echo
 
 # ─── Voraussetzungen ──────────────────────────────────────────────────────────
 
-# BashLib bereit: die Bibliotheken, die das Makefile lädt (version.lib.sh für Releases,
-# make.lib.sh für Statuszeilen und Ausgabe), lesbar; aus .tools/ zudem in der Mindestversion
-# aus .dev-tools.conf.sh. Ein von außen gesetztes BASH_LIBS prüft es nur auf Lesbarkeit. Das
-# Verzeichnis fragt es wie der Kopf bei bashlib-path aus .tools/ selbst: Das BASH_LIBS von
-# require-bash-libs steht vor dessen make setup schon fest.
-BASHLIB_DIR   = $(if $(BASHLIB_FROM_OUTSIDE),"$${BASH_LIBS}","$$("$${WORKSPACE}"/$(TOOLS_DIR)/bin/bashlib-path 2>/dev/null)")
-BASHLIB_READY = LIBS=$(BASHLIB_DIR); [[ -r "$$LIBS/version.lib.sh" && -r "$$LIBS/make.lib.sh" ]] && \
-	{ [[ -n '$(BASHLIB_FROM_OUTSIDE)' ]] || $(DEV_TOOLS) check bashlib >/dev/null 2>&1; }
+# Bereit: version.lib.sh von BashLib und cli.lib.sh samt make.lib.sh von CLITheme lesbar; aus
+# .tools/ zudem in der Mindestversion aus .dev-tools.conf.sh. Von außen gesetzte Ordner
+# (BASH_LIBS, CLI_LIBS) prüft es nur auf Lesbarkeit. Die Ordner aus .tools/ fragt es wie der Kopf
+# selbst ab: Die Werte von require-bash-libs stehen vor dessen make setup schon fest.
+BASHLIB_DIR = $(if $(BASHLIB_FROM_OUTSIDE),"$${BASH_LIBS}","$$("$${WORKSPACE}"/$(TOOLS_DIR)/bin/bashlib-path 2>/dev/null)")
+CLILIB_DIR  = $(if $(CLILIB_FROM_OUTSIDE),"$${CLI_LIBS}","$$("$${WORKSPACE}"/$(TOOLS_DIR)/bin/clilib-path 2>/dev/null)")
+LIBS_READY  = BASHLIB=$(BASHLIB_DIR); CLILIB=$(CLILIB_DIR); [[ -r "$$BASHLIB/version.lib.sh" && \
+	-r "$$CLILIB/cli.lib.sh" && -r "$$CLILIB/make.lib.sh" ]] && \
+	{ [[ -n '$(BASHLIB_FROM_OUTSIDE)' ]] || $(DEV_TOOLS) check bashlib >/dev/null 2>&1; } && \
+	{ [[ -n '$(CLILIB_FROM_OUTSIDE)' ]] || $(DEV_TOOLS) check clitheme >/dev/null 2>&1; }
 
-# Ohne `##`: Vorbedingung jedes Targets, das BashLib braucht. Fehlt BashLib oder ist sie zu alt,
-# läuft einmal make setup; reicht das nicht, bricht es mit dem Grund ab. Als Vorbedingung, nicht
-# als Rezeptzeile: Das Target danach ermittelt BASH_LIBS neu (Kopf). Bewusst ohne
-# BashLib-Ausgabe: Es meldet gerade, dass sie fehlt.
+# Ohne `##`: Vorbedingung jedes Targets, das BashLib oder die Ausgabe von CLITheme braucht; BashLib
+# setzt CLITheme voraus. Fehlt eines oder ist es zu alt, läuft einmal make setup (ohne das
+# BASH_ENV von help, info und hints); reicht das nicht, bricht es mit dem Grund ab. Als
+# Vorbedingung, nicht als Rezeptzeile: Das Target danach ermittelt BASH_LIBS und CLI_LIBS neu
+# (Kopf). Bewusst ohne Theme-Ausgabe: Es meldet gerade, dass sie fehlt.
 .PHONY: require-bash-libs
 require-bash-libs:
-	@$(BASHLIB_READY) || $(MAKE) --no-print-directory setup
-	@$(BASHLIB_READY) || { echo "  ✗ BashLib fehlt oder ist unvollständig, auch nach make setup" >&2; \
-		if [[ -n '$(BASHLIB_FROM_OUTSIDE)' ]]; then \
-			echo "    BASH_LIBS zeigt nicht auf BashLib; ohne gilt die aus .tools/: unset BASH_LIBS" >&2; \
-		else $(DEV_TOOLS) check bashlib; fi; exit 1; }
+	@$(LIBS_READY) || env -u BASH_ENV $(MAKE) --no-print-directory setup
+	@$(LIBS_READY) || { echo "  ✗ BashLib oder CLITheme fehlt oder ist zu alt, auch nach make setup" >&2; \
+		if [[ -n '$(BASHLIB_FROM_OUTSIDE)$(CLILIB_FROM_OUTSIDE)' ]]; then \
+			echo "    BASH_LIBS oder CLI_LIBS zeigt ins Leere; ohne gelten die aus .tools/: unset BASH_LIBS CLI_LIBS" >&2; \
+		else $(DEV_TOOLS) check bashlib; $(DEV_TOOLS) check clitheme; fi; exit 1; }
 
 # Ohne `##`: verlangt ProjectTools in .tools/ in Mindestversion. Fehlt es oder ist es zu alt,
 # läuft einmal make setup; reicht das nicht (etwa ein zu alter Tag in .dev-tools.conf.sh),
@@ -342,15 +357,15 @@ status: require-tools ## Git-Status aller Workspace-Repos anzeigen
 # uvicorn in Procfile.dev nur, weil overmind .env lädt; das Makefile exportiert HOST nicht.
 .PHONY: dev-up
 dev-up: require-tools ## Backend und Dashboard laufen im Hintergrund, mit Auto-Reload
-	@command -v overmind >/dev/null || { $(STATUS) "✗" "overmind fehlt: brew install overmind tmux" ERR; exit 1; }
-	@command -v tmux >/dev/null || { $(STATUS) "✗" "tmux fehlt: brew install tmux" ERR; exit 1; }
+	@command -v overmind >/dev/null || { source "$${CLI_LIBS}/cli.lib.sh" && printThemeStatus "✗" "overmind fehlt: brew install overmind tmux" ERR; exit 1; }
+	@command -v tmux >/dev/null || { source "$${CLI_LIBS}/cli.lib.sh" && printThemeStatus "✗" "tmux fehlt: brew install tmux" ERR; exit 1; }
 	@dev-ports --check
 	@# overmind bricht auch ab, wenn der Stack schon läuft oder eine verwaiste .overmind.sock
 	@# eines Absturzes liegt; aufräumen kann nur dev-down.
 	@overmind start -D -N -f Procfile.dev || { \
-		$(STATUS) "⚠" "Nicht gestartet. Läuft der Stack schon: make dev-logs. Nach einem Absturz räumt make dev-down die Reste auf." WARN; \
+		source "$${CLI_LIBS}/cli.lib.sh" && printThemeStatus "⚠" "Nicht gestartet. Läuft der Stack schon: make dev-logs. Nach einem Absturz räumt make dev-down die Reste auf." WARN; \
 		exit 1; }
-	@$(STATUS) "✓" 'Stack läuft — Backend $(call dev_url,BACKEND_PORT,) · Dashboard $(call dev_url,DASHBOARD_PORT,)  (make dev-logs)' OK
+	@source "$${CLI_LIBS}/cli.lib.sh" && printThemeStatus "✓" 'Stack läuft — Backend $(call dev_url,BACKEND_PORT,) · Dashboard $(call dev_url,DASHBOARD_PORT,)  (make dev-logs)' OK
 
 # Räumt nach einem Absturz overmind/tmux DIESES Projekts, eine verwaiste .overmind.sock und
 # die Ports aus Procfile.dev und der Vite-Konfiguration auf (dev-ports --kill).
@@ -358,7 +373,7 @@ dev-up: require-tools ## Backend und Dashboard laufen im Hintergrund, mit Auto-R
 dev-down: require-tools ## Dev-Stack gestoppt, Reste nach einem Absturz beseitigt, Ports frei
 	-@overmind quit 2>/dev/null || true
 	@dev-ports --kill
-	@$(STATUS) "✓" "Stack gestoppt" OK
+	@source "$${CLI_LIBS}/cli.lib.sh" && printThemeStatus "✓" "Stack gestoppt" OK
 
 .PHONY: dev-logs
 dev-logs: ## Logs des Dev-Stacks live verfolgen
@@ -398,12 +413,12 @@ check: require-setup docs-check test-plugin-api test-example test-dashboard qual
 # Skripten und Plugin-API brechen `check`; doppelter Code in Tests ist nur Bericht.
 .PHONY: quality
 quality: require-setup require-bash-libs ## Messbare Grenzen geprüft: Ruff, Modulgröße, doppelter Code
-	@$(HEADING) "Ruff: Fehler, Komplexität, Vereinfachungen"
+	@source "$${CLI_LIBS}/cli.lib.sh" && printThemeHeading "Ruff: Fehler, Komplexität, Vereinfachungen"
 	$(VENV)/bin/ruff check app tests scripts plugin_api
-	@$(HEADING) "Pylint: Modulgröße und doppelter Code"
+	@source "$${CLI_LIBS}/cli.lib.sh" && printThemeHeading "Pylint: Modulgröße und doppelter Code"
 	$(VENV)/bin/python -m pylint app scripts plugin_api/src plugin_api/examples \
 		--disable=all --enable=too-many-lines,duplicate-code --score=n
-	@$(HEADING) "Bericht, bricht nicht: doppelter Code in Tests"
+	@source "$${CLI_LIBS}/cli.lib.sh" && printThemeHeading "Bericht, bricht nicht: doppelter Code in Tests"
 	@$(VENV)/bin/python -m pylint tests plugin_api/tests \
 		--disable=all --enable=duplicate-code --score=n --exit-zero
 
@@ -411,9 +426,9 @@ quality: require-setup require-bash-libs ## Messbare Grenzen geprüft: Ruff, Mod
 # nicht ab (Entscheidung q-11); beide Prüfungen laufen immer.
 .PHONY: audit
 audit: require-setup require-bash-libs ## Bericht zu Lücken in Abhängigkeiten: pip-audit, npm audit (Netz)
-	@$(HEADING) "Python (pip-audit, requirements.txt)"
+	@source "$${CLI_LIBS}/cli.lib.sh" && printThemeHeading "Python (pip-audit, requirements.txt)"
 	-$(VENV)/bin/pip-audit -r requirements.txt
-	@$(HEADING) "Dashboard (npm audit, ohne Entwicklungspakete)"
+	@source "$${CLI_LIBS}/cli.lib.sh" && printThemeHeading "Dashboard (npm audit, ohne Entwicklungspakete)"
 	-npm --prefix dashboard audit --omit=dev
 
 .PHONY: test-backend
@@ -463,12 +478,12 @@ up: require-bash-libs ## Container mit Dashboard und API läuft auf PORT (Image 
 		-v "$${DATA_VOLUME}":/data \
 		--restart unless-stopped \
 		"$${IMAGE_NAME}":latest
-	@$(STATUS) "✓" "Läuft — App http://localhost:$${PORT}/  (zuvor: make build)" OK
+	@source "$${CLI_LIBS}/cli.lib.sh" && printThemeStatus "✓" "Läuft — App http://localhost:$${PORT}/  (zuvor: make build)" OK
 
 .PHONY: down
 down: require-bash-libs ## Container gestoppt und entfernt
-	-@if docker rm -f "$${CONTAINER}" 2>/dev/null; then $(STATUS) "✓" "Gestoppt" OK; \
-	else $(STATUS) "⚠" "Kein Container $${CONTAINER}" WARN; fi
+	-@source "$${CLI_LIBS}/cli.lib.sh" && if docker rm -f "$${CONTAINER}" 2>/dev/null; \
+	then printThemeStatus "✓" "Gestoppt" OK; else printThemeStatus "⚠" "Kein Container $${CONTAINER}" WARN; fi
 
 .PHONY: docker-logs
 docker-logs: ## Container-Logs live verfolgen
@@ -494,17 +509,11 @@ push: require-tools ## Image und docker/README.md veröffentlicht (TARGET=ghcr|d
 
 ##@ Versionierung
 
-.PHONY: version
-version: require-bash-libs ## Version aus pyproject.toml und letzter Release-Tag
-	@echo
-	@source "$${BASH_LIBS}/make.lib.sh" && showProjectVersion
-	@echo
-
-.PHONY: tags
-tags: require-bash-libs ## Letzte 10 Release-Tags mit Nachricht anzeigen
-	@echo
-	@source "$${BASH_LIBS}/make.lib.sh" && showReleaseTags 10
-	@echo
+# Ohne `##`: läuft vor tag-*; richtet BashLib über require-bash-libs bei Bedarf mit make setup
+# ein. Die Version steht im Kopf von make help, den letzten Release-Tag nennt make hints; eigene
+# Targets version und tags gibt es nicht (versioning-conventions §4).
+.PHONY: precheck
+precheck: require-bash-libs
 
 # Sprache von CHANGELOG.md, unabhängig von der Locale der Shell (changelog folgt sonst LANG).
 # Englisch wie die übrige Doku. Überschreiben: make … CHANGELOG_LANGUAGE=de
@@ -515,25 +524,20 @@ export CHANGELOG_LANGUAGE
 changelog: require-tools ## CHANGELOG.md aus Release-Tags erstellen (ohne Commit)
 	@LANGUAGE="$${CHANGELOG_LANGUAGE}" changelog --generate
 
-# MSG von der Kommandozeile unausgewertet; sonst macht Make aus $HOME oder $(…) schon beim
-# Export an das Rezept etwas anderes. Im Rezept nur als "$${MSG:-}".
-override MSG := $(value MSG)
-export MSG
-
 # Je Target eine Hilfezeile; showMakeTargets liest nur Zeilen mit einem Target.
 .PHONY: tag-major tag-minor tag-patch
-tag-major: ## Major-Release {major}, inkompatible Änderung  [MSG="..."]
-tag-minor: ## Minor-Release {minor}, neue Funktion  [MSG="..."]
-tag-patch: ## Patch-Release {patch}, Fehlerbehebung  [MSG="..."]
+tag-major: ## Major-Release, inkompatible Änderung  [MSG="..."]
+tag-minor: ## Minor-Release, neue Funktion  [MSG="..."]
+tag-patch: ## Patch-Release, Fehlerbehebung  [MSG="..."]
 
 # Version heben und lokal taggen, CHANGELOG.md committen, die Stufe develop auf master
 # vorspulen; alles nur lokal, veröffentlicht wird mit git push --follow-tags. Prüfung und
 # Ablauf stehen nur in tag-version (ProjectTools): Es bricht ab, solange develop Commits hat,
 # die noch nicht auf master sind (nicht abgenommene Tickets). changelog nennt bei Erfolg den
 # Pfad der Datei, darum ohne stdout; Fehler kommen über stderr.
-# require-tools vor require-bash-libs: ohne ProjectTools bricht ein Release vor dem Bump ab,
-# nicht erst nach dem Tag.
-tag-major tag-minor tag-patch: require-tools require-bash-libs
+# require-tools vor precheck: ohne ProjectTools bricht ein Release vor dem Bump ab, nicht erst
+# nach dem Tag.
+tag-major tag-minor tag-patch: require-tools precheck
 	@tag-version "$(patsubst tag-%,%,$@)" --message "$${MSG:-}"
 	@LANGUAGE="$${CHANGELOG_LANGUAGE}" changelog --commit >/dev/null
 	@tag-version --fast-forward
