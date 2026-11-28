@@ -2,7 +2,8 @@
 
 Die Tests laufen mit dem echten Makefile in einer Sandbox unter `tmp_path`,
 ohne Netz: Die Abhängigkeitsdateien sind leer, und `devtools` ist ein Ersatz,
-der seine Aufrufe mitschreibt.
+der seine Aufrufe mitschreibt. `python3` im PATH der Sandbox ist ein Python in
+der Mindestversion, wie auf einem Rechner mit Homebrew vor `/usr/bin`.
 """
 
 import os
@@ -16,6 +17,12 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON_MIN = "3.14"
 OLDER_PYTHON = "python3.13"
+# Einrichtungsstempel des Makefiles (SETUP_STAMPS), relativ zur Arbeitskopie.
+STAMPS = (
+    f".venv/.installed-python{PYTHON_MIN}",
+    "dashboard/node_modules/.installed",
+    ".tools/.installed",
+)
 
 requires_bootstrap = pytest.mark.skipif(
     shutil.which(f"python{PYTHON_MIN}") is None,
@@ -44,6 +51,8 @@ def _sandbox(tmp_path: Path) -> Path:
 def _fake_devtools(tmp_path: Path, behaviour: str = "") -> tuple[str, Path]:
     """Ersatz für devtools, der seine Aufrufe mitschreibt und danach `behaviour` ausführt.
 
+    Daneben `python3` als Link auf das Python der Mindestversion.
+
     Returns:
         PATH mit dem Ersatz vorn und die Datei mit den Aufrufen.
     """
@@ -53,6 +62,7 @@ def _fake_devtools(tmp_path: Path, behaviour: str = "") -> tuple[str, Path]:
     devtools = fake_bin / "devtools"
     devtools.write_text(f'#!/usr/bin/env bash\necho "$*" >> "{calls}"\n{behaviour}')
     devtools.chmod(0o755)
+    (fake_bin / "python3").symlink_to(shutil.which(f"python{PYTHON_MIN}"))
     return f"{fake_bin}{os.pathsep}{os.environ['PATH']}", calls
 
 
@@ -62,12 +72,7 @@ def _set_up(workspace: Path, *, venv_stamp: bool = True) -> float:
     Returns:
         Zeitstempel der Stempel.
     """
-    stamps = [
-        workspace / "dashboard" / "node_modules" / ".installed",
-        workspace / ".tools" / ".installed",
-    ]
-    if venv_stamp:
-        stamps.append(workspace / ".venv" / f".installed-python{PYTHON_MIN}")
+    stamps = [workspace / name for name in STAMPS if venv_stamp or not name.startswith(".venv/")]
     later = time.time() + 10
     for stamp in stamps:
         stamp.parent.mkdir(parents=True, exist_ok=True)
@@ -88,10 +93,18 @@ def _python_version(workspace: Path) -> str:
     ).stdout.strip()
 
 
-def _make(workspace: Path, *goals: str, path: str | None = None) -> subprocess.CompletedProcess:
-    environment = {key: value for key, value in os.environ.items() if key != "BASH_LIBS"}
+def _make(
+    workspace: Path, *goals: str, path: str | None = None, bootstrap: str | None = None
+) -> subprocess.CompletedProcess:
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in ("BASH_LIBS", "PYTHON_BOOTSTRAP")
+    }
     if path is not None:
         environment["PATH"] = path
+    if bootstrap is not None:
+        environment["PYTHON_BOOTSTRAP"] = bootstrap
     return subprocess.run(
         ["make", "--no-print-directory", *goals],
         cwd=workspace,
@@ -122,40 +135,93 @@ def _dead_link(workspace: Path, tmp_path: Path) -> None:
 
 
 def _older_python(workspace: Path, tmp_path: Path) -> None:
+    """.venv aus der Zeit einer niedrigeren Mindestversion, samt deren Stempel."""
     if shutil.which(OLDER_PYTHON) is None:
         pytest.skip(f"{OLDER_PYTHON} nicht installiert")
     _venv(workspace, OLDER_PYTHON)
+    (workspace / ".venv" / f".installed-{OLDER_PYTHON}").touch()
+
+
+def _remove_minor_version_command(tmp_path: Path) -> None:
+    """`python3.14` im PATH startet nicht mehr, wie nachdem Homebrew `python@3.14` entfernt hat.
+
+    `python3` aus `_fake_devtools` zeigt weiter auf ein Python in der Mindestversion.
+    """
+    removed = tmp_path / "bin" / f"python{PYTHON_MIN}"
+    removed.write_text(
+        f'#!/usr/bin/env bash\necho "python{PYTHON_MIN}: No such file or directory" >&2\nexit 127\n'
+    )
+    removed.chmod(0o755)
 
 
 @requires_bootstrap
 @pytest.mark.parametrize(
-    "prepare",
+    ("prepare", "venv_stamp"),
     [
-        pytest.param(None, id="venv-fehlt"),
-        pytest.param(_dead_link, id="interpreter-link-zeigt-ins-leere"),
-        pytest.param(_older_python, id="venv-mit-zu-altem-python"),
+        pytest.param(None, False, id="venv-fehlt"),
+        pytest.param(_dead_link, True, id="interpreter-link-zeigt-ins-leere"),
+        pytest.param(_older_python, False, id="venv-mit-zu-altem-python"),
     ],
 )
-def test_setup_legt_eine_unbrauchbare_venv_neu_an(tmp_path: Path, prepare) -> None:
+def test_setup_legt_eine_unbrauchbare_venv_neu_an(tmp_path: Path, prepare, venv_stamp: bool) -> None:
     """Fehlende, kaputte und zu alte .venv enden in einer lauffähigen mit Python ab der Mindestversion.
 
-    Die kaputte und die zu alte .venv stammen aus einem früheren `make setup`,
-    ihr Stempel ist also aktuell. Zeigt der Interpreter-Link ins Leere, etwa
-    nachdem Homebrew das alte Python entfernt hat, scheiterte `make setup`
-    früher mit Errno 2 oder hielt die .venv wegen des Stempels für eingerichtet
-    (T-153).
+    Die kaputte .venv stammt aus einem früheren `make setup`, ihr Stempel ist
+    also aktuell. Zeigt der Interpreter-Link ins Leere, etwa nachdem Homebrew
+    das alte Python entfernt hat, scheiterte `make setup` früher mit Errno 2
+    oder hielt die .venv wegen des Stempels für eingerichtet (T-153). Die zu
+    alte .venv trägt den Stempel einer niedrigeren Mindestversion.
     """
     workspace = _sandbox(tmp_path)
     path, calls = _fake_devtools(tmp_path)
     if prepare is not None:
         prepare(workspace, tmp_path)
-    _set_up(workspace, venv_stamp=prepare is not None)
+    _set_up(workspace, venv_stamp=venv_stamp)
 
     result = _make(workspace, "setup", path=path)
 
     assert result.returncode == 0, result.stdout + result.stderr
     assert _python_version(workspace) == str(tuple(int(part) for part in PYTHON_MIN.split(".")))
     assert not calls.exists()
+
+
+@requires_bootstrap
+def test_setup_baut_eine_tote_venv_auch_ohne_den_befehl_der_alten_minor_version_neu(
+    tmp_path: Path,
+) -> None:
+    """Nach einem Python-Wechsel baut ein einziger `make setup` die .venv mit `python3` neu.
+
+    So war es am 2026-11-26: Homebrew entfernte `python@3.14`, die .venv zeigte
+    ins Leere, und `python3.14` gab es nicht mehr. Das Makefile verlangte genau
+    diesen Befehl und brach ab, auch im Worktree-Start eines Agenten (T-156).
+    """
+    workspace = _sandbox(tmp_path)
+    path, calls = _fake_devtools(tmp_path)
+    _dead_link(workspace, tmp_path)
+    _set_up(workspace)
+    _remove_minor_version_command(tmp_path)
+
+    result = _make(workspace, "setup", path=path)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert _python_version(workspace) == str(tuple(int(part) for part in PYTHON_MIN.split(".")))
+    assert _make(workspace, "--question", *STAMPS, path=path).returncode == 0
+    assert not calls.exists()
+
+
+@requires_bootstrap
+@pytest.mark.skipif(shutil.which(OLDER_PYTHON) is None, reason=f"{OLDER_PYTHON} nicht installiert")
+def test_setup_bricht_mit_zu_altem_python_ab_und_nennt_die_mindestversion(tmp_path: Path) -> None:
+    """Ein zu altes `python3` legt keine .venv an; die Meldung nennt Mindestversion und Fund."""
+    workspace = _sandbox(tmp_path)
+    path, _ = _fake_devtools(tmp_path)
+
+    result = _make(workspace, "setup", path=path, bootstrap=OLDER_PYTHON)
+
+    assert result.returncode != 0
+    assert f"Python {PYTHON_MIN} oder neuer nötig" in result.stderr
+    assert OLDER_PYTHON.removeprefix("python") in result.stderr
+    assert not (workspace / ".venv").exists()
 
 
 @requires_bootstrap
@@ -201,7 +267,7 @@ def test_pruef_targets_richten_nur_eine_veraltete_einrichtung_ein(tmp_path: Path
 
     # requirements.txt installiert das Plugin-Paket editierbar; dessen Abhängigkeiten und
     # Entry-Points landen nur beim Installieren in der .venv (T-154).
-    venv_stamp = workspace / ".venv" / f".installed-python{PYTHON_MIN}"
+    venv_stamp = workspace / STAMPS[0]
     installed = venv_stamp.stat().st_mtime
     changed = newer + 10
     os.utime(workspace / "plugin_api" / "pyproject.toml", (changed, changed))

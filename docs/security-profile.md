@@ -159,3 +159,9 @@ dort keine Zusage.
 - **Entrypoint:** startet als root, prüft PUID/PGID und gibt die Rechte per
   `setpriv` ab, bevor die App startet (`docker/entrypoint.sh`).
 - Weitere fremde Befehle startet die App nicht.
+- **Entwicklung, `make setup`:** löscht die `.venv` des Checkouts mit
+  `rm -rf` und legt sie neu an, wenn ihr Python nicht in der Mindestversion
+  startet oder `.venv` ein Link ist. Der Ordner steht fest (`override VENV`
+  im Makefile, ein Make-Argument `VENV=…` lenkt ihn nicht um); bei einem Link entfernt
+  `rm -rf` nur den Link, das Ziel bleibt unberührt. Der Interpreter kommt aus
+  `python3` im `PATH` oder aus `PYTHON_BOOTSTRAP`, von Make gequotet.
