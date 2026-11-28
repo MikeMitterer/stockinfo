@@ -10,27 +10,30 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _bash_libs() -> str:
-    """BashLib wie im Makefile: ein gesetztes BASH_LIBS, sonst bashlib-path."""
-    configured = os.environ.get("BASH_LIBS", "")
+def _libs(variable: str, command: str) -> str:
+    """Ordner wie im Makefile: ein gesetztes `variable`, sonst die Ausgabe von `command`."""
+    configured = os.environ.get(variable, "")
     if configured:
         return configured
-    if shutil.which("bashlib-path") is None:
+    if shutil.which(command) is None:
         return ""
     return subprocess.run(
-        ["bashlib-path"], capture_output=True, text=True, check=False
+        [command], capture_output=True, text=True, check=False
     ).stdout.strip()
 
 
-BASH_LIBS = _bash_libs()
+BASH_LIBS = _libs("BASH_LIBS", "bashlib-path")
+CLI_LIBS = _libs("CLI_LIBS", "clilib-path")
 
-# Ein Release braucht BashLib sowie tag-version und changelog aus ProjectTools
-# (make setup). Ohne sie gilt der Test als übersprungen statt als Fehler.
+# Ein Release braucht BashLib samt den Bash-Libs von CLITheme, die BashLib
+# voraussetzt, sowie tag-version und changelog aus ProjectTools (make setup).
+# Ohne sie gilt der Test als übersprungen statt als Fehler.
 requires_release_tools = pytest.mark.skipif(
     not (BASH_LIBS and (Path(BASH_LIBS) / "version.lib.sh").is_file())
+    or not (CLI_LIBS and (Path(CLI_LIBS) / "make.lib.sh").is_file())
     or shutil.which("changelog") is None
     or shutil.which("tag-version") is None,
-    reason="BashLib, tag-version oder changelog (ProjectTools) nicht installiert",
+    reason="BashLib, CLITheme, tag-version oder changelog (ProjectTools) nicht installiert",
 )
 
 
@@ -86,7 +89,7 @@ def test_tag_patch_committet_und_taggt_nur_lokal(tmp_path: Path) -> None:
     result = subprocess.run(
         ["make", "--no-print-directory", "tag-patch", "DEV_TOOLS=true"],
         cwd=repository,
-        env={**os.environ, "BASH_LIBS": BASH_LIBS, "LANGUAGE": "en"},
+        env={**os.environ, "BASH_LIBS": BASH_LIBS, "CLI_LIBS": CLI_LIBS, "LANGUAGE": "en"},
         capture_output=True,
         text=True,
         check=False,

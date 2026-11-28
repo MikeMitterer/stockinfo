@@ -38,19 +38,20 @@ Installing and running the finished container is described in the
 `make setup` installs ProjectTools, BashLib and CLITheme at the versions in
 `.dev-tools.conf.sh` into `.tools/` of this checkout; each checkout and
 worktree has its own copy. `make help`, `make info`, `make hints` and the
-status lines of the other targets come from BashLib and use your CLITheme
-theme (`clitheme use NAME`). `make test`, `make check`, `make docs-check`,
+status lines of the other targets come from the Bash libraries of CLITheme
+and use your CLITheme theme (`clitheme use NAME`). The head of `make help`
+shows the project version, read by BashLib; `make hints` names the last
+release tag. `make test`, `make check`, `make docs-check`,
 `make status`, `make changelog`, `make dev-up`, `make dev-down`, `make push`
 and `make tag-*` need ProjectTools in `.tools/`; when it is missing or too
 old, they run `make setup` first, and only stop with the reason if that does
 not help, before they start or stop anything. Without ProjectTools, `make hints` shows
 `repo-info fehlt` instead of the repository and the last release, and
 `dev-ports fehlt` instead of the local addresses. `make setup`
-installs BashLib; `help`, `info`, `hints`, `quality`, `audit`, `dev-up`,
-`dev-down`, `up`, `down`, `build`, `build-check`, `push`, `version`, `tags`
-and `tag-*` need it.
-All of them except `help`, `info` and `hints` run `make setup` first when
-BashLib is missing or too old. To build the
+installs BashLib and CLITheme; `help`, `info`, `hints`, `quality`, `audit`,
+`dev-up`, `dev-down`, `up`, `down`, `build`, `build-check`, `push` and
+`tag-*` need both and run `make setup` first when one of them is missing or
+too old. To build the
 image without these tools, run this instead of `make build`:
 
 ```bash

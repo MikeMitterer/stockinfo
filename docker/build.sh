@@ -4,13 +4,19 @@
 # Build Docker-Image: mangolila/stockinfo
 #------------------------------------------------------------------------------
 
-# BashLib: make build/push setzen BASH_LIBS; direkt aufgerufen hilft bashlib-path aus .tools/
-# dieses Checkouts (make setup), sonst eines im PATH.
-_BASHLIB_PATH="$(dirname -- "${BASH_SOURCE[0]}")/../.tools/bin/bashlib-path"
+# BashLib (Docker-Build und -Push, Versionen) und CLITheme (Ausgabe, cli.lib.sh): make build/push
+# setzen BASH_LIBS und CLI_LIBS; direkt aufgerufen helfen bashlib-path und clilib-path aus
+# .tools/ dieses Checkouts (make setup), sonst die im PATH. BashLib bindet cli.lib.sh von
+# CLITheme über CLI_LIBS selbst ein.
+_TOOLS_BIN="$(dirname -- "${BASH_SOURCE[0]}")/../.tools/bin"
+_BASHLIB_PATH="${_TOOLS_BIN}/bashlib-path"
 [[ -x "${_BASHLIB_PATH}" ]] || _BASHLIB_PATH="bashlib-path"
+_CLILIB_PATH="${_TOOLS_BIN}/clilib-path"
+[[ -x "${_CLILIB_PATH}" ]] || _CLILIB_PATH="clilib-path"
 BASH_LIBS="${BASH_LIBS:-$("${_BASHLIB_PATH}" 2>/dev/null || true)}"
-unset _BASHLIB_PATH
-if [[ -z "${BASH_LIBS}" ]]; then echo "✗ BashLib nicht gefunden. Einrichten: make setup, dann make build oder make push" >&2; exit 1; fi
+CLI_LIBS="${CLI_LIBS:-$(BASH_ENV='' "${_CLILIB_PATH}" 2>/dev/null || true)}"
+unset _TOOLS_BIN _BASHLIB_PATH _CLILIB_PATH
+if [[ -z "${BASH_LIBS}" || -z "${CLI_LIBS}" ]]; then echo "✗ BashLib oder CLITheme nicht gefunden. Einrichten: make setup, dann make build oder make push" >&2; exit 1; fi
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # -e  bricht bei erstem Fehler ab   (Ausnahme: 'command || true')

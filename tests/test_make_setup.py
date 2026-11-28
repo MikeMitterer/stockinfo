@@ -89,7 +89,12 @@ def _python_version(workspace: Path) -> str:
 
 
 def _make(workspace: Path, *goals: str, path: str | None = None) -> subprocess.CompletedProcess:
-    environment = {key: value for key, value in os.environ.items() if key != "BASH_LIBS"}
+    # Ohne die Werte eines umgebenden make (make check): Die Sandbox ermittelt sie selbst.
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in ("BASH_LIBS", "CLI_LIBS", "CLITHEME_EXPORT")
+    }
     if path is not None:
         environment["PATH"] = path
     return subprocess.run(
@@ -212,34 +217,45 @@ def test_pruef_targets_richten_nur_eine_veraltete_einrichtung_ein(tmp_path: Path
 
 
 @requires_bootstrap
-def test_bashlib_target_richtet_im_frischen_checkout_ein_und_laeuft_weiter(tmp_path: Path) -> None:
-    """`make version` ohne .tools/ ruft einmal `make setup` auf und zeigt danach die Version.
+def test_help_richtet_im_frischen_checkout_ein_und_zeigt_die_version_im_kopf(tmp_path: Path) -> None:
+    """`make help` ohne .tools/ ruft einmal `make setup` auf und zeigt danach Projekt und Version.
 
-    Fehlt BashLib, richtet require-bash-libs als Vorbedingung ein. Das Target
-    danach sieht BashLib im selben Lauf nur, weil BASH_LIBS im Kopf des
-    Makefiles mit `=` steht; mit `:=` bliebe es leer (T-155).
+    Fehlen BashLib oder die Bash-Libs von CLITheme, richtet require-bash-libs
+    als Vorbedingung ein. help sieht beide im selben Lauf nur, weil BASH_LIBS
+    und CLI_LIBS im Kopf des Makefiles mit `=` stehen; mit `:=` blieben sie
+    leer (T-155). Den Kopf gibt showMakeTargets aus make.lib.sh von CLITheme
+    aus, die Version liest readProjectVersion aus BashLib (T-157, T-158).
     """
     workspace = _sandbox(tmp_path)
     bashlib = tmp_path / "bashlib"
     bashlib.mkdir()
-    (bashlib / "version.lib.sh").write_text("")
-    (bashlib / "make.lib.sh").write_text('showProjectVersion() { echo "Version aus BashLib"; }\n')
-    # install legt bashlib-path in .tools/ an; check bashlib besteht erst danach.
+    (bashlib / "version.lib.sh").write_text("readProjectVersion() { echo 9.9.9; }\n")
+    clilib = tmp_path / "clilib"
+    clilib.mkdir()
+    (clilib / "cli.lib.sh").write_text("")
+    (clilib / "make.lib.sh").write_text('showMakeTargets() { echo "Kopf: $1"; }\n')
+    # install legt bashlib-path und clilib-path in .tools/ an; check besteht erst danach.
     path, calls = _fake_devtools(
         tmp_path,
         'case "$*" in\n'
         '  "--project install") mkdir -p .tools/bin\n'
         f"    printf '#!/usr/bin/env bash\\necho %s\\n' '{bashlib}' > .tools/bin/bashlib-path\n"
-        "    chmod +x .tools/bin/bashlib-path ;;\n"
+        f"    printf '#!/usr/bin/env bash\\necho %s\\n' '{clilib}' > .tools/bin/clilib-path\n"
+        "    chmod +x .tools/bin/bashlib-path .tools/bin/clilib-path ;;\n"
         '  "--project check bashlib") test -x .tools/bin/bashlib-path ;;\n'
+        '  "--project check clitheme") test -x .tools/bin/clilib-path ;;\n'
         "esac\n",
     )
     _venv(workspace)
     _set_up(workspace)
     shutil.rmtree(workspace / ".tools")
 
-    result = _make(workspace, "version", path=path)
+    result = _make(workspace, "help", path=path)
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "Version aus BashLib" in result.stdout
-    assert calls.read_text().splitlines() == ["--project install", "--project check bashlib"]
+    assert "Kopf: work 9.9.9" in result.stdout
+    assert calls.read_text().splitlines() == [
+        "--project install",
+        "--project check bashlib",
+        "--project check clitheme",
+    ]

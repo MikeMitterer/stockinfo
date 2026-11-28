@@ -14,7 +14,7 @@ CONTAINER_ID = "container-1"
 
 
 def _check_sandbox(tmp_path: Path, failing_step: str) -> tuple[Path, dict[str, str]]:
-    """Echtes Buildscript; docker, curl, sleep und BashLib sind Attrappen.
+    """Echtes Buildscript; docker, curl, sleep, BashLib und CLITheme sind Attrappen.
 
     `failing_step` lässt einen Schritt nach dem Containerstart scheitern:
     `port` (docker port), `page` (Abruf von /) oder leer.
@@ -59,6 +59,7 @@ def _check_sandbox(tmp_path: Path, failing_step: str) -> tuple[Path, dict[str, s
         **os.environ,
         "PATH": f"{tmp_path / 'bin'}{os.pathsep}{os.environ['PATH']}",
         "BASH_LIBS": str(tmp_path / "libs"),
+        "CLI_LIBS": str(tmp_path / "libs"),
         "CALL_LOG": str(tmp_path / "calls"),
         "FAILING_STEP": failing_step,
     }
